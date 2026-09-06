@@ -7,6 +7,11 @@ const rawSecret = process.env.SESSION_SECRET;
 if (!rawSecret || rawSecret.length < 32) throw new Error("SESSION_SECRET must be set and contain at least 32 characters");
 const secret = new TextEncoder().encode(rawSecret);
 
+// __Host- cookies require Secure and therefore cannot be used over plain HTTP.
+// The internal demo runs on HTTP; production with HTTPS keeps the stronger __Host- prefix.
+const secureCookies = process.env.APP_URL?.startsWith("https://") ?? process.env.NODE_ENV === "production";
+const sessionCookieName = secureCookies ? "__Host-ka_session" : "ka_session";
+
 export async function hashPassword(password: string) { return bcrypt.hash(password, 12); }
 export async function verifyPassword(password: string, hash: string) { return bcrypt.compare(password, hash); }
 
@@ -14,9 +19,9 @@ export async function createSession(userId: string) {
   const token = await new SignJWT({ userId })
     .setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("8h").sign(secret);
   const jar = await cookies();
-  jar.set("__Host-ka_session", token, {
+  jar.set(sessionCookieName, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookies,
     sameSite: "strict",
     path: "/",
     maxAge: 60 * 60 * 8
@@ -25,11 +30,17 @@ export async function createSession(userId: string) {
 
 export async function destroySession() {
   const jar = await cookies();
-  jar.set("__Host-ka_session", "", { httpOnly:true, secure:true, sameSite:"strict", expires:new Date(0), path:"/" });
+  jar.set(sessionCookieName, "", {
+    httpOnly: true,
+    secure: secureCookies,
+    sameSite: "strict",
+    expires: new Date(0),
+    path: "/"
+  });
 }
 
 export async function currentUser() {
-  const token = (await cookies()).get("__Host-ka_session")?.value;
+  const token = (await cookies()).get(sessionCookieName)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
