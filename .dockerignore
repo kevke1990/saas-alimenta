@@ -1,0 +1,16 @@
+# Secrets and local environment files
+.env
+.env.*
+!.env.example
+!deploy/.env.production.example
+
+# Dependencies and build output
+node_modules
+.next
+.git
+.gitignore
+
+# Local/editor files
+.DS_Store
+*.log
+npm-debug.log*
