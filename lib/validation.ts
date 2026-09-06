@@ -12,5 +12,7 @@ export const clientSchema = z.object({
   reference: z.string().max(100).optional(),
   email: z.string().email().optional().or(z.literal("")),
   phone: z.string().max(50).optional(),
-  notes: z.string().max(5000).optional()
+  notes: z.string().max(5000).optional(),
+  personAName: z.string().min(2).max(150), personAEmail: z.string().email().optional().or(z.literal("")), personAPhone: z.string().max(50).optional(),
+  personBName: z.string().min(2).max(150), personBEmail: z.string().email().optional().or(z.literal("")), personBPhone: z.string().max(50).optional()
 });

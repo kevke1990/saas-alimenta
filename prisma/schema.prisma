@@ -84,6 +84,12 @@ model Client {
   reference       String?
   email           String?
   phone           String?
+  personAName     String?
+  personAEmail    String?
+  personAPhone    String?
+  personBName     String?
+  personBEmail    String?
+  personBPhone    String?
   status          ClientStatus     @default(ACTIVE)
   notes           String?
   createdAt       DateTime         @default(now())
