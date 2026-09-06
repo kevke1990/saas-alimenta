@@ -49,7 +49,10 @@ describe("Partner alimony engine foundation", () => {
       contributionOverrideMonthly: 900,
     });
 
-    expect(result.contributionMonthly).toBe(900);
+    expect(result.contributionMonthly).toBe(861);
     expect(result.audit.overrideApplied).toBe(true);
+    expect(result.audit.requestedOverrideMonthly).toBe(900);
+    expect(result.audit.calculatedContributionBeforeOverrideMonthly).toBe(861);
+    expect(result.warnings.some((warning) => warning.includes("begrensd"))).toBe(true);
   });
 });
