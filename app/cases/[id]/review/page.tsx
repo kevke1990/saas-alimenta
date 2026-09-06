@@ -46,7 +46,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
         </div>
       </section>
       <section className="panel"><div className="panel-head"><div><h2 className="panel-title">Reviewopmerking</h2><div className="panel-sub">Leg een controlebevinding of professionele toelichting vast in het auditspoor.</div></div></div>
-        <form action={`/api/cases/${id}/approval`} method="post" className="topgap"><input type="hidden" name="status" value={c.reviewStatus === "APPROVED" || c.reviewStatus === "FINAL" ? "APPROVED" : "REVIEWED"}/><textarea name="comment" required maxLength={5000} rows={5} placeholder="Bijvoorbeeld: loonstrook gecontroleerd, woonlast onderbouwd en afwijkende kosten beoordeeld." style={{width:"100%",boxSizing:"border-box",padding:"12px",borderRadius:"10px",border:"1px solid #d9dee8",fontFamily:"inherit",resize:"vertical"}}></textarea><div className="actions topgap"><button className="btn secondary" type="submit">Opslaan in audittrail</button></div></form>
+        <form action={`/api/cases/${id}/approval`} method="post" className="topgap"><input type="hidden" name="status" value={c.reviewStatus}/><textarea name="comment" required maxLength={5000} rows={5} placeholder="Bijvoorbeeld: loonstrook gecontroleerd, woonlast onderbouwd en afwijkende kosten beoordeeld." style={{width:"100%",boxSizing:"border-box",padding:"12px",borderRadius:"10px",border:"1px solid #d9dee8",fontFamily:"inherit",resize:"vertical"}}></textarea><div className="actions topgap"><button className="btn secondary" type="submit">Opslaan in audittrail</button></div></form>
       </section>
     </div>
 
