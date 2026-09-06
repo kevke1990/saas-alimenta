@@ -16,6 +16,7 @@ jobs:
       PRIVACY_HASH_SALT: ci-privacy-salt
       POSTMARK_INBOUND_SECRET: ci-inbound-secret
       AI_PROCESSING_DISABLED: "true"
+      PRISMA_HIDE_UPDATE_MESSAGE: "true"
     services:
       postgres:
         image: postgres:16
@@ -32,11 +33,12 @@ jobs:
           --health-retries 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: 22
+          package-manager-cache: false
       - name: Cache Next.js build
         uses: actions/cache@v5
         with:
