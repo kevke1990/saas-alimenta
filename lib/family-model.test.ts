@@ -5,8 +5,8 @@ describe("canonical family model", () => {
   it("keeps both parent identities and every child identity together", () => {
     const family = createFamilyContext({
       relationshipStatus: "DIVORCED",
-      parentA: { name: "Ouder A" },
-      parentB: { name: "Ouder B" },
+      parentA: { role: "PARENT_A", name: "Ouder A" },
+      parentB: { role: "PARENT_B", name: "Ouder B" },
       children: [
         { id: "yuna", name: "Yuna", residence: "A" },
         { id: "jayda", name: "Jayda", residence: "B" },
@@ -27,8 +27,8 @@ describe("canonical family model", () => {
   it("supports housing, relationship status and new partner context", () => {
     const family = createFamilyContext({
       relationshipStatus: "REGISTERED_PARTNERSHIP",
-      parentA: { name: "Ouder A" },
-      parentB: { name: "Ouder B" },
+      parentA: { role: "PARENT_A", name: "Ouder A" },
+      parentB: { role: "PARENT_B", name: "Ouder B" },
       children: [{ id: "child-1", name: "Kind", residence: "50-50" }],
       housing: {
         parentA: { type: "OWN_HOME", monthlyCost: 1650, wozValue: 420000 },
