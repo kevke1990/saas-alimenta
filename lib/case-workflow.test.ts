@@ -42,4 +42,16 @@ describe('buildCaseWorkflow', () => {
     expect(items.find((x) => x.step === 'REVIEW')?.complete).toBe(true);
     expect(workflowStatusLabel('FINAL')).toBe('Definitief');
   });
+
+  it('routes a review-ready case directly to professional review', () => {
+    const items = buildCaseWorkflow('case-5', {
+      status: 'READY_FOR_REVIEW', hasCalculation: true, hasScenarios: false, hasHistory: true,
+      reviewReady: true, reportAvailable: true,
+    });
+    const review = items.find((x) => x.step === 'REVIEW');
+    expect(review?.active).toBe(true);
+    expect(review?.complete).toBe(false);
+    expect(getNextCaseWorkflowStep(items)?.step).toBe('REVIEW');
+    expect(workflowStatusLabel('READY_FOR_REVIEW')).toBe('Klaar voor review');
+  });
 });
