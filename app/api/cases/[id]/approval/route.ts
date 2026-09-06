@@ -23,6 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const reopened = isExplicitReopen(c.reviewStatus, status);
     const data: any = { reviewStatus: status };
+    if (status === 'READY_FOR_REVIEW' || status === 'INCOMPLETE') data.reviewedAt = null;
     if (status === 'REVIEWED' || status === 'APPROVED' || status === 'FINAL') data.reviewedAt = new Date();
     if (status === 'APPROVED' || status === 'FINAL') { data.approvedAt = c.approvedAt || new Date(); data.approvedByUserId = c.approvedByUserId || user.id; }
     if (status === 'INCOMPLETE') { data.approvedAt = null; data.approvedByUserId = null; }
