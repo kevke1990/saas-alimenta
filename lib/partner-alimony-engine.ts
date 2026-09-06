@@ -1,6 +1,6 @@
 import { calculatePartnerSupportCapacity, type SupportCapacityInput } from "./support-engine";
 
-export const PARTNER_ENGINE_VERSION = "0.1.0";
+export const PARTNER_ENGINE_VERSION = "0.1.1";
 
 export type PartnerAlimonyInput = {
   /** Professionally determined monthly need before the recipient's own NBI. */
@@ -26,6 +26,8 @@ export type PartnerAlimonyResult = {
     recipientOwnIncomeUsed: boolean;
     payerCapacityIncludesKgb: boolean;
     overrideApplied: boolean;
+    requestedOverrideMonthly: number;
+    calculatedContributionBeforeOverrideMonthly: number;
   };
 };
 
@@ -39,8 +41,7 @@ const money = (value: number) => Math.round(Math.max(0, value) + 1e-9);
  * The professional supplies the monthly need basis. The engine does not invent
  * a marital-standard figure or silently apply legal exceptions. The recipient's
  * own NBI reduces the calculated need; the payer's capacity is then determined
- * by the shared support-capacity engine. Complex legal circumstances remain
- * explicit review points.
+ * by the shared support-capacity engine.
  */
 export function calculatePartnerAlimony(input: PartnerAlimonyInput): PartnerAlimonyResult {
   const needBasis = nonNegative(input.needBasisMonthly);
@@ -51,8 +52,10 @@ export function calculatePartnerAlimony(input: PartnerAlimonyInput): PartnerAlim
     kgb: undefined,
   });
 
+  const calculatedContributionBeforeOverride = money(Math.min(calculatedNeed, payerCapacity.capacity));
   const override = signed(input.contributionOverrideMonthly);
-  const uncappedContribution = override > 0 ? override : Math.min(calculatedNeed, payerCapacity.capacity);
+  const overrideApplied = override > 0;
+  const uncappedContribution = overrideApplied ? override : calculatedContributionBeforeOverride;
   const contribution = money(Math.min(calculatedNeed, Math.min(payerCapacity.capacity, uncappedContribution)));
 
   const warnings = [
@@ -60,9 +63,10 @@ export function calculatePartnerAlimony(input: PartnerAlimonyInput): PartnerAlim
     "Controleer behoefte/behoeftigheid, limitering, nieuwe partner, woonlasten en overige onderhoudsverplichtingen afzonderlijk.",
     ...payerCapacity.notes,
   ];
-  if (override > 0) warnings.push("Een professionele bijdrage-override is toegepast; de oorspronkelijke berekende bijdrage blijft auditbaar via de invoer.");
+  if (overrideApplied) warnings.push("Een professionele bijdrage-override is toegepast; de oorspronkelijke berekende bijdrage blijft auditbaar via de resultaatgegevens.");
   if (input.payer.kgb) warnings.push("KGB is niet meegenomen in de draagkracht voor partneralimentatie.");
   if (calculatedNeed > payerCapacity.capacity) warnings.push("De berekende behoefte is hoger dan de draagkracht van de onderhoudsplichtige; het resterende deel is onvervuld.");
+  if (overrideApplied && override !== contribution) warnings.push("De professionele override is begrensd door behoefte en/of beschikbare draagkracht.");
 
   return {
     engineVersion: PARTNER_ENGINE_VERSION,
@@ -78,7 +82,9 @@ export function calculatePartnerAlimony(input: PartnerAlimonyInput): PartnerAlim
     audit: {
       recipientOwnIncomeUsed: recipientNbi > 0,
       payerCapacityIncludesKgb: false,
-      overrideApplied: override > 0,
+      overrideApplied,
+      requestedOverrideMonthly: money(override),
+      calculatedContributionBeforeOverrideMonthly: calculatedContributionBeforeOverride,
     },
   };
 }
