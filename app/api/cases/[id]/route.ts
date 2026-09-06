@@ -1,0 +1,3 @@
+import { NextResponse } from "next/server"; import { requireUser } from "@/lib/auth"; import { db } from "@/lib/db";
+export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){const u=await requireUser();const {id}=await params;const c=await db.case.findFirst({where:{id,userId:u.id},include:{client:true,calculations:true}});if(!c)return new NextResponse("Not found",{status:404});return NextResponse.json(c)}
+export async function DELETE(_:Request,{params}:{params:Promise<{id:string}>}){const u=await requireUser();const {id}=await params;const c=await db.case.findFirst({where:{id,userId:u.id}});if(!c)return new NextResponse("Not found",{status:404});await db.case.update({where:{id},data:{status:"ARCHIVED"}});return NextResponse.json({ok:true})}
