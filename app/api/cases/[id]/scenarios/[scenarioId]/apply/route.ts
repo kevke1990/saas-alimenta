@@ -10,6 +10,9 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   if (!existing) return new NextResponse('Dossier niet gevonden.', { status: 404 });
   const scenario = await db.calculationScenario.findFirst({ where: { id: scenarioId, caseId: id, userId: user.id } });
   if (!scenario) return new NextResponse('Scenario niet gevonden.', { status: 404 });
+  if (scenario.baseCalculationId && scenario.baseCalculationId !== existing.calculations[0]?.id) {
+    return new NextResponse('Dit scenario is gebaseerd op een oudere berekening. Maak eerst een nieuw scenario op basis van de actuele berekening.', { status: 409 });
+  }
 
   const scenarioResult = scenario.result as Record<string, any>;
   const engineVersion = String(scenarioResult.child?.engineVersion || scenarioResult.engineVersion || '2026.1');
