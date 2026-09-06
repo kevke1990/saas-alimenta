@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/alimenta_test
-      SESSION_SECRET: ci-session-secret
+      SESSION_SECRET: ci-session-secret-0123456789abcdef
       APP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       PRIVACY_HASH_SALT: ci-privacy-salt
       POSTMARK_INBOUND_SECRET: ci-inbound-secret
