@@ -31,14 +31,13 @@ describe('Partneralimentatie engine 1.1.1', () => {
   });
 });
 
-
 describe('Complexe PAL 1.1.1', () => {
   it('averages multi-year business profit instead of using one exceptional year', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 0, currentPayerNBI: 7000, payerBusinessProfitYears: [12000, 24000, 18000] });
     expect(r.incomeAnalysis.payerBusinessAverageMonthly).toBe(1500);
   });
   it('keeps recipient business income separate from verdiencapaciteit', () => {
-    const r = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 1000, recipientBusinessProfitYears: [12000, 18000], recipientVerdiencapaciteit: 500 });
+    const r = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 1000, currentPayerNBI: 4000, recipientBusinessProfitYears: [12000, 18000], recipientVerdiencapaciteit: 500 });
     expect(r.incomeAnalysis.recipientBusinessAverageMonthly).toBe(1250);
     expect(r.need.earningCapacity).toBe(500);
     expect(r.need.ownIncome).toBe(2250);
