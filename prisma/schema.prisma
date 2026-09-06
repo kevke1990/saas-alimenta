@@ -1,0 +1,531 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PRO
+  PRACTICE
+  ENTERPRISE
+}
+
+enum CaseStatus {
+  DRAFT
+  CALCULATED
+  ARCHIVED
+}
+
+enum ClientStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+}
+
+model User {
+  calendarEvents CalendarEvent[]
+  mailIdentities MailIdentity[]
+  mailLogs MailLog[]
+  customDomains   CustomDomain[]
+  branding        Branding?
+  id                    String         @id @default(cuid())
+  email                 String         @unique
+  passwordHash          String
+  name                  String?
+  companyName           String?
+  isAdmin               Boolean        @default(false)
+  role                  String         @default("PROFESSIONAL")
+  mfaEnabled            Boolean        @default(false)
+  mfaSecretCipher       String?
+  passkeyEnabled        Boolean        @default(false)
+  lockedAt              DateTime?
+  lastLoginAt           DateTime?
+  plan                  Plan           @default(FREE)
+  emailVerifiedAt       DateTime?
+  stripeCustomerId      String?        @unique
+  stripeSubscriptionId  String?        @unique
+  subscriptionStatus    SubscriptionStatus?
+  subscriptionEndsAt    DateTime?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  clients               Client[]
+  cases                 Case[]
+  usageEvents            UsageEvent[]
+  auditLogs              AuditLog[]
+  subscriptions          Subscription[]
+  privacyRequests         PrivacyRequest[]
+  consentRecords          ConsentRecord[]
+  mailRoutes              MailRoute[]
+  tasks                   Task[]
+  aiRuns                  AiRun[]
+  documents               Document[]
+  mailMessages            MailMessage[]
+  incomeFacts             IncomeFact[]
+}
+
+model Client {
+  calendarEvents CalendarEvent[]
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  reference   String?
+  email       String?
+  phone       String?
+  status      ClientStatus @default(ACTIVE)
+  notes       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  cases       Case[]
+  usageEvents UsageEvent[]
+  privacyRequests PrivacyRequest[]
+  consentRecords ConsentRecord[]
+  documents Document[]
+  mailMessages MailMessage[]
+  @@index([userId, status])
+  @@unique([userId, reference])
+}
+
+model Case {
+  id             String      @id @default(cuid())
+  userId         String
+  clientId       String?
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client         Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  name           String
+  status         CaseStatus  @default(DRAFT)
+  reviewStatus   String      @default("INCOMPLETE")
+  reviewedAt     DateTime?
+  approvedAt     DateTime?
+  approvedByUserId String?
+  calculationVersion String  @default("2026.1")
+  normVersionId  String?
+  data           Json
+  metadata       Json?
+  result         Json?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  calculations   Calculation[]
+  overrides      ProfessionalOverride[]
+  scenarios      CalculationScenario[]
+  documents      Document[]
+  mailMessages   MailMessage[]
+  incomeFacts    IncomeFact[]
+  tasks          Task[]
+  @@index([userId, updatedAt])
+  @@index([clientId])
+}
+
+model ProfessionalOverride {
+  id          String   @id @default(cuid())
+  caseId      String
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  userId      String
+  field       String
+  originalValue Json?
+  overrideValue Json
+  reason      String
+  createdAt   DateTime @default(now())
+  @@index([caseId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Calculation {
+  id             String   @id @default(cuid())
+  caseId         String
+  case           Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  engineVersion  String
+  normVersion    String
+  inputSnapshot  Json
+  result         Json
+  createdAt      DateTime @default(now())
+  @@index([caseId, createdAt])
+}
+
+model NormVersion {
+  id          String   @id @default(cuid())
+  version     String   @unique
+  year        Int
+  effectiveFrom DateTime
+  effectiveTo DateTime?
+  source      String
+  data        Json
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model UsageEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  clientId    String?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  type        String
+  units       Int      @default(1)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  @@index([userId, createdAt])
+}
+
+model Subscription {
+  id                    String             @id @default(cuid())
+  userId                String             @unique
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId  String             @unique
+  stripePriceId         String
+  status                SubscriptionStatus
+  currentPeriodEnd     DateTime?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+}
+
+model StripeConfig {
+  id                  String   @id
+  mode                String   @default("test")
+  secretKeyCipher     String?
+  webhookSecretCipher String?
+  webhookEndpoint     String?
+  configuredAt        DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model StripePlan {
+  id                String   @id @default(cuid())
+  key               String   @unique
+  name              String
+  annualAmountCents Int
+  stripeProductId   String?
+  stripePriceId     String?  @unique
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Passkey {
+  id           String   @id @default(cuid())
+  userId       String
+  credentialId String   @unique
+  publicKey    String
+  counter      Int      @default(0)
+  transports   String?
+  name         String?
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+}
+
+model RateLimitBucket {
+  key       String   @id
+  count     Int      @default(0)
+  windowAt  DateTime
+  expiresAt DateTime
+  updatedAt DateTime @updatedAt
+  @@index([expiresAt])
+}
+
+model StripeEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  type        String
+  processedAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
+
+
+model Branding {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  companyName     String
+  logoUrl         String?
+  faviconUrl      String?
+  primaryColor    String   @default("#1d4ed8")
+  secondaryColor  String   @default("#0f172a")
+  accentColor     String   @default("#e0f2fe")
+  textColor       String   @default("#0f172a")
+  backgroundColor String   @default("#ffffff")
+  fontFamily      String   @default("Inter")
+  reportTitle     String?
+  footerText      String?
+  emailFromName   String?
+  emailReplyTo    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+model CustomDomain {
+  id                String   @id @default(cuid())
+  userId            String
+  hostname          String   @unique
+  verificationToken String   @unique
+  status            String   @default("PENDING")
+  verifiedAt        DateTime?
+  sslStatus         String   @default("PENDING")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+
+model CalendarEvent {
+  id            String   @id @default(cuid())
+  userId        String
+  clientId      String?
+  title         String
+  description   String?
+  location      String?
+  startAt       DateTime
+  endAt         DateTime
+  allDay        Boolean  @default(false)
+  status        String   @default("CONFIRMED")
+  attendeeEmail String?
+  attendeeName  String?
+  organizerName String?
+  organizerEmail String?
+  meetingUrl    String?
+  reminderMins  Int      @default(30)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client        Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  @@index([userId, startAt])
+  @@index([clientId, startAt])
+}
+
+model MailIdentity {
+  id              String   @id @default(cuid())
+  userId          String
+  fromName        String
+  fromEmail       String
+  replyTo         String?
+  provider        String   @default("POSTMARK")
+  providerDomain  String?
+  status          String   @default("PENDING")
+  verifiedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, fromEmail])
+}
+
+model MailLog {
+  id          String   @id @default(cuid())
+  userId      String
+  eventType   String
+  toEmail     String
+  subject     String
+  status      String
+  providerId  String?
+  error       String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+}
+
+
+model PrivacyRequest {
+  id                String   @id @default(cuid())
+  userId            String
+  clientId          String?
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client            Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  type              String
+  status            String   @default("PENDING")
+  verificationHash  String?  @unique
+  expiresAt         DateTime?
+  verifiedAt        DateTime?
+  completedAt       DateTime?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  @@index([userId, createdAt])
+  @@index([clientId, createdAt])
+}
+
+model ConsentRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  clientId    String?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  purpose     String
+  status      String
+  version     String
+  source      String?
+  ipHash      String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  @@index([userId, clientId, purpose])
+}
+
+
+
+
+model Document {
+  id              String   @id @default(cuid())
+  userId          String
+  clientId        String?
+  caseId          String?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client         Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  case           Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  incomeFacts    IncomeFact[]
+  name            String
+  mimeType        String
+  sizeBytes       Int
+  sha256          String
+  source          String   @default("UPLOAD")
+  storageCipher   String
+  aiStatus        String   @default("NOT_ANALYZED")
+  aiResult        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  analysisVersion String?
+  aiModel         String?
+  approvedAt      DateTime?
+  approvedByUserId String?
+  approvedResult  Json?
+  @@index([userId, createdAt])
+  @@index([clientId, createdAt])
+  @@index([caseId, createdAt])
+}
+
+model IncomeFact {
+  id             String   @id @default(cuid())
+  userId         String
+  documentId     String
+  caseId         String?
+  parentIndex    Int?
+  key            String
+  label          String
+  valueNumber    Float?
+  valueText      String?
+  unit           String?
+  confidence     Float?
+  page           Int?
+  sourceHint     String?
+  status         String   @default("PROPOSED")
+  approvedAt     DateTime?
+  approvedByUserId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document       Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  case           Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  @@index([userId, caseId, status])
+  @@index([documentId])
+}
+
+model AiRun {
+  id          String   @id @default(cuid())
+  userId      String
+  caseId      String?
+  documentId  String?
+  operation   String
+  model       String
+  status      String
+  inputHash   String?
+  output      Json?
+  error       String?
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, startedAt])
+  @@index([caseId, startedAt])
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  userId      String
+  caseId      String?
+  clientId    String?
+  title       String
+  description String?
+  status      String   @default("OPEN")
+  priority    String   @default("NORMAL")
+  dueAt       DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  case        Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  @@index([userId, status, dueAt])
+  @@index([caseId, status])
+}
+
+model MailMessage {
+  id             String   @id @default(cuid())
+  userId         String
+  clientId       String?
+  caseId         String?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client         Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  case           Case?    @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  direction      String
+  fromEmail      String
+  toEmails       Json
+  ccEmails       Json?
+  subject        String
+  textBody       String?
+  htmlBody       String?
+  providerId     String?
+  status         String
+  inReplyTo      String?
+  createdAt      DateTime @default(now())
+  @@index([userId, createdAt])
+  @@index([clientId, createdAt])
+  @@index([caseId, createdAt])
+}
+
+model MailRoute {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inboundHash    String   @unique
+  inboundAddress String
+  forwardToEmail String
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@index([userId, enabled])
+}
+
+model CalculationScenario {
+  id                 String   @id @default(cuid())
+  caseId             String
+  case               Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  userId             String
+  name               String
+  description        String?
+  baseCalculationId  String?
+  inputSnapshot      Json
+  changes            Json
+  result             Json
+  fingerprint        String
+  createdAt          DateTime @default(now())
+  @@index([caseId, createdAt])
+  @@index([userId, createdAt])
+}
