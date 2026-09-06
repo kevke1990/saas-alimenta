@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { combineAlimonyResults } from "./combined-alimony";
+import type { PartnerAlimonyResult } from "./partner-alimony-engine";
 
-const partner = {
-  engineVersion: "0.1.0",
+const partner: PartnerAlimonyResult = {
+  engineVersion: "0.1.1",
   needBasisMonthly: 1800,
   recipientNbiMonthly: 500,
   calculatedNeedMonthly: 1300,
@@ -16,17 +17,14 @@ const partner = {
     recipientOwnIncomeUsed: true,
     payerCapacityIncludesKgb: false,
     overrideApplied: false,
+    requestedOverrideMonthly: 0,
+    calculatedContributionBeforeOverrideMonthly: 1300,
   },
-} as const;
+};
 
 describe("combineAlimonyResults", () => {
   it("puts child support before partner support", () => {
-    const result = combineAlimonyResults({
-      childSupport: [{ payerIndex: 0, paymentMonthly: 1200 }],
-      partnerSupport: partner,
-      partnerPayerIndex: 0,
-    });
-
+    const result = combineAlimonyResults({ childSupport: [{ payerIndex: 0, paymentMonthly: 1200 }], partnerSupport: partner, partnerPayerIndex: 0 });
     expect(result.childSupportMonthly).toBe(1200);
     expect(result.partnerCapacityBeforeChildSupportMonthly).toBe(1600);
     expect(result.partnerCapacityAfterChildSupportMonthly).toBe(400);
@@ -37,25 +35,14 @@ describe("combineAlimonyResults", () => {
   });
 
   it("keeps the full partner contribution when capacity remains sufficient", () => {
-    const result = combineAlimonyResults({
-      childSupport: [{ payerIndex: 0, paymentMonthly: 200 }],
-      partnerSupport: partner,
-      partnerPayerIndex: 0,
-    });
-
+    const result = combineAlimonyResults({ childSupport: [{ payerIndex: 0, paymentMonthly: 200 }], partnerSupport: partner, partnerPayerIndex: 0 });
     expect(result.partnerSupportMonthly).toBe(1300);
     expect(result.totalMonthly).toBe(1500);
     expect(result.partnerSupportLimitedByChildPriority).toBe(false);
   });
 
   it("supports a child-only result", () => {
-    const result = combineAlimonyResults({
-      childSupport: [
-        { payerIndex: 0, paymentMonthly: 450 },
-        { payerIndex: 0, paymentMonthly: 150 },
-      ],
-    });
-
+    const result = combineAlimonyResults({ childSupport: [{ payerIndex: 0, paymentMonthly: 450 }, { payerIndex: 0, paymentMonthly: 150 }] });
     expect(result.childSupportMonthly).toBe(600);
     expect(result.partnerSupportMonthly).toBe(0);
     expect(result.totalMonthly).toBe(600);
