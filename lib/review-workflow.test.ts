@@ -3,9 +3,17 @@ import { isAllowedReviewTransition, isExplicitReopen, isReviewStatus } from './r
 
 describe('review workflow', () => {
   it('accepts the supported professional workflow', () => {
-    expect(isAllowedReviewTransition('INCOMPLETE', 'REVIEWED')).toBe(true);
+    expect(isAllowedReviewTransition('INCOMPLETE', 'READY_FOR_REVIEW')).toBe(true);
+    expect(isAllowedReviewTransition('READY_FOR_REVIEW', 'REVIEWED')).toBe(true);
     expect(isAllowedReviewTransition('REVIEWED', 'APPROVED')).toBe(true);
     expect(isAllowedReviewTransition('APPROVED', 'FINAL')).toBe(true);
+  });
+
+  it('does not allow skipping professional review stages', () => {
+    expect(isAllowedReviewTransition('INCOMPLETE', 'APPROVED')).toBe(false);
+    expect(isAllowedReviewTransition('READY_FOR_REVIEW', 'APPROVED')).toBe(false);
+    expect(isAllowedReviewTransition('INCOMPLETE', 'FINAL')).toBe(false);
+    expect(isAllowedReviewTransition('REVIEWED', 'FINAL')).toBe(false);
   });
 
   it('only permits APPROVED/FINAL to be reopened explicitly', () => {
