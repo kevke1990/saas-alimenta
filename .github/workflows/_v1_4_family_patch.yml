@@ -1,0 +1,35 @@
+name: v1.4 family calculation patch
+on:
+  push:
+    paths:
+      - .github/workflows/_v1_4_family_patch_trigger
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Apply family model
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('prisma/schema.prisma'); s=p.read_text()
+          old='  email           String?\n  phone           String?\n  status          ClientStatus     @default(ACTIVE)'
+          new='  email           String?\n  phone           String?\n  personAName     String?\n  personAEmail    String?\n  personAPhone    String?\n  personBName     String?\n  personBEmail    String?\n  personBPhone    String?\n  status          ClientStatus     @default(ACTIVE)'
+          if old not in s: raise SystemExit('Client fields anchor not found')
+          p.write_text(s.replace(old,new,1))
+          d=Path('prisma/migrations/20260906152000_family_members'); d.mkdir(parents=True,exist_ok=True)
+          (d/'migration.sql').write_text('ALTER TABLE "Client" ADD COLUMN "personAName" TEXT;\nALTER TABLE "Client" ADD COLUMN "personAEmail" TEXT;\nALTER TABLE "Client" ADD COLUMN "personAPhone" TEXT;\nALTER TABLE "Client" ADD COLUMN "personBName" TEXT;\nALTER TABLE "Client" ADD COLUMN "personBEmail" TEXT;\nALTER TABLE "Client" ADD COLUMN "personBPhone" TEXT;\n')
+          p=Path('lib/validation.ts'); s=p.read_text(); anchor='  notes: z.string().max(5000).optional()\n});'
+          repl='  notes: z.string().max(5000).optional(),\n  personAName: z.string().min(2).max(150), personAEmail: z.string().email().optional().or(z.literal("")), personAPhone: z.string().max(50).optional(),\n  personBName: z.string().min(2).max(150), personBEmail: z.string().email().optional().or(z.literal("")), personBPhone: z.string().max(50).optional()\n});'
+          if anchor not in s: raise SystemExit('validation anchor not found')
+          p.write_text(s.replace(anchor,repl,1))
+          Path('.github/workflows/_v1_4_family_patch_trigger').write_text('apply')
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add prisma/schema.prisma prisma/migrations/20260906152000_family_members lib/validation.ts .github/workflows/_v1_4_family_patch_trigger
+          git commit -m "feat: model clients as two-person families"
+          git push
