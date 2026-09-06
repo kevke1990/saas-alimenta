@@ -1,138 +1,270 @@
+# Alimenta Pro
+
 > **v1.3.1-rc1 — Demo Release Candidate**
-> Gebruik voor de eerste VPS-demo uitsluitend fictieve gegevens.
+>
+> Professionele alimentatie-werkplek: van document naar onderbouwde alimentatieberekening in minuten.
 
-# Alimenta Pro v1.3.1
+Alimenta Pro is een professionele SaaS-werkplek voor alimentatieprofessionals. De applicatie combineert dossierbeheer, document intake, AI-ondersteunde extractie, inkomensanalyse, kinderalimentatie, partneralimentatie, scenario's, professionele overrides, review/approval, rapportage, communicatie en privacy-workflows.
 
-Professionele alimentatie-werkplek voor dossierbeheer, berekeningen, inkomensanalyse, document intake, AVG-workflows en e-mail.
+**Demo:** gebruik uitsluitend fictieve persoonsgegevens.
 
-## Nieuw in v0.9.9
+## Architectuur
 
-- **Mobile-first document intake**: telefoon/tablet camera + bestand kiezen.
-- **Document Intelligence**: versleutelde opslag, SHA-256-integriteit en Gemini documentanalyse.
-- **AI-assisted income extraction**: loonstrook/jaaropgave/uitkeringsspecificatie naar voorstelvelden met confidence en warnings.
-- **E-mail vanuit de applicatie** via Postmark.
-- **Postmark Sender Signature onboarding**.
-- **Inbound e-mail routes** met automatische forwarding naar een ingestelde mailbox.
-- **AVG-export v2** inclusief documentinhoud en mailberichten.
-- **Vollediger operationeel wissen** van cliëntgebonden documenten, mails, agenda, usage, consent en privacyrequests.
-- PWA/mobile metadata en responsive scan-UI.
-
-## Google AI Studio
-
-Stel in productie in:
-
-```env
-GOOGLE_AI_API_KEY=...
-GOOGLE_AI_MODEL=gemini-2.5-flash
-AI_PROCESSING_DISABLED=false
+```text
+Dossier
+  ↓
+Documenten → AI extractie/signalen → Professional approval
+                                      ↓
+                              Approved Data
+                                      ↓
+                              Income Engine
+                              ↙          ↘
+                    Kinderalimentatie   Partneralimentatie
+                              ↘          ↙
+                              Scenario's
+                                  ↓
+                         Review → Rapport
+                                  ↓
+                            Audit trail
 ```
 
-AI is een extractielaag. De professional controleert en accordeert de resultaten voordat gegevens in een berekening terechtkomen.
+AI is nadrukkelijk een extractie- en signaleringslaag. De professional controleert en accordeert de gegevens voordat deze in een deterministische berekening terechtkomen.
 
-## Documenten
+## Stack
 
-Ondersteund: PDF, JPEG, PNG en WEBP, maximaal 15 MB per bestand. Documenten worden in v0.9.9 versleuteld in PostgreSQL opgeslagen. Voor grotere productievolumes is object storage met lifecycle policies aanbevolen.
+- Next.js 16.3
+- React 19.2
+- TypeScript 5.9
+- Prisma 6
+- PostgreSQL
+- Docker / Docker Compose
+- Nginx
+- Debian 13 deployment automation
+- Vitest
+- Google Gemini document intelligence (optioneel)
+- Postmark e-mail (optioneel)
+- Stripe billing (optioneel)
 
-## Mobiel scannen
+## Belangrijkste functionaliteit
 
-Open `/scan` op een telefoon/tablet. Gebruik bij voorkeur HTTPS. De browsercamera gebruikt `navigator.mediaDevices.getUserMedia()`; als camera niet beschikbaar is, kan via de mobiele bestandskiezer een foto of PDF worden gekozen.
+- Cliënten en dossiers
+- Mobile-first document upload/scan (`/scan`)
+- Versleutelde documentopslag en SHA-256-integriteit
+- AI-document- en inkomensextractie met confidence/source hints
+- Menselijke accordering van AI-afgeleide feiten
+- Income Engine met auditable inkomensopbouw
+- Kinderalimentatie 2026-engine
+- Partneralimentatie 2026-engine
+- Scenario Engine met immutable snapshots en fingerprints
+- Professionele overrides
+- Case Review workflow: `INCOMPLETE → READY_FOR_REVIEW → REVIEWED → APPROVED → FINAL`
+- Rapportage
+- Audit logging
+- AVG export/privacy workflows
+- TOTP MFA
+- RBAC helpers
+- Database-backed authentication rate limiting
+- Dagelijkse retention job
+- Demo seed
+- PostgreSQL backup/restore
+- Geautomatiseerde Debian 13 deployment
+
+## Status v1.3.1-rc1
+
+Deze release is bedoeld voor een gecontroleerde VPS-demo en verdere ontwikkeling. Het is **geen juridisch gecertificeerd product** en nog geen claim van een onafhankelijke security-audit.
+
+### Bekende beperkingen
+
+- Passkeys hebben het credential-datamodel, maar de volledige WebAuthn browser ceremony is nog niet onderdeel van deze RC.
+- RBAC bevat server-side role helpers; volledige resource-level multi-tenant autorisatie moet vóór productie verder worden gehard.
+- Retention is technisch geautomatiseerd via de deployment/cron-laag; het concrete bewaarbeleid moet per organisatie/dossier worden vastgesteld.
+- Partneralimentatie bevat professionele signaleringen en een deterministische rekenslag, maar complexe juridische uitzonderingen blijven mensenwerk.
+- Een volledige `npm test`/`next build` moet in een omgeving met geïnstalleerde dependencies worden uitgevoerd voordat deze RC productie wordt genoemd.
+
+## Lokaal ontwikkelen
+
+Vereisten: Node.js 22 LTS, npm en Docker.
+
+```bash
+git clone https://github.com/kevke1990/saas-alimenta.git
+cd saas-alimenta
+npm ci
+cp .env.example .env
+```
+
+Start PostgreSQL:
+
+```bash
+docker compose up -d postgres
+```
+
+Stel minimaal `DATABASE_URL` in en voer daarna uit:
+
+```bash
+npx prisma migrate deploy
+npx prisma generate
+npm run db:seed
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+### Fictieve demo-data
+
+```bash
+npm run db:seed:demo
+```
+
+Gebruik nooit echte cliëntgegevens in de demo-seed.
+
+## VPS-demo — Debian 13
+
+Aanbevolen startserver:
+
+- 2 vCPU
+- 4 GB RAM
+- 100 GB NVMe
+- Debian 13
+- publiek IPv4-adres
+
+Clone de repository op de VPS:
+
+```bash
+git clone https://github.com/kevke1990/saas-alimenta.git /opt/alimenta
+cd /opt/alimenta
+```
+
+Controleer eerst:
+
+```bash
+sudo bash deploy/preflight-demo.sh
+```
+
+Automatische installatie:
+
+```bash
+sudo bash deploy/installer.sh
+```
+
+De installer verzorgt onder meer Docker, PostgreSQL, Prisma migrations, secrets, firewall, fail2ban, Nginx, HTTPS, healthcheck en optionele demo-data.
+
+Controleer na installatie:
+
+```bash
+sudo alimenta doctor
+sudo alimenta status
+sudo alimenta logs
+```
+
+### Beheer
+
+```bash
+sudo alimenta backup
+sudo alimenta update
+sudo alimenta restore /opt/alimenta/backups/alimenta-postgres-YYYYMMDDTHHMMSSZ.sql.gz
+```
+
+Restore vereist expliciete bevestiging. Controleer backups altijd voordat je ze terugzet.
+
+## Docker
+
+Voor productie:
+
+```bash
+docker compose -f docker-compose.prod.yml config
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+PostgreSQL wordt niet publiek gepubliceerd. De Next.js-app wordt lokaal gebonden en via Nginx ontsloten.
+
+Gebruik voor productie **versioned Prisma migrations** (`npx prisma migrate deploy`). Gebruik `prisma db push` niet als normale productie-releaseprocedure.
+
+## Omgevingsvariabelen
+
+Gebruik `.env.example` als uitgangspunt. Secrets die nooit in Git mogen komen:
+
+- `DATABASE_URL`
+- `POSTGRES_PASSWORD`
+- `SESSION_SECRET`
+- `APP_ENCRYPTION_KEY`
+- `PRIVACY_HASH_SALT`
+- `ADMIN_PASSWORD`
+- `POSTMARK_INBOUND_SECRET`
+- API- en webhook-sleutels
+
+Optionele integraties:
+
+- Google Gemini: `GOOGLE_AI_API_KEY`
+- Postmark: `POSTMARK_SERVER_TOKEN`, `POSTMARK_ACCOUNT_TOKEN`
+- Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+- Cloudflare custom domains: `CLOUDFLARE_*`
+
+## AI
+
+AI wordt gebruikt voor document-/inkomensextractie en signalering. De applicatie moet AI-output valideren en een professional moet de voorgestelde gegevens goedkeuren voordat ze onderdeel worden van een berekening.
+
+Configureer AI alleen wanneer de privacygrondslag, verwerkersafspraken en tenantpolicy dit toestaan.
 
 ## E-mail
 
-### Uitgaand
-
-Vereist:
-
-```env
-POSTMARK_SERVER_TOKEN=...
-POSTMARK_ACCOUNT_TOKEN=...
-POSTMARK_OUTBOUND_STREAM=outbound
-```
-
-Maak in `/mail` een afzender aan. Postmark stuurt een verificatiebericht. Een geverifieerde Sender Signature is vereist voordat de applicatie namens dat adres kan verzenden.
-
-### Inbound + forwarding
-
-Vereist:
-
-```env
-POSTMARK_INBOUND_SECRET=een-lange-willekeurige-geheime-waarde
-INBOUND_DOMAIN=inbound.postmarkapp.com
-```
-
-Maak in `/mail` een inbound route aan. De applicatie geeft een uniek inboundadres zoals `alimenta+<hash>@inbound.postmarkapp.com`. Configureer in Postmark Inbound Domain Forwarding of een eigen forward naar dit adres.
-
-Webhook:
+De mailmodule ondersteunt Postmark Sender Signatures, outbound mail, inbound routes en forwarding. Voor inbound is een webhook beschikbaar op:
 
 ```text
 https://<app-domain>/api/mail/inbound?secret=<POSTMARK_INBOUND_SECRET>
 ```
 
-De webhook verwerkt de mail, registreert de inbound message en stuurt deze door naar de ingestelde mailbox. Bijlagen worden mee doorgestuurd.
+Gebruik in productie SPF, DKIM, DMARC en passende abuse/spam-controls.
 
-Voor productie is een eigen inbound subdomein zoals `inbox.jouwdomein.nl` aanbevolen, plus SPF/DKIM/DMARC en aanvullende abuse/spam-controls.
+## Privacy / AVG
 
-## AVG / privacy
+De applicatie bevat technische ondersteuning voor inzage, dataportabiliteit, wissing, consent en audit. Een wissing is niet automatisch altijd toegestaan: wettelijke bewaarplichten, bewijsbelangen en andere uitzonderingen moeten professioneel worden beoordeeld.
 
-De applicatie ondersteunt technische workflows voor inzage, dataportabiliteit en wissing. Een export bevat cliëntgegevens, dossiers, berekeningen, agenda-events, usage events, privacyrequests, consentrecords, documentmetadata + documentinhoud en mailberichten.
+Zie de actuele privacy- en hardeningdocumentatie onder `docs/`.
 
-**Let op:** een recht op wissing is niet absoluut. Wettelijke bewaarplichten, bewijsbelangen en andere uitzonderingen moeten per praktijk en dossier worden beoordeeld. De software mag nooit automatisch alle gegevens wissen zonder dat deze uitzonderingen zijn beoordeeld.
+## Testen
 
-## Deploy
+```bash
+npm ci
+npx prisma generate
+npm test
+npm run build
+```
 
-1. Vul `.env.example` aan in je productie `.env`.
-2. Zet `APP_ENCRYPTION_KEY`, `SESSION_SECRET`, `PRIVACY_HASH_SALT` en `POSTMARK_INBOUND_SECRET` op lange unieke secrets.
-3. Start PostgreSQL/app via Docker Compose.
-4. Voer `npx prisma db push` uit voor deze ontwikkelrelease.
-5. Configureer HTTPS/Nginx.
-6. Configureer Postmark outbound sender/domain.
-7. Configureer Postmark inbound webhook + forwarding.
-8. Configureer Google AI alleen als AI-verwerking juridisch en contractueel is toegestaan.
+Voor een VPS-demo is daarnaast de preflight- en healthcheckroute beschikbaar:
 
-## Belangrijke v1.0 verbeterpunten
+```bash
+sudo bash deploy/preflight-demo.sh
+sudo alimenta doctor
+```
 
-- Prisma migrations en gecontroleerde schema releases.
-- MFA/passkeys + RBAC.
-- echte object storage + lifecycle/retention.
-- server-side PDF.
-- uitgebreide audit/event log zonder inhoudelijke persoonsgegevens.
-- retention engine.
-- datalekregister.
-- RoPA/verwerkingsregister.
-- DPIA workflow.
-- DPA/subprocessor register.
-- identity verification voor cliëntportalen.
-- e-mailthreads + automatische dossierkoppeling.
-- AI field approval workflow met bronpagina/bronfragment.
-- calculator regression suite met officiële testgevallen.
-- onafhankelijke juridische review van de volledige Tremanormen-implementatie.
+## Development workflow
 
-## v1.1.2 Partneralimentatie
+Werk met branches en pull requests:
 
-Partneralimentatie is beschikbaar per dossier via **Partneralimentatie**. De module gebruikt dezelfde dossier- en snapshotarchitectuur als kinderalimentatie en verwerkt de 2026-hoofdlijnen: hofnorm, behoeftigheid, partnerdraagkracht, prioriteit van kinderalimentatie, inkomensvergelijking en brutering. Zie `docs/V1.1-PARTNERALIMENTATIE.md`.
+```bash
+git checkout -b feature/<naam>
+# wijzigingen
+npm test
+npm run build
+git add .
+git commit -m "feat: ..."
+git push -u origin feature/<naam>
+```
 
+CI staat onder `.github/workflows/ci.yml`.
 
-## v1.1.2 Complexe partneralimentatie
-De PAL-engine ondersteunt meerjarige ondernemerswinst, variabel inkomen, dividend/vermogen, eigen woning/fiscale correcties, pensioen/lijfrentevoorzieningen en meerdere onderhoudsverplichtingen. Elke PAL-berekening krijgt een SHA-256 fingerprint.
+## Documentatie
 
+- `CHANGELOG.md` — centrale historische changelog
+- `docs/ARCHITECTURE.md` — actuele architectuur
+- `docs/DEMO-RC-v1.3.1.md` — demo checklist
+- `docs/V1.3.1-DEPLOYMENT-AUTOMATION.md` — deployment automation
+- `docs/V1.3.1-SECURITY-COMPLETION.md` — security completion
+- `docs/V1.3-HARDENING.md` — v1.3 hardening
+- `docs/V1.1-PARTNERALIMENTATIE.md` — PAL-module
+- `docs/V1.0-KINDERALIMENTATIE-PRODUCTION.md` — KA-engine
+- `deploy/custom-domains.md` — custom domains
 
-## Hardening v1.1.2
+## Juridische scope
 
-Deze release bevat officiële 2026 rekenkundige ankercontroles, numeriek stabiele afronding, inputvalidatie en regressietests voor complexe partneralimentatie. Zie `CHANGELOG-v1.1.2.md` en `RELEASE-v1.1.2.md`.
-
-
-## v1.3 Hardening & Production Readiness
-
-Professionele overrides, reviewworkflow, audit trail, authentication rate limiting, security-identiteitsfundament en versioned Prisma migration. Zie `docs/V1.3-HARDENING.md`.
-
-## v1.2 Scenario & Wijzigingen
-
-Scenario's zijn immutable snapshots waarmee een professional wijzigingen in inkomen of leeftijd kan testen zonder het hoofddossier te muteren. Indien partneralimentatie-input is opgeslagen, wordt PAL opnieuw berekend met de scenario-kinderalimentatie als prioritaire kinderalimentatie.
-
-
-## v1.3.1 security completion
-- TOTP MFA operationeel met versleutelde secrets en MFA bij login.
-- Database-backed rate limiting voor login/registratie.
-- Passkey-datamodel voorbereid voor WebAuthn registration.
-- Dagelijkse AVG-retention job voor verlopen data en rate-limit buckets.
-- RBAC-rollen beschikbaar via `requireRole()`.
+Alimenta Pro is een professioneel reken- en dossiervoeringshulpmiddel. De geïmplementeerde rekenlogica is gebaseerd op de geïmplementeerde uitgangspunten uit het Rapport Alimentatienormen 2026. De aanbevelingen van de Expertgroep Alimentatienormen zijn geen wet; individuele omstandigheden kunnen afwijking rechtvaardigen. De software vervangt geen juridische beoordeling of rechterlijk oordeel.
