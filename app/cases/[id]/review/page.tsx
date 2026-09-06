@@ -16,9 +16,13 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   const review = reviewCase({ data: c.data, documents: c.documents, calculations: c.calculations, result: c.result });
   const logs = await db.auditLog.findMany({ where: { userId: u.id, action: { in: ["CASE_REVIEW_COMMENTED", "CASE_REVIEW_STARTED", "CASE_REVIEWED", "CASE_APPROVED", "CASE_FINAL", "CASE_REOPENED"] } }, orderBy: { createdAt: "desc" }, take: 100 });
   const history = logs.filter(x => String((x.metadata as any)?.caseId || "") === id);
+  const canReview = c.reviewStatus === "INCOMPLETE" || c.reviewStatus === "READY_FOR_REVIEW";
+  const canApprove = c.reviewStatus === "REVIEWED";
+  const canFinalise = c.reviewStatus === "APPROVED";
+  const canReopen = c.reviewStatus === "APPROVED" || c.reviewStatus === "FINAL";
 
   return <AppShell>
-    <div className="page-head"><div><div className="eyebrow">Professionele review · v1.0</div><h1 className="page-title">{c.name}</h1><p className="page-subtitle">Automatische signalering, professionele opmerkingen en gecontroleerde goedkeuring.</p></div><div className="actions"><Link className="btn secondary" href={`/cases/${id}`}>← Dossier</Link><Link className="btn secondary" href={`/cases/${id}/history`}>Berekeningshistorie</Link></div></div>
+    <div className="page-head"><div><div className="eyebrow">Professionele review · v1.1</div><h1 className="page-title">{c.name}</h1><p className="page-subtitle">Automatische signalering, professionele opmerkingen en gecontroleerde goedkeuring.</p></div><div className="actions"><Link className="btn secondary" href={`/cases/${id}`}>← Dossier</Link><Link className="btn secondary" href={`/cases/${id}/workflow`}>Workflow</Link><Link className="btn secondary" href={`/cases/${id}/history`}>Berekeningshistorie</Link></div></div>
     <div className="result-hero">
       <div className="stat-card result-main"><div className="stat-label">CASE REVIEW SCORE</div><div className="stat-value">{review.score}%</div><div className="stat-meta">{review.readyForProfessionalReview ? "Geen kritieke blokkade" : "Kritieke controlepunten aanwezig"}</div></div>
       <div className="stat-card"><div className="stat-label">KRITIEK</div><div className="stat-value">{review.criticalCount}</div><div className="stat-meta">Moet eerst worden opgelost</div></div>
@@ -31,13 +35,13 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     </section>
 
     <div className="two-col topgap">
-      <section className="panel"><div className="panel-head"><div><h2 className="panel-title">Professionele workflow</h2><div className="panel-sub">Goedkeuring wordt technisch geblokkeerd zolang kritieke reviewpunten openstaan.</div></div><span className={`status ${c.reviewStatus === "APPROVED" || c.reviewStatus === "FINAL" ? "green" : c.reviewStatus === "REVIEWED" ? "amber" : "gray"}`}>{c.reviewStatus}</span></div>
+      <section className="panel"><div className="panel-head"><div><h2 className="panel-title">Professionele workflow</h2><div className="panel-sub">De status volgt nu strikt: INCOMPLETE → READY_FOR_REVIEW → REVIEWED → APPROVED → FINAL.</div></div><span className={`status ${c.reviewStatus === "APPROVED" || c.reviewStatus === "FINAL" ? "green" : c.reviewStatus === "REVIEWED" || c.reviewStatus === "READY_FOR_REVIEW" ? "amber" : "gray"}`}>{c.reviewStatus}</span></div>
         <div className={review.readyForProfessionalReview ? "notice success" : "notice error"}>{review.readyForProfessionalReview ? "Het dossier is klaar voor professionele beoordeling." : `Los eerst ${review.criticalCount} kritisch(e) controlepunt(en) op.`}</div>
         <div className="actions topgap">
-          {review.readyForProfessionalReview && c.reviewStatus !== "APPROVED" && c.reviewStatus !== "FINAL" && <form action={`/api/cases/${id}/approval`} method="post"><input type="hidden" name="status" value="REVIEWED"/><button className="btn secondary" type="submit">Markeer als reviewed</button></form>}
-          {review.readyForProfessionalReview && c.reviewStatus !== "APPROVED" && c.reviewStatus !== "FINAL" && <form action={`/api/cases/${id}/approval`} method="post"><input type="hidden" name="status" value="APPROVED"/><button className="btn" type="submit">✓ Goedkeuren</button></form>}
-          {c.reviewStatus === "APPROVED" && <form action={`/api/cases/${id}/approval`} method="post"><input type="hidden" name="status" value="FINAL"/><button className="btn" type="submit">Maak FINAL</button></form>}
-          {(c.reviewStatus === "APPROVED" || c.reviewStatus === "FINAL") && <form action={`/api/cases/${id}/approval`} method="post"><input type="hidden" name="status" value="INCOMPLETE"/><button className="btn secondary" type="submit">Heropen review</button></form>}
+          {review.readyForProfessionalReview && canReview && <form action={`/api/cases/${id}/approval`} method="post"><input type="hidden" name="status" value="REVIEWED"/><button className="btn secondary" type="submit">Markeer als reviewed</button></form>}
+          {review.readyForProfessionalReview && canApprove && <form action={`/api/cases/${id}/approval`} method="post"><input type="hidden" name="status" value="APPROVED"/><button className="btn" type="submit">✓ Goedkeuren</button></form>}
+          {canFinalise && <form action={`/api/cases/${id}/approval`} method="post"><input type="hidden" name="status" value="FINAL"/><button className="btn" type="submit">Maak FINAL</button></form>}
+          {canReopen && <form action={`/api/cases/${id}/approval`} method="post"><input type="hidden" name="status" value="INCOMPLETE"/><button className="btn secondary" type="submit">Heropen review</button></form>}
           <Link className="btn secondary" href={`/cases/${id}/overrides`}>Professionele overrides</Link>
         </div>
       </section>
