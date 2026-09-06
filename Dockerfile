@@ -5,6 +5,9 @@ RUN npm install --omit=dev
 
 FROM node:22-alpine AS builder
 WORKDIR /app
+# Auth modules validate SESSION_SECRET during Next.js build-time route collection.
+# This value exists only in the builder stage and is never used at runtime.
+ENV SESSION_SECRET="build-only-session-secret-not-used-at-runtime-32chars"
 COPY package*.json ./
 RUN npm install
 COPY . .
