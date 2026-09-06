@@ -1,6 +1,6 @@
 import type { PartnerAlimonyResult } from "./partner-alimony-engine";
 
-export const COMBINED_ALIMONY_ENGINE_VERSION = "0.1.0";
+export const COMBINED_ALIMONY_ENGINE_VERSION = "0.1.1";
 
 type ChildSupportSummary = {
   payerIndex: number;
@@ -41,8 +41,14 @@ const money = (value: unknown) => Math.round(Math.max(0, Number.isFinite(Number(
 export function combineAlimonyResults(input: CombinedAlimonyInput): CombinedAlimonyResult {
   const childSupportMonthly = money(input.childSupport.reduce((sum, item) => sum + money(item.paymentMonthly), 0));
   const partner = input.partnerSupport ?? null;
+  const partnerPayerIndex = Number.isInteger(input.partnerPayerIndex) ? input.partnerPayerIndex as number : 0;
+  const childSupportForPartnerPayerMonthly = money(
+    input.childSupport
+      .filter(item => item.payerIndex === partnerPayerIndex)
+      .reduce((sum, item) => sum + money(item.paymentMonthly), 0),
+  );
   const before = money(partner?.payerCapacityMonthly ?? 0);
-  const after = money(Math.max(0, before - childSupportMonthly));
+  const after = money(Math.max(0, before - childSupportForPartnerPayerMonthly));
 
   let partnerSupportMonthly = 0;
   let limited = false;
@@ -54,7 +60,7 @@ export function combineAlimonyResults(input: CombinedAlimonyInput): CombinedAlim
     limited = partnerSupportMonthly < requested;
     warnings.push("Kinderalimentatie is als voorliggende onderhoudsverplichting vóór partneralimentatie toegepast.");
     if (limited) {
-      warnings.push("De beschikbare draagkracht voor partneralimentatie is verminderd met de vastgestelde kinderalimentatiebijdrage.");
+      warnings.push("De beschikbare draagkracht voor partneralimentatie is verminderd met de kinderalimentatiebijdrage van dezelfde onderhoudsplichtige.");
     }
     warnings.push(...partner.warnings);
   }
