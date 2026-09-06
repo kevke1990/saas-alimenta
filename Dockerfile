@@ -1,13 +1,12 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --omit=dev --ignore-scripts
+RUN npm install --omit=dev
 
 FROM node:22-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --ignore-scripts
-COPY --from=deps /app/node_modules ./node_modules
+RUN npm install
 COPY . .
 RUN npx prisma generate
 RUN npm run build
