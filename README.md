@@ -79,7 +79,7 @@ Deze release is bedoeld voor een gecontroleerde VPS-demo en verdere ontwikkeling
 - RBAC bevat server-side role helpers; volledige resource-level multi-tenant autorisatie moet vóór productie verder worden gehard.
 - Retention is technisch geautomatiseerd via de deployment/cron-laag; het concrete bewaarbeleid moet per organisatie/dossier worden vastgesteld.
 - Partneralimentatie bevat professionele signaleringen en een deterministische rekenslag, maar complexe juridische uitzonderingen blijven mensenwerk.
-- Een volledige `npm test`/`next build` moet in een omgeving met geïnstalleerde dependencies worden uitgevoerd voordat deze RC productie wordt genoemd.
+- De repository gebruikt op dit moment nog geen gecommitte `package-lock.json`; totdat die lockfile is toegevoegd gebruikt CI bewust `npm install` in plaats van `npm ci`.
 
 ## Lokaal ontwikkelen
 
@@ -88,9 +88,11 @@ Vereisten: Node.js 22 LTS, npm en Docker.
 ```bash
 git clone https://github.com/kevke1990/saas-alimenta.git
 cd saas-alimenta
-npm ci
+npm install
 cp .env.example .env
 ```
+
+> **Reproduceerbare builds:** voeg vóór een productie-release een gecommitte `package-lock.json` toe en schakel daarna lokaal en in CI over naar `npm ci`.
 
 Start PostgreSQL:
 
@@ -130,8 +132,8 @@ Aanbevolen startserver:
 Clone de repository op de VPS:
 
 ```bash
-git clone https://github.com/kevke1990/saas-alimenta.git /opt/alimenta
-cd /opt/alimenta
+git clone https://github.com/kevke1990/saas-alimenta.git /opt/saas-alimenta
+cd /opt/saas-alimenta
 ```
 
 Controleer eerst:
@@ -161,7 +163,7 @@ sudo alimenta logs
 ```bash
 sudo alimenta backup
 sudo alimenta update
-sudo alimenta restore /opt/alimenta/backups/alimenta-postgres-YYYYMMDDTHHMMSSZ.sql.gz
+sudo alimenta restore /opt/saas-alimenta/backups/alimenta-postgres-YYYYMMDDTHHMMSSZ.sql.gz
 ```
 
 Restore vereist expliciete bevestiging. Controleer backups altijd voordat je ze terugzet.
@@ -175,7 +177,7 @@ docker compose -f docker-compose.prod.yml config
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-PostgreSQL wordt niet publiek gepubliceerd. De Next.js-app wordt lokaal gebonden en via Nginx ontsloten.
+PostgreSQL wordt niet publiek gepubliceerd. De Next.js-app wordt standaard lokaal gebonden en via Nginx ontsloten. Voor een directe test zonder Nginx kan `ALIMENTA_BIND_IP` in `.env.production` worden ingesteld op het gewenste interface-adres.
 
 Gebruik voor productie **versioned Prisma migrations** (`npx prisma migrate deploy`). Gebruik `prisma db push` niet als normale productie-releaseprocedure.
 
@@ -191,6 +193,8 @@ Gebruik `.env.example` als uitgangspunt. Secrets die nooit in Git mogen komen:
 - `ADMIN_PASSWORD`
 - `POSTMARK_INBOUND_SECRET`
 - API- en webhook-sleutels
+
+`.env.production` is expliciet uitgesloten van Git. Commit nooit productie-secrets.
 
 Optionele integraties:
 
@@ -218,53 +222,3 @@ Gebruik in productie SPF, DKIM, DMARC en passende abuse/spam-controls.
 ## Privacy / AVG
 
 De applicatie bevat technische ondersteuning voor inzage, dataportabiliteit, wissing, consent en audit. Een wissing is niet automatisch altijd toegestaan: wettelijke bewaarplichten, bewijsbelangen en andere uitzonderingen moeten professioneel worden beoordeeld.
-
-Zie de actuele privacy- en hardeningdocumentatie onder `docs/`.
-
-## Testen
-
-```bash
-npm ci
-npx prisma generate
-npm test
-npm run build
-```
-
-Voor een VPS-demo is daarnaast de preflight- en healthcheckroute beschikbaar:
-
-```bash
-sudo bash deploy/preflight-demo.sh
-sudo alimenta doctor
-```
-
-## Development workflow
-
-Werk met branches en pull requests:
-
-```bash
-git checkout -b feature/<naam>
-# wijzigingen
-npm test
-npm run build
-git add .
-git commit -m "feat: ..."
-git push -u origin feature/<naam>
-```
-
-CI staat onder `.github/workflows/ci.yml`.
-
-## Documentatie
-
-- `CHANGELOG.md` — centrale historische changelog
-- `docs/ARCHITECTURE.md` — actuele architectuur
-- `docs/DEMO-RC-v1.3.1.md` — demo checklist
-- `docs/V1.3.1-DEPLOYMENT-AUTOMATION.md` — deployment automation
-- `docs/V1.3.1-SECURITY-COMPLETION.md` — security completion
-- `docs/V1.3-HARDENING.md` — v1.3 hardening
-- `docs/V1.1-PARTNERALIMENTATIE.md` — PAL-module
-- `docs/V1.0-KINDERALIMENTATIE-PRODUCTION.md` — KA-engine
-- `deploy/custom-domains.md` — custom domains
-
-## Juridische scope
-
-Alimenta Pro is een professioneel reken- en dossiervoeringshulpmiddel. De geïmplementeerde rekenlogica is gebaseerd op de geïmplementeerde uitgangspunten uit het Rapport Alimentatienormen 2026. De aanbevelingen van de Expertgroep Alimentatienormen zijn geen wet; individuele omstandigheden kunnen afwijking rechtvaardigen. De software vervangt geen juridische beoordeling of rechterlijk oordeel.
