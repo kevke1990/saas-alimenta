@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
+import type { Route } from "next";
 import { usePathname } from "next/navigation";
 
-const nav=[
+const nav: Array<{href: Route; label: string; icon: string}> = [
  {href:"/dashboard",label:"Overzicht",icon:"grid"},
  {href:"/clients",label:"Cliënten",icon:"users"},
  {href:"/cases",label:"Dossiers",icon:"folder"},
