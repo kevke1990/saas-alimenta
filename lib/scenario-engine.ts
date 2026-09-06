@@ -1,7 +1,8 @@
 import { calculate, type CaseInput } from './calculator';
 import { calculatePartnerSupport, type PartnerSupportInput } from './partner-engine';
+import { buildCombinedAudit } from './combined-audit';
 
-export const SCENARIO_ENGINE_VERSION = '1.2.0';
+export const SCENARIO_ENGINE_VERSION = '1.3.0';
 
 export type ScenarioChanges = {
   parents?: Partial<Record<'0'|'1', Partial<CaseInput['parents'][number]>>>;
@@ -25,14 +26,24 @@ export function applyScenarioChanges(base: CaseInput, changes: ScenarioChanges):
   return next;
 }
 
-export function calculateScenario(base: CaseInput, changes: ScenarioChanges, partnerInput?: Partial<PartnerSupportInput>) {
+export function calculateScenario(base: CaseInput, changes: ScenarioChanges, partnerInput?: Partial<PartnerSupportInput> & { payerIndex?: 0 | 1 }) {
   const input = applyScenarioChanges(base, changes);
   const childResult = calculate(input);
   let partnerResult: ReturnType<typeof calculatePartnerSupport> | null = null;
+  let combinedAudit = buildCombinedAudit({
+    childSupportByParent: [0, 0],
+    partnerPayerIndex: null,
+    partnerMonthlyNet: 0,
+    partnerMonthlyGross: 0,
+    partnerCapacityRemainingNet: 0,
+  });
+
   if (partnerInput) {
-    const suggestedChildSupport = Array.isArray((childResult as any).transfers)
-      ? (childResult as any).transfers.reduce((s: number, t: any) => s + Number(t.payment || 0), 0)
-      : 0;
+    const suggestedChildSupportByParent = [0, 0];
+    for (const transfer of childResult.transfers || []) {
+      suggestedChildSupportByParent[transfer.payerIndex] += Number(transfer.payment || 0);
+    }
+    const suggestedChildSupport = suggestedChildSupportByParent.reduce((a, b) => a + b, 0);
     partnerResult = calculatePartnerSupport({
       historicalNBGI: partnerInput.historicalNBGI ?? 0,
       historicalChildCosts: partnerInput.historicalChildCosts ?? 0,
@@ -41,6 +52,37 @@ export function calculateScenario(base: CaseInput, changes: ScenarioChanges, par
       ...partnerInput,
       currentChildSupport: suggestedChildSupport,
     });
+    const payerIndex = partnerInput.payerIndex === 1 ? 1 : 0;
+    combinedAudit = buildCombinedAudit({
+      childSupportByParent: suggestedChildSupportByParent,
+      partnerPayerIndex: payerIndex,
+      partnerMonthlyNet: partnerResult.result.monthlyNet,
+      partnerMonthlyGross: partnerResult.result.monthlyGross,
+      partnerCapacityRemainingNet: partnerResult.capacity.remainingNet,
+    });
   }
-  return { engineVersion: SCENARIO_ENGINE_VERSION, input, child: childResult, partner: partnerResult };
+
+  const childSupportByParent = [0, 0];
+  for (const transfer of childResult.transfers || []) childSupportByParent[transfer.payerIndex] += Number(transfer.payment || 0);
+  const partnerPayerIndex = partnerInput?.payerIndex === 1 ? 1 : partnerInput ? 0 : null;
+  const partnerNet = partnerResult?.result.monthlyNet || 0;
+  const partnerGross = partnerResult?.result.monthlyGross || 0;
+  const combinedPaymentByParent = [...childSupportByParent];
+  if (partnerPayerIndex !== null) combinedPaymentByParent[partnerPayerIndex] += partnerGross;
+
+  return {
+    engineVersion: SCENARIO_ENGINE_VERSION,
+    input,
+    child: childResult,
+    partner: partnerResult,
+    combined: {
+      childSupportTotal: childSupportByParent.reduce((a, b) => a + b, 0),
+      childSupportByParent,
+      partnerSupportMonthlyNet: partnerNet,
+      partnerSupportMonthlyGross: partnerGross,
+      totalMonthlyPayments: combinedPaymentByParent.reduce((a, b) => a + b, 0),
+      paymentByParent: combinedPaymentByParent,
+      priorityAudit: combinedAudit,
+    },
+  };
 }
