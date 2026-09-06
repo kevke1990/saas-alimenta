@@ -24,7 +24,10 @@ const housing = z.object({
   homeValue: z.number().finite().nonnegative().optional(), mortgageBalance: z.number().finite().nonnegative().optional(), mortgageInterestTaxBenefitMonthly: z.number().finite().nonnegative().optional()
 }).optional();
 const parent = z.object({
-  name: z.string().max(150).optional(), nbi: z.number().finite().nonnegative(), kgb: z.number().finite().nonnegative().optional(), capacityAdjustment: z.number().finite().optional(),
+  name: z.string().max(150).optional(),
+  // NBI is optional because GROSS and NET modes provide their own authoritative income profile.
+  nbi: z.number().finite().nonnegative().optional(),
+  kgb: z.number().finite().nonnegative().optional(), capacityAdjustment: z.number().finite().optional(),
   aow: z.boolean().optional(), housingCosts: z.number().finite().nonnegative().optional(), housing, newPartner,
   specialNecessaryCosts: z.number().finite().nonnegative().optional(), otherMaintenance: z.number().finite().nonnegative().optional(),
   careDaysPerWeek: z.number().finite().min(0).max(7).optional(), receivesBijstand: z.boolean().optional(), income
@@ -45,5 +48,5 @@ const partnerSupport = z.object({
 export const caseCreateSchema = z.object({
   name: z.string().trim().min(2).max(200), clientId: z.string().optional(),
   data: z.object({ historicalNBGI: z.number().finite().nonnegative().optional(), parents: z.array(parent).length(2), children: z.array(child).min(1).max(10), actualKgbReceivingParent: z.number().finite().nonnegative().optional(), partnerSupport }),
-  meta: z.object({ effectiveDate: z.string().optional(), notes: z.string().max(10000).optional(), assetsA: z.number().finite().nonnegative().optional(), assetsB: z.number().finite().nonnegative().optional() }).optional()
+  meta: z.object({ effectiveDate: z.string().optional(), separationDate: z.string().optional(), notes: z.string().max(10000).optional(), assetsA: z.number().finite().nonnegative().optional(), assetsB: z.number().finite().nonnegative().optional() }).optional()
 });
