@@ -1,4 +1,36 @@
-import { PrismaClient } from '@prisma/client';import { DEFAULT_RETENTION_POLICY,retentionCutoff } from '../lib/retention';
-const db=new PrismaClient();
-async function main(){const p=DEFAULT_RETENTION_POLICY;const docs=await db.document.deleteMany({where:{createdAt:{lt:retentionCutoff(new Date(),p.documentsDays)}}});const audit=await db.auditLog.deleteMany({where:{createdAt:{lt:retentionCutoff(new Date(),p.auditDays)}}});const rl=await db.rateLimitBucket.deleteMany({where:{expiresAt:{lt:new Date()}}});console.log(JSON.stringify({documents:docs.count,auditLogs:audit.count,rateLimitBuckets:rl.count,policy:p}));}
-main().finally(()=>db.$disconnect());
+import { PrismaClient } from '@prisma/client';
+import { DEFAULT_RETENTION_POLICY, retentionCutoff } from '../lib/retention';
+
+const db = new PrismaClient();
+
+async function main() {
+  const p = DEFAULT_RETENTION_POLICY;
+  const now = new Date();
+  const documentCutoff = retentionCutoff(now, p.documentsDays);
+  const auditCutoff = retentionCutoff(now, p.auditDays);
+  const mailCutoff = retentionCutoff(now, p.mailDays);
+
+  const [docs, audit, mailLogs, mailMessages, rl] = await db.$transaction([
+    db.document.deleteMany({ where: { createdAt: { lt: documentCutoff } } }),
+    db.auditLog.deleteMany({ where: { createdAt: { lt: auditCutoff } } }),
+    db.mailLog.deleteMany({ where: { createdAt: { lt: mailCutoff } } }),
+    db.mailMessage.deleteMany({ where: { createdAt: { lt: mailCutoff } } }),
+    db.rateLimitBucket.deleteMany({ where: { expiresAt: { lt: now } } }),
+  ]);
+
+  console.log(JSON.stringify({
+    documents: docs.count,
+    auditLogs: audit.count,
+    mailLogs: mailLogs.count,
+    mailMessages: mailMessages.count,
+    rateLimitBuckets: rl.count,
+    policy: p,
+  }));
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => db.$disconnect());
