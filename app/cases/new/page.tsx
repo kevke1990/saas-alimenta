@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
 
 type ParentForm = { name:string; nbi:string; kgb:string; aow:boolean; housing:string; special:string; other:string; careDays:string; bijstand:boolean; incomeMode:"NBI"|"GROSS"|"NET"; salary:string; holidayPct:string; ikb:string; pension:string; overtime:string; bonus:string; iack:boolean; netIncome:string; };
 type ChildForm = { name:string; age:string; residence:"A"|"B"|"50-50"; special:string; ownIncome:string; studentType:"MBO"|"HBO"|"OTHER"; livesAtHome:boolean };
@@ -10,7 +10,7 @@ const blankParent=():ParentForm=>({name:"",nbi:"",kgb:"0",aow:false,housing:"",s
 const blankChild=(i:number):ChildForm=>({name:`Kind ${i}`,age:"",residence:"A",special:"0",ownIncome:"0",studentType:"OTHER",livesAtHome:true});
 const n=(s:string)=>Math.max(0,Number(String(s).replace(",","."))||0);
 
-export default function NewCase(){
+function NewCaseContent(){
  const sp=useSearchParams(); const clientId=sp.get("clientId")||""; const router=useRouter();
  const [step,setStep]=useState(1); const [name,setName]=useState("Nieuwe alimentatieberekening");
  const [effectiveDate,setEffectiveDate]=useState(new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10));
@@ -49,4 +49,8 @@ export default function NewCase(){
    <div className="wizard-actions"><button className="btn secondary" disabled={step===1||busy} onClick={()=>setStep(s=>s-1)}>← Vorige</button>{step<6?<button className="btn" onClick={()=>{setErr("");setStep(s=>s+1)}}>Volgende →</button>:<button className="btn" disabled={busy} onClick={submit}>{busy?"Berekening wordt opgeslagen…":"Bereken & opslaan"}</button>}</div>
   </section><aside className="wizard-summary"><div className="summary-sticky"><div className="eyebrow">Dossieroverzicht</div><h3>{name||"Nieuw dossier"}</h3><div className="summary-line"><span>Ouders</span><b>2</b></div><div className="summary-line"><span>Kinderen</span><b>{children.length}</b></div><div className="summary-line"><span>Gezamenlijk NBI</span><b>{money(totalNbi)}</b></div><div className="summary-divider"/><div className="summary-caption">Je bent op</div><div className="summary-progress"><span style={{width:`${(step/6)*100}%`}}/></div><b className="summary-step">Stap {step} van 6</b><p>De berekening wordt pas opgeslagen wanneer je op de laatste stap bevestigt.</p></div></aside></div>
  </main>
+}
+
+export default function NewCase(){
+ return <Suspense fallback={<main className="content" style={{maxWidth:1180}}><div className="panel"><p className="muted">Berekening laden…</p></div></main>}><NewCaseContent /></Suspense>;
 }
