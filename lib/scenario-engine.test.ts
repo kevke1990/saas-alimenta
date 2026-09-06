@@ -7,21 +7,36 @@ const base = {
   children: [{ age: 10, residence: 'B' as const, specialCosts: 0 }]
 };
 
-describe('Scenario engine 1.2', () => {
+describe('Scenario engine 1.3', () => {
   it('patches a parent income without mutating the base', () => {
     const next = applyScenarioChanges(base, { parents: { '0': { nbi: 5000 } } });
     expect(next.parents[0].nbi).toBe(5000);
     expect(base.parents[0].nbi).toBe(4000);
   });
+
   it('recalculates child support from changed income', () => {
     const a = calculateScenario(base, {});
     const b = calculateScenario(base, { parents: { '0': { nbi: 5000 } } });
     expect(b.child.parentResults[0].capacity).toBeGreaterThan(a.child.parentResults[0].capacity);
   });
-  it('can recalculate linked partner support with scenario child support', () => {
-    const partnerInput = { historicalNBGI: 8000, historicalChildCosts: 1000, currentRecipientNBI: 1000, currentPayerNBI: 6000 };
+
+  it('links partner support to the selected payer child-support amount', () => {
+    const partnerInput = { historicalNBGI: 8000, historicalChildCosts: 1000, currentRecipientNBI: 1000, currentPayerNBI: 6000, payerIndex: 1 as const };
     const r = calculateScenario(base, { parents: { '0': { nbi: 5000 } } }, partnerInput);
     expect(r.partner).not.toBeNull();
-    expect(r.partner!.capacity.childSupportShare).toBeGreaterThanOrEqual(0);
+    expect(r.partner!.capacity.childSupportShare).toBe(r.combined.childSupportByParent[1]);
+    expect(r.combined.priorityAudit.partnerPayerIndex).toBe(1);
+    expect(r.combined.priorityAudit.childSupportForPartnerPayerMonthly).toBe(r.combined.childSupportByParent[1]);
+  });
+
+  it('keeps combined payment totals auditable', () => {
+    const partnerInput = { historicalNBGI: 8000, historicalChildCosts: 1000, currentRecipientNBI: 1000, currentPayerNBI: 6000, payerIndex: 0 as const };
+    const r = calculateScenario(base, {}, partnerInput);
+    expect(r.combined.totalMonthlyPayments).toBe(
+      r.combined.childSupportTotal + r.combined.partnerSupportMonthlyGross,
+    );
+    expect(r.combined.paymentByParent[0]).toBe(
+      r.combined.childSupportByParent[0] + r.combined.partnerSupportMonthlyGross,
+    );
   });
 });
