@@ -14,7 +14,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   const c = await db.case.findFirst({ where: { id, userId: u.id }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: "desc" } } } });
   if (!c) return <AppShell><div className="notice error">Dossier niet gevonden.</div></AppShell>;
   const review = reviewCase({ data: c.data, documents: c.documents, calculations: c.calculations, result: c.result });
-  const logs = await db.auditLog.findMany({ where: { userId: u.id, action: { in: ["CASE_REVIEW_COMMENTED", "CASE_REVIEW_STARTED", "CASE_REVIEWED", "CASE_APPROVED", "CASE_FINAL", "CASE_REOPENED"] } }, orderBy: { createdAt: "desc" }, take: 100 });
+  const logs = await db.auditLog.findMany({ where: { userId: u.id, action: { in: ["CASE_REVIEW_COMMENTED", "CASE_REVIEW_STARTED", "CASE_READY_FOR_REVIEW", "CASE_REVIEWED", "CASE_APPROVED", "CASE_FINAL", "CASE_REOPENED"] } }, orderBy: { createdAt: "desc" }, take: 100 });
   const history = logs.filter(x => String((x.metadata as any)?.caseId || "") === id);
   const canMarkReady = c.reviewStatus === "INCOMPLETE" && review.readyForProfessionalReview;
   const canReview = c.reviewStatus === "READY_FOR_REVIEW";
