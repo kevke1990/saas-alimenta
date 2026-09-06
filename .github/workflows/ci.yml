@@ -47,6 +47,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-next-${{ hashFiles('**/package.json') }}-
             ${{ runner.os }}-next-
+      - name: Verify repository hygiene
+        run: |
+          set -eu
+          if git ls-files | grep -E '(^|/)\.env(\.production|\.local|\.development)$'; then
+            echo "Tracked production/local environment file detected. Remove it from Git."
+            exit 1
+          fi
+          test -f prisma/migrations/migration_lock.toml
+          migration_count=$(find prisma/migrations -mindepth 2 -maxdepth 2 -type f -name migration.sql | wc -l)
+          test "$migration_count" -gt 0
+          echo "Verified $migration_count Prisma migration files."
       - name: Install dependencies
         run: npm install
       - name: Security audit
@@ -61,3 +72,20 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
+      - name: Runtime health smoke test
+        run: |
+          set -eu
+          npm run start > /tmp/alimenta-next.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3000/api/health; then
+              echo
+              echo "Runtime health check passed."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Runtime health check failed. Server log:"
+          cat /tmp/alimenta-next.log
+          exit 1
