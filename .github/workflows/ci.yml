@@ -89,3 +89,33 @@ jobs:
           echo "Runtime health check failed. Server log:"
           cat /tmp/alimenta-next.log
           exit 1
+      - name: Validate production Compose
+        run: |
+          set -eu
+          test -f Dockerfile
+          test -f docker-compose.prod.yml
+          test -f deploy/.env.production.example
+          cp deploy/.env.production.example .env.production
+          sed -i 's/GENERATE-A-LONG-RANDOM-PASSWORD/ci-postgres-password/g; s/GENERATE-A-LONG-RANDOM-SECRET/ci-session-secret-0123456789abcdef/g; s/USE-A-LONG-UNIQUE-PASSWORD/ci-admin-password/g; s/change-this-to-a-long-random-secret/ci-privacy-salt/g; s/CHANGE-ME-LONG-RANDOM-SECRET/ci-inbound-secret/g' .env.production
+          ln -s .env.production .env
+          docker compose -f docker-compose.prod.yml config >/tmp/alimenta-compose.yml
+          grep -q 'no-new-privileges:true' /tmp/alimenta-compose.yml
+          grep -q 'cap_drop:' /tmp/alimenta-compose.yml
+          grep -q 'read_only: true' /tmp/alimenta-compose.yml
+      - name: Build production Docker image
+        run: |
+          set -eu
+          docker build --pull -t alimenta-pro:ci .
+      - name: Validate production image user
+        run: |
+          set -eu
+          test "$(docker run --rm --entrypoint id alimenta-pro:ci -u)" = "1000"
+          test "$(docker run --rm --entrypoint id alimenta-pro:ci -g)" = "1000"
+      - name: Validate deployment scripts
+        run: |
+          set -eu
+          for script in deploy/preflight-demo.sh deploy/verify-demo.sh deploy/doctor.sh deploy/backup.sh deploy/restore.sh deploy/update.sh deploy/installer.sh deploy/alimenta; do
+            test -f "$script"
+            bash -n "$script"
+          done
+          echo "Deployment scripts passed shell syntax validation."
