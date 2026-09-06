@@ -211,7 +211,7 @@ export function calculate(input: CaseInput) {
       const payer = resident === 0 ? 1 : resident === 1 ? 0 : (afterCare[1] >= afterCare[0] ? 1 : 0);
       const receiver = payer === 0 ? 1 : 0;
       const payerCapacityShare = totalCapacity > 0
-        ? money(parentResults[payer].capacity * (child.need / Math.max(totalNeed, 1)))
+        ? money(parentResults[payer].capacity * (childResults[i].need / Math.max(totalNeed, 1)))
         : 0;
       const care = effectiveCare[payer];
       const payment = careMultiplier === 0 ? payerCapacityShare : Math.max(0, payerCapacityShare - care);
