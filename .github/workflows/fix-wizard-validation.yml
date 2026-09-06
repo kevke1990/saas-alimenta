@@ -1,15 +1,16 @@
 name: Repair wizard validation
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
 
 permissions:
   contents: write
 
 jobs:
   repair:
-    if: github.event.head_commit.message != 'fix: validate wizard income modes correctly'
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
