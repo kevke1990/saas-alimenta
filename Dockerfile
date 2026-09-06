@@ -27,6 +27,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts/bootstrap-admin.mjs ./scripts/bootstrap-admin.mjs
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+RUN chown -R node:node /app
+USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
 CMD ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node ./scripts/bootstrap-admin.mjs && exec node server.js"]
