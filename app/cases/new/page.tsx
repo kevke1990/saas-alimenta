@@ -22,15 +22,36 @@ function NewCaseContent(){
  const totalNbi=useMemo(()=>parents.reduce((s,p)=>s+n(p.nbi),0),[parents]);
  const updateParent=(i:number,key:keyof ParentForm,value:any)=>setParents(ps=>ps.map((p,j)=>j===i?{...p,[key]:value}:p));
  const updateChild=(i:number,key:keyof ChildForm,value:any)=>setChildren(cs=>cs.map((c,j)=>j===i?{...c,[key]:value}:c));
- function validate(){
-   if(!name.trim()) return "Geef het dossier een naam.";
-   if(parents.some(p=>n(p.nbi)<=0)) return "Vul voor beide ouders een positief NBI in.";
-   if(children.length===0) return "Voeg minimaal één kind toe.";
-   if(children.some(c=>n(c.age)>25)) return "De leeftijd van een kind kan maximaal 25 jaar zijn.";
+ function incomeValidation(p:ParentForm,index:number){
+   if(p.incomeMode==="GROSS" && n(p.salary)<=0) return `Vul voor ouder ${index===0?"A":"B"} een positief bruto maandsalaris in.`;
+   if(p.incomeMode==="NET" && n(p.netIncome)<=0) return `Vul voor ouder ${index===0?"A":"B"} een positief netto inkomen in.`;
+   if(p.incomeMode==="NBI" && n(p.nbi)<=0) return `Vul voor ouder ${index===0?"A":"B"} een positief NBI in.`;
    return "";
  }
+ function validateStep(currentStep:number){
+   if(currentStep===1 && !name.trim()) return {message:"Geef het dossier een naam.",step:1};
+   if(currentStep===2){
+     for(let i=0;i<parents.length;i++){ const message=incomeValidation(parents[i],i); if(message) return {message,step:2}; }
+   }
+   if(currentStep===3){
+     if(children.length===0) return {message:"Voeg minimaal één kind toe.",step:3};
+     if(children.some(c=>!String(c.age).trim())) return {message:"Vul voor ieder kind de leeftijd in.",step:3};
+     if(children.some(c=>n(c.age)>25)) return {message:"De leeftijd van een kind kan maximaal 25 jaar zijn.",step:3};
+   }
+   return null;
+ }
+ function validate(){
+   const dossier=validateStep(1); if(dossier) return dossier;
+   const parentsValidation=validateStep(2); if(parentsValidation) return parentsValidation;
+   return validateStep(3);
+ }
+ function nextStep(){
+   const validation=validateStep(step);
+   if(validation){ setErr(validation.message); setStep(validation.step); return; }
+   setErr(""); setStep(s=>Math.min(6,s+1));
+ }
  async function submit(){
-   const validation=validate(); if(validation){setErr(validation);setStep(validation.includes("kind")?3:validation.includes("NBI")?4:1);return;}
+   const validation=validate(); if(validation){setErr(validation.message);setStep(validation.step);return;}
    setBusy(true); setErr("");
    const data={historicalNBGI:n(historicalNBGI)||undefined, parents:parents.map(p=>({nbi:n(p.nbi),kgb:n(p.kgb),aow:p.aow,housingCosts:n(p.housing),specialNecessaryCosts:n(p.special),otherMaintenance:n(p.other),careDaysPerWeek:n(p.careDays),receivesBijstand:p.bijstand,income:p.incomeMode==="GROSS"?{mode:"GROSS",salaryMonthly:n(p.salary),holidayAllowancePct:n(p.holidayPct),ikbMonthly:n(p.ikb),pensionMonthly:n(p.pension),overtimeMonthly:n(p.overtime),bonusAnnual:n(p.bonus),kgbMonthly:n(p.kgb),hasIack:p.iack,aow:p.aow}:p.incomeMode==="NET"?{mode:"NET",netIncomeMonthly:n(p.netIncome),kgbMonthly:n(p.kgb)}:{mode:"NBI",netIncomeMonthly:n(p.nbi),kgbMonthly:n(p.kgb)}})), children:children.map(c=>({age:n(c.age),specialCosts:n(c.special),residence:c.residence,studentType:c.studentType,livesAtHome:c.livesAtHome,ownIncome:n(c.ownIncome)})), actualKgbReceivingParent: n(parents[kgbParent==="A"?0:1].kgb)};
    try{const r=await fetch("/api/cases",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({name:name.trim(),clientId:clientId||undefined,data,meta:{effectiveDate,notes,assetsA:n(assetsA),assetsB:n(assetsB)}})}); if(!r.ok){setErr(await r.text());return;} const c=await r.json(); router.push(`/cases/${c.id}`);}catch{setErr("Opslaan mislukt. Controleer je verbinding en probeer opnieuw.");}finally{setBusy(false);}
@@ -46,7 +67,7 @@ function NewCaseContent(){
    {step===5&&<div className="wizard-section"><div className="eyebrow">Stap 5 van 6</div><h2 className="panel-title big-title">Zorg & toeslagen</h2><p className="panel-sub">Leg de zorgverdeling en verdeling van KGB vast.</p><div className="form-card topgap"><div className="form-card-head"><div><h3>Zorgregeling</h3><span>Gemiddeld aantal zorgdagen per week</span></div></div><div className="form-grid">{parents.map((p,i)=><div key={i}><label className="label">Ouder {i===0?"A":"B"} · zorgdagen per week</label><input className="input" type="number" min="0" max="7" step="0.1" value={p.careDays} onChange={e=>updateParent(i,"careDays",e.target.value)}/></div>)}</div></div><div className="form-card topgap"><div className="form-card-head"><div><h3>Kindgebonden budget</h3><span>Welke ouder ontvangt het ingevoerde KGB?</span></div></div><div className="form-grid"><div><label className="label">Ontvangende ouder</label><select className="input" value={kgbParent} onChange={e=>setKgbParent(e.target.value as "A"|"B")}><option value="A">Ouder A</option><option value="B">Ouder B</option></select></div></div></div><div className="notice topgap">KGB is in deze versie een ingevoerde/indicatieve component. Controleer de beschikking van Dienst Toeslagen en bijzondere gezinssituaties afzonderlijk.</div></div>}
    {step===6&&<div className="wizard-section"><div className="eyebrow">Stap 6 van 6</div><h2 className="panel-title big-title">Controle & berekenen</h2><p className="panel-sub">Controleer de belangrijkste uitgangspunten voordat het dossier wordt opgeslagen.</p><div className="review-grid topgap"><div className="review-card"><span>Dossier</span><b>{name||"—"}</b><small>{effectiveDate||"Geen ingangsdatum"}</small></div><div className="review-card"><span>Ouders</span><b>{money(totalNbi)} NBI</b><small>{parents.map(p=>p.name).join(" · ")}</small></div><div className="review-card"><span>Kinderen</span><b>{children.length}</b><small>{children.map(c=>`${c.name} (${c.age||"?"})`).join(" · ")}</small></div><div className="review-card"><span>Norm</span><b>2026.1</b><small>Alimenta Pro rekenengine</small></div></div><div className="notice success topgap"><b>Klaar voor berekening.</b><br/>Na opslaan wordt een immutable calculation snapshot aangemaakt met de gebruikte invoer en normversie.</div>{err&&<div className="notice error topgap">{err}</div>}</div>}
    {err&&step!==6&&<div className="notice error topgap">{err}</div>}
-   <div className="wizard-actions"><button className="btn secondary" disabled={step===1||busy} onClick={()=>setStep(s=>s-1)}>← Vorige</button>{step<6?<button className="btn" onClick={()=>{setErr("");setStep(s=>s+1)}}>Volgende →</button>:<button className="btn" disabled={busy} onClick={submit}>{busy?"Berekening wordt opgeslagen…":"Bereken & opslaan"}</button>}</div>
+   <div className="wizard-actions"><button className="btn secondary" disabled={step===1||busy} onClick={()=>setStep(s=>s-1)}>← Vorige</button>{step<6?<button className="btn" onClick={nextStep}>Volgende →</button>:<button className="btn" disabled={busy} onClick={submit}>{busy?"Berekening wordt opgeslagen…":"Bereken & opslaan"}</button>}</div>
   </section><aside className="wizard-summary"><div className="summary-sticky"><div className="eyebrow">Dossieroverzicht</div><h3>{name||"Nieuw dossier"}</h3><div className="summary-line"><span>Ouders</span><b>2</b></div><div className="summary-line"><span>Kinderen</span><b>{children.length}</b></div><div className="summary-line"><span>Gezamenlijk NBI</span><b>{money(totalNbi)}</b></div><div className="summary-divider"/><div className="summary-caption">Je bent op</div><div className="summary-progress"><span style={{width:`${(step/6)*100}%`}}/></div><b className="summary-step">Stap {step} van 6</b><p>De berekening wordt pas opgeslagen wanneer je op de laatste stap bevestigt.</p></div></aside></div>
  </main>
 }
