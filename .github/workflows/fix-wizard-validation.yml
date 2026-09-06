@@ -1,0 +1,85 @@
+name: Repair wizard validation
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event.head_commit.message != 'fix: validate wizard income modes correctly'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Patch wizard validation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/cases/new/page.tsx')
+          s = p.read_text()
+          old = ''' function validate(){
+             if(!name.trim()) return "Geef het dossier een naam.";
+             if(parents.some(p=>n(p.nbi)<=0)) return "Vul voor beide ouders een positief NBI in.";
+             if(children.length===0) return "Voeg minimaal één kind toe.";
+             if(children.some(c=>n(c.age)>25)) return "De leeftijd van een kind kan maximaal 25 jaar zijn.";
+             return "";
+           }
+           async function submit(){
+             const validation=validate(); if(validation){setErr(validation);setStep(validation.includes("kind")?3:validation.includes("NBI")?4:1);return;}
+          '''
+          new = ''' function incomeValidation(p:ParentForm,index:number){
+             if(p.incomeMode==="GROSS" && n(p.salary)<=0) return `Vul voor ouder ${index===0?"A":"B"} een positief bruto maandsalaris in.`;
+             if(p.incomeMode==="NET" && n(p.netIncome)<=0) return `Vul voor ouder ${index===0?"A":"B"} een positief netto inkomen in.`;
+             if(p.incomeMode==="NBI" && n(p.nbi)<=0) return `Vul voor ouder ${index===0?"A":"B"} een positief NBI in.`;
+             return "";
+           }
+           function validateStep(currentStep:number){
+             if(currentStep===1 && !name.trim()) return {message:"Geef het dossier een naam.",step:1};
+             if(currentStep===2){
+               for(let i=0;i<parents.length;i++){ const message=incomeValidation(parents[i],i); if(message) return {message,step:2}; }
+             }
+             if(currentStep===3){
+               if(children.length===0) return {message:"Voeg minimaal één kind toe.",step:3};
+               if(children.some(c=>!String(c.age).trim())) return {message:"Vul voor ieder kind de leeftijd in.",step:3};
+               if(children.some(c=>n(c.age)>25)) return {message:"De leeftijd van een kind kan maximaal 25 jaar zijn.",step:3};
+             }
+             return null;
+           }
+           function validate(){
+             const dossier=validateStep(1); if(dossier) return dossier;
+             const parentsValidation=validateStep(2); if(parentsValidation) return parentsValidation;
+             return validateStep(3);
+           }
+           function nextStep(){
+             const validation=validateStep(step);
+             if(validation){ setErr(validation.message); setStep(validation.step); return; }
+             setErr(""); setStep(s=>Math.min(6,s+1));
+           }
+           async function submit(){
+             const validation=validate(); if(validation){setErr(validation.message);setStep(validation.step);return;}
+          '''
+          if old not in s:
+              raise SystemExit('Expected wizard validation block not found')
+          s = s.replace(old, new, 1)
+          old_button = '<button className="btn" onClick={()=>{setErr("");setStep(s=>s+1)}}>Volgende →</button>'
+          new_button = '<button className="btn" onClick={nextStep}>Volgende →</button>'
+          if old_button not in s:
+              raise SystemExit('Expected wizard next button not found')
+          s = s.replace(old_button, new_button, 1)
+          p.write_text(s)
+          PY
+
+          git diff --check
+          git diff -- app/cases/new/page.tsx
+
+          rm .github/workflows/fix-wizard-validation.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/cases/new/page.tsx .github/workflows/fix-wizard-validation.yml
+          git commit -m "fix: validate wizard income modes correctly"
+          git push origin HEAD:main
