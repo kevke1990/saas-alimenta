@@ -112,18 +112,26 @@ export function calculateIncome(profile: IncomeProfile): IncomeResult {
   }
 
   if (mode === "NET") {
-    const annual = nz(profile.netIncomeMonthly) * 12 + nz(profile.netOtherIncomeMonthly) * 12 + nz(profile.kgbMonthly) * 12;
+    const netMonthly = nz(profile.netIncomeMonthly) + nz(profile.netOtherIncomeMonthly);
+    const kgbMonthly = nz(profile.kgbMonthly);
+    const annual = (netMonthly + kgbMonthly) * 12;
     warnings.push("Nettomethode: gebruik loon-/uitkeringsspecificaties en controleer of vakantietoeslag al in het netto bedrag zit.");
     return {
       mode, grossAnnual: 0, pensionAnnual: 0, taxableBox1: 0, box3TaxableIncome: 0,
       taxBeforeCredits: 0, generalTaxCredit: 0, laborTaxCredit: 0, iack: 0, taxCreditTotal: 0,
-      netAnnual: eur(annual), nbiMonthly: eur(nz(profile.netIncomeMonthly) + nz(profile.netOtherIncomeMonthly)), nbiIncludingKgbMonthly: eur(annual / 12),
+      netAnnual: eur(annual),
+      nbiMonthly: eur(netMonthly + kgbMonthly),
+      nbiIncludingKgbMonthly: eur(netMonthly + kgbMonthly),
       components: [{ label: "Netto inkomen volgens specificatie", annual: eur(annual), kind: "income" }], warnings,
     };
   }
 
   const salary = nz(profile.salaryMonthly) * 12;
-  const holiday = nz(profile.holidayAllowanceMonthly) > 0 ? nz(profile.holidayAllowanceMonthly) * 12 : salary * (nz(profile.holidayAllowancePct) || 8) / 100;
+  // When a percentage is supplied, the professional input model treats the
+  // percentage as applying to the regular gross remuneration plus IKB. This
+  // keeps the annualisation auditable and matches the income-engine contract.
+  const holidayBase = salary + nz(profile.ikbMonthly) * 12;
+  const holiday = nz(profile.holidayAllowanceMonthly) > 0 ? nz(profile.holidayAllowanceMonthly) * 12 : holidayBase * (nz(profile.holidayAllowancePct) || 8) / 100;
   const ikb = nz(profile.ikbMonthly) * 12;
   const overtime = nz(profile.overtimeMonthly) * 12;
   const bonus = nz(profile.bonusAnnual);
