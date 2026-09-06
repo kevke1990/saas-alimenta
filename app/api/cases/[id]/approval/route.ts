@@ -7,32 +7,28 @@ const allowed = new Set(['INCOMPLETE','READY_FOR_REVIEW','REVIEWED','APPROVED','
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(); const { id } = await params;
-  const c = await db.case.findFirst({
-    where: { id, userId: user.id },
-    include: {
-      documents: { select: { aiStatus: true, approvedAt: true } },
-      calculations: { orderBy: { createdAt: 'desc' } },
-    },
-  });
+  const c = await db.case.findFirst({ where: { id, userId: user.id }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: 'desc' } } } });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
   const body = req.headers.get('content-type')?.includes('application/json') ? await req.json() : Object.fromEntries((await req.formData()).entries());
   const status = String(body.status || '');
+  const comment = typeof body.comment === 'string' ? body.comment.trim() : '';
   if (!allowed.has(status)) return new NextResponse('Ongeldige reviewstatus.', { status: 422 });
+  if (comment.length > 5000) return new NextResponse('Reviewopmerking is te lang.', { status: 422 });
 
   const review = reviewCase({ data: c.data, documents: c.documents, calculations: c.calculations, result: c.result });
-  if ((status === 'APPROVED' || status === 'FINAL') && !review.readyForProfessionalReview) {
-    return new NextResponse('Goedkeuring geblokkeerd: los eerst de kritieke Case Review-punten op.', { status: 409 });
-  }
-  if (status === 'FINAL' && c.reviewStatus !== 'APPROVED' && c.approvedAt == null) {
-    return new NextResponse('Een dossier moet eerst als APPROVED zijn gemarkeerd.', { status: 409 });
-  }
+  if ((status === 'APPROVED' || status === 'FINAL') && !review.readyForProfessionalReview) return new NextResponse('Goedkeuring geblokkeerd: los eerst de kritieke Case Review-punten op.', { status: 409 });
+  if (status === 'FINAL' && c.reviewStatus !== 'APPROVED' && c.approvedAt == null) return new NextResponse('Een dossier moet eerst als APPROVED zijn gemarkeerd.', { status: 409 });
 
   const data: any = { reviewStatus: status };
   if (status === 'REVIEWED' || status === 'APPROVED' || status === 'FINAL') data.reviewedAt = new Date();
   if (status === 'APPROVED' || status === 'FINAL') { data.approvedAt = c.approvedAt || new Date(); data.approvedByUserId = c.approvedByUserId || user.id; }
   if (status === 'INCOMPLETE' || status === 'READY_FOR_REVIEW' || status === 'REVIEWED') { data.approvedAt = null; data.approvedByUserId = null; }
 
-  const updated = await db.case.update({ where: { id }, data });
-  await db.auditLog.create({ data: { userId: user.id, action: `CASE_${status}`, metadata: { caseId: id, calculationId: c.calculations[0]?.id || null, reviewScore: review.score, criticalCount: review.criticalCount } } });
+  const updated = await db.$transaction(async (tx) => {
+    const next = await tx.case.update({ where: { id }, data });
+    await tx.auditLog.create({ data: { userId: user.id, action: `CASE_${status}`, metadata: { caseId: id, calculationId: c.calculations[0]?.id || null, reviewScore: review.score, criticalCount: review.criticalCount } } });
+    if (comment) await tx.auditLog.create({ data: { userId: user.id, action: 'CASE_REVIEW_COMMENTED', metadata: { caseId: id, calculationId: c.calculations[0]?.id || null, comment } } });
+    return next;
+  });
   return NextResponse.json(updated);
 }
