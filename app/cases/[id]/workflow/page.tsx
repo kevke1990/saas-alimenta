@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Route } from 'next';
 import AppShell from '@/components/AppShell';
 import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
@@ -62,7 +63,7 @@ export default async function CaseWorkflowPage({ params }: { params: Promise<{ i
       <div className="section-kicker">Volgende noodzakelijke stap</div>
       <h2 className="panel-title">{next.label}</h2>
       <p className="panel-sub">{next.description}</p>
-      <div className="actions topgap"><Link className="btn" href={next.href}>Ga naar {next.label} →</Link></div>
+      <div className="actions topgap"><Link className="btn" href={next.href as Route}>Ga naar {next.label} →</Link></div>
     </section> : <section className="panel topgap"><div className="section-kicker">Workflow compleet</div><h2 className="panel-title">Alle noodzakelijke stappen zijn afgerond.</h2><p className="panel-sub">Controleer het rapport en de auditinformatie voordat het dossier extern wordt gebruikt.</p></section>}
 
     <section className="panel topgap">
@@ -73,7 +74,7 @@ export default async function CaseWorkflowPage({ params }: { params: Promise<{ i
           <div className="detail-card-head"><b>{index + 1}. {item.label}</b><span>{item.locked ? 'Vergrendeld' : item.complete ? 'Klaar' : item.active ? 'Actief' : 'Beschikbaar'}</span></div>
           <p className="panel-sub">{item.description}</p>
           <div className="actions topgap">
-            <Link className="btn secondary" href={item.href}>{item.locked ? 'Bekijken' : 'Openen'} →</Link>
+            <Link className="btn secondary" href={item.href as Route}>{item.locked ? 'Bekijken' : 'Openen'} →</Link>
           </div>
         </div>)}
       </div>
