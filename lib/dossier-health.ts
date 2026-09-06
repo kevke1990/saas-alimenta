@@ -1,0 +1,13 @@
+export type HealthItem={key:string;label:string;status:"OK"|"WARNING"|"MISSING";detail:string;priority:number};
+export function assessDossierHealth(input:{data:any;documents:any[];calculations:number;mailCount?:number}){
+ const d=input.data||{}; const parents=Array.isArray(d.parents)?d.parents:[]; const children=Array.isArray(d.children)?d.children:[]; const docs=input.documents||[]; const items:HealthItem[]=[];
+ items.push({key:"parents",label:"Twee ouders",status:parents.length===2?"OK":"MISSING",detail:parents.length===2?"Twee onderhoudsplichtige ouders aanwezig":"Er zijn niet precies twee ouders vastgelegd.",priority:parents.length===2?0:10});
+ items.push({key:"children",label:"Kinderen",status:children.length?"OK":"MISSING",detail:children.length?`${children.length} kind(eren) vastgelegd.`:"Minimaal één kind is vereist.",priority:children.length?0:10});
+ const named=parents.filter((p:any)=>String(p.name||"").trim()).length; items.push({key:"names",label:"Namen ouders",status:named===2?"OK":"WARNING",detail:named===2?"Beide namen zijn ingevuld.":"Controleer de namen van beide ouders.",priority:named===2?0:4});
+ const income=parents.filter((p:any)=>Number(p.nbi)>0 || p.income).length; items.push({key:"income",label:"Inkomen",status:income===2?"OK":"WARNING",detail:income===2?"Voor beide ouders is een inkomensbasis aanwezig.":"Voor één of beide ouders ontbreekt een inkomensbasis.",priority:income===2?0:7});
+ const analyzed=docs.filter((x:any)=>x.aiStatus==="COMPLETED").length; items.push({key:"documents",label:"AI-documentanalyse",status:docs.length===0?"WARNING":analyzed===docs.length?"OK":"WARNING",detail:docs.length===0?"Nog geen documenten gekoppeld.":`${analyzed} van ${docs.length} documenten geanalyseerd.`,priority:docs.length===0?5:analyzed===docs.length?0:3});
+ const approved=docs.filter((x:any)=>x.approvedAt).length; items.push({key:"approval",label:"Menselijke accordering",status:analyzed===0?"WARNING":approved===analyzed?"OK":"WARNING",detail:analyzed===0?"Er zijn nog geen AI-resultaten om te accorderen.":`${approved} van ${analyzed} geanalyseerde documenten geaccordeerd.`,priority:approved===analyzed&&analyzed>0?0:6});
+ items.push({key:"calculation",label:"Berekening",status:input.calculations>0?"OK":"WARNING",detail:input.calculations>0?`${input.calculations} berekening(en) als snapshot opgeslagen.`:"Nog geen berekening opgeslagen.",priority:input.calculations>0?0:4});
+ const warnings=items.filter(x=>x.status!=="OK").sort((a,b)=>b.priority-a.priority); const score=Math.max(0,Math.round(100-warnings.reduce((s,x)=>s+x.priority*2,0)));
+ return {score,items,warnings,readyForCalculation:warnings.filter(x=>["parents","children","income"].includes(x.key)).length===0};
+}

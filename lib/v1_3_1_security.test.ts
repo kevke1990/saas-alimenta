@@ -1,0 +1,3 @@
+import { describe,it,expect } from 'vitest';
+import { generateSecret,totp,verifyTotp,encryptSecret,decryptSecret } from './totp';
+describe('v1.3.1 security',()=>{it('generates and verifies TOTP',()=>{const s=generateSecret();const c=totp(s,Date.UTC(2026,0,1));expect(c).toMatch(/^\d{6}$/);expect(verifyTotp(s,c,Date.UTC(2026,0,1))).toBe(true);expect(verifyTotp(s,'000000',Date.UTC(2026,0,1))).toBe(false)});it('encrypts MFA secret',()=>{process.env.SESSION_SECRET='a'.repeat(64);const s=generateSecret();const blob=encryptSecret(s);expect(blob).not.toContain(s);expect(decryptSecret(blob)).toBe(s)})});
