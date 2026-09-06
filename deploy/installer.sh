@@ -61,20 +61,27 @@ sysctl --system >/dev/null
 # If the installer is run from the extracted application directory, deploy that exact source.
 SRC_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 if [[ "$SRC_DIR" != "$APP_DIR" ]]; then
-  rsync -a --delete --exclude='.env' --exclude='node_modules' --exclude='.next' --exclude='backups/' "$SRC_DIR/" "$APP_DIR/"
+  rsync -a --delete --exclude='.env' --exclude='.env.production' --exclude='node_modules' --exclude='.next' --exclude='backups/' "$SRC_DIR/" "$APP_DIR/"
 fi
 chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 cd "$APP_DIR"
 
-if [[ -f .env ]]; then
+# Compose expects .env.production for the application and .env for interpolation.
+# Keep one authoritative secret file and expose it through a local symlink.
+if [[ -f .env.production ]]; then
+  cp -a .env.production ".env.production.backup.$(date -u +%Y%m%dT%H%M%SZ)"
+elif [[ -f .env && ! -L .env ]]; then
+  cp -a .env .env.production
   cp -a .env ".env.backup.$(date -u +%Y%m%dT%H%M%SZ)"
-else
-  cp deploy/.env.production.example .env
+elif [[ ! -e .env.production ]]; then
+  cp deploy/.env.production.example .env.production
 fi
+rm -f .env
+ln -s .env.production .env
 python3 - "$DOMAIN" "$ADMIN_EMAIL_INPUT" <<'PY'
 from pathlib import Path
 import secrets, sys, re
-p=Path('.env'); s=p.read_text()
+p=Path('.env.production'); s=p.read_text()
 domain,email=sys.argv[1:]
 def val(): return secrets.token_urlsafe(48)
 current={}
@@ -83,7 +90,7 @@ for line in s.splitlines():
         k,v=line.split("=",1); current[k]=v.strip().strip('"')
 def setv(k,v,generate=False):
     old=current.get(k,"")
-    if generate and old and old not in {"GENERATE-ME","CHANGE-ME"}: return old
+    if generate and old and old not in {"GENERATE-ME","CHANGE-ME"} and not old.startswith("GENERATE-"): return old
     return v
 repls={
  'APP_URL':f'https://{domain}',
@@ -108,7 +115,7 @@ p.write_text(s)
 print('ADMIN_PASSWORD='+repls['ADMIN_PASSWORD'])
 print('ADMIN_PATH='+repls['ADMIN_PATH'])
 PY
-chmod 600 .env
+chmod 600 .env.production
 
 # Validate compose before doing anything destructive.
 docker compose -f docker-compose.prod.yml config >/dev/null
@@ -187,7 +194,7 @@ echo "============================================================"
 echo "Alimenta Pro v1.3.1 installatie voltooid"
 echo "URL: https://$DOMAIN"
 echo "Beheer CLI: alimenta doctor | status | logs | backup | update | restore"
-echo "Admin-gegevens staan in $APP_DIR/.env (chmod 600)."
+echo "Admin-gegevens staan in $APP_DIR/.env.production (chmod 600)."
 echo "============================================================"
 
 # v1.3.1 security completion: daily retention job (idempotent)
