@@ -53,6 +53,8 @@ jobs:
         run: npm audit --audit-level=high
       - name: Validate Prisma schema
         run: npx prisma validate
+      - name: Deploy Prisma migrations
+        run: npx prisma migrate deploy
       - name: Generate Prisma client
         run: npx prisma generate
       - name: Run tests
