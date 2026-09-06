@@ -30,9 +30,12 @@ export default async function CaseWorkflowPage({ params }: { params: Promise<{ i
 
   const review = reviewCase({ data: c.data, documents: c.documents, calculations: c.calculations, result: c.result });
   const rawStatus = String(c.reviewStatus || 'INCOMPLETE');
-  const status: CaseWorkflowStatus = ['INCOMPLETE', 'READY_FOR_REVIEW', 'REVIEWED', 'APPROVED', 'FINAL'].includes(rawStatus)
+  const knownStatus = ['INCOMPLETE', 'READY_FOR_REVIEW', 'REVIEWED', 'APPROVED', 'FINAL'].includes(rawStatus)
     ? rawStatus as CaseWorkflowStatus
-    : review.readyForProfessionalReview ? 'READY_FOR_REVIEW' : 'INCOMPLETE';
+    : 'INCOMPLETE';
+  const status: CaseWorkflowStatus = knownStatus === 'INCOMPLETE' && review.readyForProfessionalReview
+    ? 'READY_FOR_REVIEW'
+    : knownStatus;
   const items = buildCaseWorkflow(id, {
     status,
     hasCalculation: c.calculations.length > 0,
@@ -53,7 +56,7 @@ export default async function CaseWorkflowPage({ params }: { params: Promise<{ i
       </div>
       <div className="actions">
         <span className={`status ${statusClass[status]}`}>{workflowStatusLabel(status)}</span>
-        <Link className="btn secondary" href={`/cases/${id}`}>← Dossier</Link>
+        <Link className="btn secondary" href={`/cases/${id}` as Route}>← Dossier</Link>
       </div>
     </div>
 
