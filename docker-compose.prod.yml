@@ -3,14 +3,14 @@ services:
     build: .
     image: alimenta-pro:${ALIMENTA_IMAGE_TAG:-1.3.1-rc1}
     restart: unless-stopped
-    env_file: .env
+    env_file: .env.production
     environment:
       NODE_ENV: production
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "127.0.0.1:3000:3000"
+      - "${ALIMENTA_BIND_IP:-127.0.0.1}:3000:3000"
     read_only: true
     tmpfs:
       - /tmp
