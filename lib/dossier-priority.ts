@@ -14,8 +14,8 @@ export type DossierPriority = { score: number; level: "HIGH" | "MEDIUM" | "LOW";
 
 export function calculateDossierPriority(input: DossierPriorityInput): DossierPriority {
   const signals: DossierPrioritySignal[] = [];
-  if (input.overdueTasks > 0) signals.push({ key: "OVERDUE_TASK", label: `${input.overdueTasks} achterstallige taak${input.overdueTasks === 1 ? "" : "ken"}`, points: 35 });
-  if (input.todayTasks > 0) signals.push({ key: "TODAY_TASK", label: `${input.todayTasks} taak${input.todayTasks === 1 ? "" : "ken"} voor vandaag`, points: 10 });
+  if (input.overdueTasks > 0) signals.push({ key: "OVERDUE_TASK", label: `${input.overdueTasks} achterstallige taak${input.overdueTasks === 1 ? "" : "en"}`, points: 35 });
+  if (input.todayTasks > 0) signals.push({ key: "TODAY_TASK", label: `${input.todayTasks} taak${input.todayTasks === 1 ? "" : "en"} voor vandaag`, points: 10 });
   if (input.reviewStatus === "INCOMPLETE") signals.push({ key: "INCOMPLETE_REVIEW", label: "Professionele review nog niet gereed", points: 25 });
   else if (input.reviewStatus === "READY_FOR_REVIEW") signals.push({ key: "READY_FOR_REVIEW", label: "Wacht op professionele review", points: 30 });
   else if (input.reviewStatus === "REVIEWED") signals.push({ key: "AWAITING_APPROVAL", label: "Review uitgevoerd, goedkeuring ontbreekt", points: 20 });
