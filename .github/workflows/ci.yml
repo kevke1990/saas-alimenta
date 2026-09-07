@@ -89,6 +89,11 @@ jobs:
           echo "Runtime health check failed. Server log:"
           cat /tmp/alimenta-next.log
           exit 1
+      - name: Runtime readiness smoke test
+        run: |
+          set -eu
+          curl --fail --silent http://127.0.0.1:3000/api/ready >/tmp/alimenta-ready.json
+          cat /tmp/alimenta-ready.json
       - name: Validate production Compose
         run: |
           set -eu
