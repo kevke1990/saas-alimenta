@@ -31,6 +31,44 @@
 
 De applicatie gebruikt de bestaande plan-enum (`FREE`, `PRO`, `PRACTICE`, `ENTERPRISE`). De commerciële prijsstaffels blijven in `lib/pricing.ts`; Stripe Price IDs worden via `StripePlan` gekoppeld.
 
-## Definition of Done G1 + G2
+## G3 — Team & permissions
 
-Een gebruiker krijgt bij registratie een eigen praktijkorganisatie. Organisatieleden kunnen veilig worden uitgenodigd en krijgen een expliciete rol. Bestaande resource-isolatie blijft intact. Abonnementen kunnen via Stripe worden afgesloten/beheerd en server-side entitlements blokkeren het aanmaken van nieuwe actieve cliëntdossiers zodra de planlimiet is bereikt.
+- [x] Team overview at `/team`
+- [x] Server-side role enforcement
+- [x] Role management with owner safeguards
+- [x] Member removal with owner safeguards
+- [x] Security-sensitive team mutations are audited
+- [x] Existing user-owned dossier isolation preserved
+
+## G4 — Enterprise security
+
+- [x] Central security-event helper
+- [x] Authenticated security-events endpoint
+- [x] No secret values exposed through security reporting
+- [x] Existing authentication, passkeys and security headers preserved
+
+## G5 — Production readiness
+
+- [x] `/api/health` liveness/dependency check
+- [x] `/api/ready` production readiness gate
+- [x] Database readiness check
+- [x] Required production secret presence checks without secret disclosure
+- [x] `/api/release` non-sensitive release metadata
+- [x] Production release checklist and rollback requirements retained
+
+## G6 — Commercial launch
+
+- [x] Public `/pricing` page
+- [x] Central pricing configuration reused by public pricing
+- [x] Registration CTA
+- [x] Stripe production configuration gate documented
+- [x] Commercial launch gate documented
+- [x] Professional/legal disclaimer retained
+
+## Definition of Done G3 + G4
+
+Een gebruiker krijgt veilige team- en rolfunctionaliteit zonder dat bestaande resource-isolatie, berekeningen of provenance ongemerkt veranderen.
+
+## Definition of Done G5 + G6
+
+De applicatie heeft een afzonderlijke readiness-gate en release metadata, naast de bestaande healthcheck. De commerciële plannen zijn publiek zichtbaar en gekoppeld aan de centrale prijsconfiguratie. Productiebetalingen en echte klantdata blijven geblokkeerd totdat CI, deployment, security, privacy, billing, backup/restore en end-to-end functionele release-evidence aantoonbaar groen zijn.
