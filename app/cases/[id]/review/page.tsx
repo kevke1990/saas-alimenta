@@ -3,17 +3,23 @@ import AppShell from "@/components/AppShell";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { reviewCase, type ReviewSeverity } from "@/lib/case-review";
+import { buildCalculationDifference } from "@/lib/calculation-difference";
 
 const labels: Record<ReviewSeverity, string> = { CRITICAL: "Kritiek", WARNING: "Controleren", INFO: "Aandacht", OK: "OK" };
 const cls: Record<ReviewSeverity, string> = { CRITICAL: "red", WARNING: "amber", INFO: "gray", OK: "green" };
 const date = (v: any) => new Intl.DateTimeFormat("nl-NL", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v));
+const money = (v: any) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Number(v) || 0);
+const delta = (v: number) => v > 0 ? `+${money(v)}` : money(v);
 
 export default async function ReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
   const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: u.id }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: "desc" } } } });
+  const c = await db.case.findFirst({ where: { id, userId: u.id }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: "desc" }, take: 2 } } });
   if (!c) return <AppShell><div className="notice error">Dossier niet gevonden.</div></AppShell>;
   const review = reviewCase({ data: c.data, documents: c.documents, calculations: c.calculations, result: c.result });
+  const current = c.calculations[0];
+  const previous = c.calculations[1];
+  const difference = current && previous ? buildCalculationDifference({ previous: { inputSnapshot: previous.inputSnapshot, result: previous.result, fingerprint: (previous.result as any)?.calculationFingerprint || null }, current: { inputSnapshot: current.inputSnapshot, result: current.result, fingerprint: (current.result as any)?.calculationFingerprint || null } }) : null;
   const logs = await db.auditLog.findMany({ where: { userId: u.id, action: { in: ["CASE_REVIEW_COMMENTED", "CASE_REVIEW_STARTED", "CASE_READY_FOR_REVIEW", "CASE_REVIEWED", "CASE_APPROVED", "CASE_FINAL", "CASE_REOPENED"] } }, orderBy: { createdAt: "desc" }, take: 100 });
   const history = logs.filter(x => String((x.metadata as any)?.caseId || "") === id);
   const canMarkReady = c.reviewStatus === "INCOMPLETE" && review.readyForProfessionalReview;
@@ -30,6 +36,8 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       <div className="stat-card"><div className="stat-label">CONTROLEREN</div><div className="stat-value">{review.warningCount}</div><div className="stat-meta">Professionele beoordeling</div></div>
       <div className="stat-card"><div className="stat-label">STATUS</div><div className="stat-value" style={{fontSize: "18px"}}>{c.reviewStatus}</div><div className="stat-meta">Laatste workflowstatus</div></div>
     </div>
+
+    {difference && <section className="panel topgap"><div className="panel-head"><div><h2 className="panel-title">Wijzigingen sinds vorige berekening</h2><div className="panel-sub">De review ziet nu expliciet wat financieel en inhoudelijk is veranderd tussen de twee meest recente snapshots.</div></div><Link className="btn ghost" href={`/cases/${id}/history/compare/${previous!.id}/${current!.id}`}>Volledige vergelijking</Link></div><div className="result-overview"><div className="result-metric"><div className="stat-label">KINDERALIMENTATIE</div><div className="metric-value">{delta(difference.delta.childSupport)}</div><span>verschil per maand</span></div><div className="result-metric"><div className="stat-label">PAL NETTO</div><div className="metric-value">{delta(difference.delta.partnerSupportNet)}</div><span>verschil per maand</span></div><div className="result-metric"><div className="stat-label">PAL BRUTO</div><div className="metric-value">{delta(difference.delta.partnerSupportGross)}</div><span>verschil per maand</span></div><div className="result-metric"><div className="stat-label">TOTAAL</div><div className="metric-value">{delta(difference.delta.totalPayments)}</div><span>verschil per maand</span></div></div><div className="notice topgap">{difference.inputChanges.length} gewijzigde invoerwaarde{difference.inputChanges.length === 1 ? "" : "n"}. De huidige snapshot is {difference.changed ? "inhoudelijk gewijzigd ten opzichte van de vorige snapshot" : "gelijk aan de vorige snapshot"}.</div></section>}
 
     <section className="panel"><div className="panel-head"><div><h2 className="panel-title">Reviewpunten</h2><div className="panel-sub">Alimenta Pro signaleert; de professional beslist.</div></div></div>
       {review.items.map(item => <div className="review-row" key={item.key}><div className="review-icon">{item.severity === "OK" ? "✓" : item.severity === "CRITICAL" ? "!" : "•"}</div><div className="review-copy"><div className="review-title"><b>{item.title}</b><span className={`status ${cls[item.severity]}`}>{labels[item.severity]}</span></div><div className="subtle">{item.detail}</div>{item.action && <div className="review-action">Volgende stap: {item.action}</div>}</div></div>)}
