@@ -1,3 +1,5 @@
+import { detectLegalExceptions } from "./legal-exceptions";
+
 export type ReviewSeverity = "CRITICAL" | "WARNING" | "INFO" | "OK";
 export type ReviewItem = {
   key: string;
@@ -72,6 +74,10 @@ export function reviewCase(input: { data: any; documents?: any[]; calculations?:
     if (mismatches) add("housing.review", "INFO", "Woonlast boven forfait", "Bij één of meer ouders ligt de ingevoerde woonlast boven het rekenkundige woonbudget. Dat kan een maatwerkcontrole rechtvaardigen.", "Controleer werkelijke woonlast en onderbouwing.");
   }
 
+  for (const exception of detectLegalExceptions(d)) {
+    add(`legal.${exception.key}`, exception.severity, exception.title, exception.detail, exception.action, "LEGAL_EXCEPTION_SIGNAL");
+  }
+
   if (calculations.length === 0) add("calculation.missing", "WARNING", "Nog geen berekening", "Er is nog geen berekeningssnapshot opgeslagen.", "Maak eerst een berekening nadat de dossiercontrole is afgerond.");
   else add("calculation.present", "OK", "Berekening opgeslagen", `${calculations.length} berekeningssnapshot(s) zijn beschikbaar.`);
 
@@ -84,7 +90,7 @@ export function reviewCase(input: { data: any; documents?: any[]; calculations?:
   const score = Math.max(0, Math.min(100, 100 - critical * 25 - warnings * 10 - infos * 2));
 
   return {
-    version: "0.9.10",
+    version: "0.10.0",
     score,
     readyForProfessionalReview: critical === 0,
     criticalCount: critical,
