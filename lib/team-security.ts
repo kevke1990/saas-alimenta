@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
 import { ensureTenant, TENANT_ROLES, type TenantRole } from "@/lib/tenant";
+import type { Prisma } from "@prisma/client";
 
 export function isTenantRole(value: string): value is TenantRole {
   return (TENANT_ROLES as readonly string[]).includes(value);
@@ -21,6 +22,6 @@ export function createInviteSecret() {
   return { token, hash: createHash("sha256").update(token).digest("hex") };
 }
 
-export async function auditSecurity(userId: string, action: string, metadata: Record<string, unknown> = {}) {
+export async function auditSecurity(userId: string, action: string, metadata: Prisma.InputJsonValue = {}) {
   await db.auditLog.create({ data: { userId, action, metadata } });
 }
