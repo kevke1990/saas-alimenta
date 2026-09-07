@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Route } from 'next';
 import AppShell from '@/components/AppShell';
+import DemoWorkflowActions from '@/components/DemoWorkflowActions';
 import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { reviewCase } from '@/lib/case-review';
@@ -46,6 +47,7 @@ export default async function CaseWorkflowPage({ params }: { params: Promise<{ i
   });
   const next = getNextCaseWorkflowStep(items);
   const locked = status === 'APPROVED' || status === 'FINAL';
+  const isDemo = c.name.startsWith('DEMO');
 
   return <AppShell>
     <div className="page-head">
@@ -59,6 +61,8 @@ export default async function CaseWorkflowPage({ params }: { params: Promise<{ i
         <Link className="btn secondary" href={`/cases/${id}` as Route}>← Dossier</Link>
       </div>
     </div>
+
+    {isDemo && !locked && <section className="panel topgap"><div className="section-kicker">Demo-snelpad</div><h2 className="panel-title">Test de volledige reviewketen zonder extra klikken</h2><p className="panel-sub">Gebruik dit alleen voor het fictieve demo-dossier. Dezelfde server-side overgangscontroles, reviewblokkades en snapshot-binding blijven actief.</p><DemoWorkflowActions caseId={id} status={status}/><div className="actions topgap"><Link className="btn secondary" href={`/cases/${id}/scenarios`}>Scenario testen →</Link><Link className="btn secondary" href={`/cases/${id}/history`}>Historie testen →</Link><a className="btn secondary" href={`/api/cases/${id}/report`} target="_blank" rel="noreferrer">Rapport openen ↗</a></div></section>}
 
     {locked && <div className="notice success topgap"><b>Dossier vergrendeld.</b> {status === 'FINAL' ? 'Dit dossier is definitief.' : 'Dit dossier is goedgekeurd.'} Heropenen kan uitsluitend vanuit de professionele review.</div>}
 
@@ -76,9 +80,7 @@ export default async function CaseWorkflowPage({ params }: { params: Promise<{ i
         {items.map((item, index) => <div className="detail-card" key={item.step}>
           <div className="detail-card-head"><b>{index + 1}. {item.label}</b><span>{item.locked ? 'Vergrendeld' : item.complete ? 'Klaar' : item.active ? 'Actief' : 'Beschikbaar'}</span></div>
           <p className="panel-sub">{item.description}</p>
-          <div className="actions topgap">
-            <Link className="btn secondary" href={item.href as Route}>{item.locked ? 'Bekijken' : 'Openen'} →</Link>
-          </div>
+          <div className="actions topgap"><Link className="btn secondary" href={item.href as Route}>{item.locked ? 'Bekijken' : 'Openen'} →</Link></div>
         </div>)}
       </div>
     </section>
