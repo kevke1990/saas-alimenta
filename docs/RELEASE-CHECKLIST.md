@@ -23,13 +23,24 @@ Use this checklist for every production release. Do not mark a release complete 
 
 ## Deployment
 
-- [ ] Health endpoint returns 200.
+- [ ] `/api/health` returns 200.
+- [ ] `/api/ready` returns 200 and all blocking checks are green.
+- [ ] `/api/release` reports the expected release metadata.
 - [ ] Database migrations completed successfully.
 - [ ] Application starts without migration/runtime errors.
 - [ ] Login and authenticated dossier workflow tested.
 - [ ] Document upload/review tested with fictional data.
 - [ ] Calculation + snapshot + approval binding tested.
 - [ ] Professional report provenance checked.
+
+## Commercial launch
+
+- [ ] Public pricing page reviewed against `lib/pricing.ts`.
+- [ ] Stripe Price IDs configured for every sellable plan.
+- [ ] Stripe webhook signing configured and tested.
+- [ ] Test checkout/customer-portal flow completed.
+- [ ] Production billing is not enabled until the above checks pass.
+- [ ] Privacy, retention and support information is published.
 
 ## Recovery
 
@@ -53,4 +64,6 @@ Record with the release:
 - rollback target:
 - backup identifier:
 - reference-suite result:
+- readiness result:
+- billing verification:
 - known issues:
