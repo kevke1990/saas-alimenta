@@ -9,6 +9,33 @@ describe('review workflow', () => {
     expect(isAllowedReviewTransition('APPROVED', 'FINAL')).toBe(true);
   });
 
+  it('accepts a complete reopen-and-review cycle after FINAL', () => {
+    const firstCycle = [
+      ['INCOMPLETE', 'READY_FOR_REVIEW'],
+      ['READY_FOR_REVIEW', 'REVIEWED'],
+      ['REVIEWED', 'APPROVED'],
+      ['APPROVED', 'FINAL'],
+    ] as const;
+    const secondCycle = [
+      ['FINAL', 'INCOMPLETE'],
+      ['INCOMPLETE', 'READY_FOR_REVIEW'],
+      ['READY_FOR_REVIEW', 'REVIEWED'],
+      ['REVIEWED', 'APPROVED'],
+      ['APPROVED', 'FINAL'],
+    ] as const;
+
+    for (const [current, next] of [...firstCycle, ...secondCycle]) {
+      expect(isAllowedReviewTransition(current, next)).toBe(true);
+    }
+  });
+
+  it('does not allow FINAL to be changed directly into an editable review stage', () => {
+    expect(isAllowedReviewTransition('FINAL', 'REVIEWED')).toBe(false);
+    expect(isAllowedReviewTransition('FINAL', 'APPROVED')).toBe(false);
+    expect(isAllowedReviewTransition('FINAL', 'READY_FOR_REVIEW')).toBe(false);
+    expect(isExplicitReopen('FINAL', 'INCOMPLETE')).toBe(true);
+  });
+
   it('does not allow skipping professional review stages', () => {
     expect(isAllowedReviewTransition('INCOMPLETE', 'APPROVED')).toBe(false);
     expect(isAllowedReviewTransition('READY_FOR_REVIEW', 'APPROVED')).toBe(false);
