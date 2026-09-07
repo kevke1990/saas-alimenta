@@ -37,13 +37,11 @@ export default async function AttentionCenter() {
       where: { userId: user.id, status: "OPEN", dueAt: { lt: start } },
       orderBy: { dueAt: "asc" },
       take: 25,
-      include: { case: true, client: true },
     }),
     db.task.findMany({
       where: { userId: user.id, status: "OPEN", dueAt: { gte: start, lte: end } },
       orderBy: [{ priority: "desc" }, { dueAt: "asc" }],
       take: 25,
-      include: { case: true, client: true },
     }),
     db.case.findMany({
       where: {
@@ -56,13 +54,34 @@ export default async function AttentionCenter() {
     }),
   ]);
 
+  const relatedIds = [
+    ...overdueTasks.map((task) => task.clientId),
+    ...todayTasks.map((task) => task.clientId),
+  ].filter((id): id is string => Boolean(id));
+  const taskCaseIds = [
+    ...overdueTasks.map((task) => task.caseId),
+    ...todayTasks.map((task) => task.caseId),
+  ].filter((id): id is string => Boolean(id));
+
+  const [taskClients, taskCases] = await Promise.all([
+    relatedIds.length
+      ? db.client.findMany({ where: { userId: user.id, id: { in: relatedIds } } })
+      : Promise.resolve([]),
+    taskCaseIds.length
+      ? db.case.findMany({ where: { userId: user.id, id: { in: taskCaseIds } }, select: { id: true, name: true } })
+      : Promise.resolve([]),
+  ]);
+
+  const clientsById = new Map(taskClients.map((client) => [client.id, client.name]));
+  const casesById = new Map(taskCases.map((item) => [item.id, item.name]));
+
   const taskRow = (task: (typeof overdueTasks)[number], overdue = false) => (
     <tr key={task.id}>
       <td>
         <strong>{task.title}</strong>
         {task.description && <div className="stat-meta">{task.description}</div>}
       </td>
-      <td>{task.client?.name || task.case?.name || "—"}</td>
+      <td>{(task.clientId && clientsById.get(task.clientId)) || (task.caseId && casesById.get(task.caseId)) || "—"}</td>
       <td>{task.priority}</td>
       <td>{task.dueAt ? new Intl.DateTimeFormat("nl-NL", { dateStyle: "medium", timeStyle: "short" }).format(task.dueAt) : "—"}</td>
       <td>{overdue ? <span className="status amber">VERLOPEN</span> : <span className="status green">VANDAAG</span>}</td>
