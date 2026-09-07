@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
-import type { Plan } from "@prisma/client";
+import type { Plan, Prisma } from "@prisma/client";
 
 const PREFIX = "almt_live_";
 const LIMITS: Record<Plan, { monthly: number; keys: number }> = {
@@ -41,7 +41,8 @@ export async function authenticateApiToken(request: Request) {
 
 export async function checkApiEntitlement(userId: string, plan: Plan) {
   const since = new Date();
-  since.setUTCDate(1); since.setUTCHours(0, 0, 0, 0);
+  since.setUTCDate(1);
+  since.setUTCHours(0, 0, 0, 0);
   const used = await db.usageEvent.aggregate({
     where: { userId, type: "API_REQUEST", createdAt: { gte: since } },
     _sum: { units: true },
@@ -55,18 +56,28 @@ export async function enforceApiRateLimit(key: string, limit = 60, windowMs = 60
   const expiresAt = new Date(now.getTime() + windowMs);
   const bucket = await db.rateLimitBucket.findUnique({ where: { key } });
   if (!bucket || bucket.expiresAt <= now) {
-    await db.rateLimitBucket.upsert({ where: { key }, create: { key, count: 1, windowAt: now, expiresAt }, update: { count: 1, windowAt: now, expiresAt } });
-    return { allowed: true, remaining: limit - 1 };
+    await db.rateLimitBucket.upsert({
+      where: { key },
+      create: { key, count: 1, windowAt: now, expiresAt },
+      update: { count: 1, windowAt: now, expiresAt },
+    });
+    return { allowed: true, remaining: Math.max(0, limit - 1) };
   }
-  const updated = await db.rateLimitBucket.updateMany({ where: { key, expiresAt: { gt: now }, count: { lt: limit } }, data: { count: { increment: 1 } } });
-  return { allowed: updated.count > 0, remaining: Math.max(0, limit - (bucket.count + (updated.count > 0 ? 1 : 0))) };
+  const updated = await db.rateLimitBucket.updateMany({
+    where: { key, expiresAt: { gt: now }, count: { lt: limit } },
+    data: { count: { increment: 1 } },
+  });
+  return {
+    allowed: updated.count > 0,
+    remaining: Math.max(0, limit - (bucket.count + (updated.count > 0 ? 1 : 0))),
+  };
 }
 
 export function apiError(message: string, status: number, headers?: HeadersInit) {
   return Response.json({ error: message }, { status, headers });
 }
 
-export async function recordApiRequest(userId: string, metadata: Record<string, unknown>) {
+export async function recordApiRequest(userId: string, metadata: Prisma.InputJsonValue) {
   await db.usageEvent.create({ data: { userId, type: "API_REQUEST", units: 1, metadata } });
 }
 
