@@ -6,15 +6,43 @@ Fase F maakt van Alimenta Pro een actieve professionele werkplek in plaats van a
 
 De professional moet direct kunnen zien welk werk prioriteit heeft, zonder door meerdere schermen te zoeken.
 
+## F2 — Slimme dossierprioritering
+
+De eerste F2-release bouwt voort op `/dashboard/attention` en geeft ieder dossier een **uitlegbare werkscore van 0–100**. De score is nadrukkelijk geen juridisch oordeel en verandert geen berekening, norm, reviewstatus of dossierdata.
+
+De score gebruikt uitsluitend bestaande, server-side geautoriseerde workflowgegevens:
+
+- achterstallige taken: +35
+- taken voor vandaag: +10
+- wachten op professionele review: +30
+- professionele review nog incompleet: +25
+- review uitgevoerd maar goedkeuring ontbreekt: +20
+- voorgestelde inkomensfeiten die beoordeling vragen: +25
+- documenten die nog geen professionele/AI-review hebben afgerond: +15
+- geen berekening beschikbaar: +20
+- berekening gebruikt een andere actieve normversie: +20
+
+De totaalscore wordt begrensd op 100. **Hoog** is 60+, **middel** is 30–59 en **laag** is 0–29. De onderliggende signalen worden naast de score getoond zodat de professional kan zien waarom een dossier hoger staat.
+
+### F2 status
+
+- [x] signalen uit reviewworkflow meenemen
+- [x] ontbrekende professionele goedkeuring detecteren
+- [x] verouderde berekening/normversie signaleren
+- [x] openstaande document-/AI-review signaleren
+- [x] één uitlegbare prioriteitsscore per dossier
+- [x] server-side resource isolation behouden
+- [x] geen automatische juridische conclusie of berekeningswijziging
+
 ## Eerste release
 
 De eerste Fase-F release bevat `/dashboard/attention` met drie werkstromen:
 
 1. **Achterstallige taken** — open taken waarvan de deadline is verstreken.
 2. **Taken voor vandaag** — open taken met een deadline binnen de huidige dag.
-3. **Dossiers met opvolging** — oudste niet-definitieve dossiers eerst.
+3. **Dossiers met opvolging** — dossiers met de hoogste uitlegbare werkscore eerst.
 
-Alle queries zijn strikt gescopeerd op de ingelogde gebruiker. Het actiecentrum leest uitsluitend bestaande dossier- en taakgegevens en verandert geen berekening of reviewstatus.
+Alle queries zijn strikt gescopeerd op de ingelogde gebruiker. Het actiecentrum leest uitsluitend bestaande dossier-, taak-, document-, inkomensfeit-, berekenings- en normgegevens en verandert geen berekening of reviewstatus.
 
 ## Ontwerpprincipes
 
@@ -31,16 +59,8 @@ Alle queries zijn strikt gescopeerd op de ingelogde gebruiker. Het actiecentrum 
 - [x] open taken tonen
 - [x] verlopen taken apart tonen
 - [x] taken voor vandaag tonen
-- [x] open dossiers prioriteren op ouderdom
+- [x] open dossiers prioriteren
 - [x] resource-level autorisatie
-
-### F2 — Slimme dossierprioritering
-
-- [ ] signalen uit reviewworkflow meenemen
-- [ ] ontbrekende professionele goedkeuring detecteren
-- [ ] verouderde berekening/normversie signaleren
-- [ ] openstaande document-/AI-review signaleren
-- [ ] één uitlegbare prioriteitsscore per dossier
 
 ### F3 — Automatisering
 
