@@ -73,11 +73,13 @@ export function buildCalculationDifference(input: {
     partnerSupportGross: readNumber(currentResult, partnerGrossPaths),
     totalPayments: readNumber(currentResult, totalPaths),
   };
+  const inputChanges = collectChanges(input.previous.inputSnapshot, input.current.inputSnapshot);
+  const fingerprintsMatch = (input.previous.fingerprint || null) === (input.current.fingerprint || null);
 
   return {
     previousFingerprint: input.previous.fingerprint || null,
     currentFingerprint: input.current.fingerprint || null,
-    changed: (input.previous.fingerprint || null) !== (input.current.fingerprint || null),
+    changed: !fingerprintsMatch || inputChanges.length > 0,
     monthly: currentMonthly,
     delta: {
       childSupport: currentMonthly.childSupport - previousMonthly.childSupport,
@@ -85,6 +87,6 @@ export function buildCalculationDifference(input: {
       partnerSupportGross: currentMonthly.partnerSupportGross - previousMonthly.partnerSupportGross,
       totalPayments: currentMonthly.totalPayments - previousMonthly.totalPayments,
     },
-    inputChanges: collectChanges(input.previous.inputSnapshot, input.current.inputSnapshot),
+    inputChanges,
   };
 }
