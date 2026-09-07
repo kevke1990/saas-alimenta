@@ -20,4 +20,20 @@ describe('calculation fingerprint', () => {
     expect(calculationFingerprint(input, '1.0.1', '2026.1')).not.toBe(fingerprint);
     expect(calculationFingerprint(input, '1.0.0', '2026.2')).not.toBe(fingerprint);
   });
+
+  it('keeps an unchanged snapshot reproducible while a revised input gets a new fingerprint', () => {
+    const originalInput = {
+      effectiveDate: '2026-01-01',
+      parents: [{ nbi: 3200, housingCosts: 900 }],
+      children: [{ age: 8, name: 'K' }],
+    };
+    const revisedInput = {
+      ...originalInput,
+      parents: [{ ...originalInput.parents[0], nbi: 3350 }],
+    };
+    const originalFingerprint = calculationFingerprint(originalInput, '1.3.1', '2026.1');
+
+    expect(calculationFingerprint(originalInput, '1.3.1', '2026.1')).toBe(originalFingerprint);
+    expect(calculationFingerprint(revisedInput, '1.3.1', '2026.1')).not.toBe(originalFingerprint);
+  });
 });
