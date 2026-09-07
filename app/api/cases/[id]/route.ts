@@ -7,7 +7,6 @@ import { caseCreateSchema } from "@/lib/case-validation";
 import { calculationFingerprint } from "@/lib/calculation-snapshot";
 import { buildCombinedAudit } from "@/lib/combined-audit";
 import { calculationLockMessage, isCaseLockedForCalculation } from "@/lib/case-lock";
-import { resetReviewAfterRecalculation } from "@/lib/case-recalculation-workflow";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
@@ -129,7 +128,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     };
     const productionResult = { ...childResult, combined, partnerSupport, family: oldResult.family, identity: oldResult.identity };
     const fingerprint = calculationFingerprint(body.data, childResult.engineVersion, childResult.normVersion);
-    const reviewReset = resetReviewAfterRecalculation();
 
     const updated = await db.$transaction(async (tx) => {
       const c = await tx.case.update({
@@ -139,13 +137,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           data: body.data,
           result: { ...productionResult, calculationFingerprint: fingerprint },
           status: "CALCULATED",
-          ...reviewReset,
+          reviewStatus: "INCOMPLETE",
+          reviewedAt: null,
+          approvedAt: null,
+          approvedByUserId: null,
           calculationVersion: childResult.normVersion,
           metadata: (body.meta ?? existing.metadata ?? {}) as any,
         },
       });
       const calculation = await tx.calculation.create({ data: { caseId: id, engineVersion: childResult.engineVersion, normVersion: childResult.normVersion, inputSnapshot: body.data, result: { ...productionResult, calculationFingerprint: fingerprint } } });
-      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, fingerprint, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: calculation.id, previousReviewStatus: existing.reviewStatus, newReviewStatus: reviewReset.reviewStatus, engineVersion: childResult.engineVersion, normVersion: childResult.normVersion } } });
+      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, fingerprint, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: calculation.id, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: childResult.engineVersion, normVersion: childResult.normVersion } } });
       return c;
     });
     return NextResponse.json(updated);
