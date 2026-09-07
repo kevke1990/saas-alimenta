@@ -33,7 +33,7 @@ Een dossier ondersteunt minimaal:
 - Professionele goedkeuring van AI-afgeleide feiten.
 - Berekeningen, scenario's en overrides.
 
-De `Client` bevat expliciete velden voor persoon A en B. Het `Case` bewaart de complete berekeningsdata als versioneerbare dossierdata. Zie ook het Prisma-model. fileciteturn41file0
+De `Client` bevat expliciete velden voor persoon A en B. Het `Case` bewaart de complete berekeningsdata als versioneerbare dossierdata.
 
 ### Kinderalimentatie
 
@@ -158,9 +158,7 @@ AI is nadrukkelijk een extractie- en signaleringslaag. AI-output wordt niet zond
 
 ## Database en migrations
 
-De repository gebruikt versioned Prisma migrations. De huidige migratieketen bevat onder andere de initial schema migration, v1.3 hardening, security completion, demo uniqueness en family-members uitbreiding. fileciteturn26file0
-
-Productie gebruikt:
+De repository gebruikt versioned Prisma migrations. Productie gebruikt:
 
 ```bash
 npx prisma migrate deploy
@@ -185,8 +183,6 @@ cd saas-alimenta
 npm install
 ```
 
-> **Dependency policy:** dit project gebruikt bewust `npm install`. Een `package-lock.json` is niet vereist voor de CI-/developmentworkflow en hoeft niet te worden toegevoegd of gebruikt als release-artefact.
-
 Start PostgreSQL:
 
 ```bash
@@ -210,6 +206,8 @@ Open daarna `http://localhost:3000`.
 npm run db:seed:demo
 ```
 
+Daarnaast staat op het dashboard **Start volledige demo**. Deze actie maakt via dezelfde normale `/api/clients`- en `/api/cases`-keten een volledig fictief dossier met twee ouders, twee kinderen, wonen, nieuwe partner, kinderalimentatie en partneralimentatie en opent daarna direct de dossierworkflow.
+
 Gebruik uitsluitend fictieve persoonsgegevens in de demo.
 
 ## CI
@@ -226,8 +224,6 @@ De GitHub Actions CI voert op een schone PostgreSQL-service onder meer uit:
 8. `npm run build`;
 9. een runtime smoke test tegen `/api/health`.
 
-De huidige workflow gebruikt bewust `npm install`, niet `npm ci`. fileciteturn37file0
-
 ## Docker
 
 Productie gebruikt `docker-compose.prod.yml` met:
@@ -243,8 +239,6 @@ Productie gebruikt `docker-compose.prod.yml` met:
 - geen publieke PostgreSQL-poort;
 - configureerbare bind-IP voor de app.
 
-De productiecompose gebruikt een `.env.production` bestand dat **niet in Git hoort**. fileciteturn38file0
-
 Build/start:
 
 ```bash
@@ -257,8 +251,6 @@ Healthcheck:
 ```bash
 curl http://127.0.0.1:3000/api/health
 ```
-
-De applicatie-health endpoint controleert daadwerkelijk de databaseverbinding voordat `ok: true` wordt teruggegeven. fileciteturn33file0
 
 ## VPS-demo — Debian 13
 
@@ -372,19 +364,92 @@ Elke berekening wordt gekoppeld aan:
 - berekeningsresultaat;
 - timestamp.
 
-Hierdoor kan een eerder resultaat worden gereproduceerd en gecontroleerd, ook wanneer later een nieuwe norm- of engineversie wordt ingevoerd.
+Bij APPROVED wordt bovendien een exacte calculation binding opgeslagen. Een nieuw of gewijzigd berekeningssnapshot maakt een eerdere approval-binding ongeldig; FINAL wordt dan server-side geblokkeerd totdat opnieuw professioneel is gereviewd en goedgekeurd.
 
 ## Release status
 
 **v1.3.1-rc1 — Demo Release Candidate**
 
-De technische basis voor verdere ontwikkeling is aanwezig. Fase 1 richt zich op repository hygiene, reproduceerbare CI, migrations, build, runtime health en deployment hardening. Fase 2 richt zich op de inhoudelijke berekeningsengine en de volledige gegevensketen van gezin → berekening → professioneel resultaat.
+### Fase A — Demo MVP
+
+Fase A is gericht op een snelle, volledige demo-test van de bestaande inhoudelijke engine en workflow.
+
+**Afgerond:**
+
+- dashboard met één-klik volledige fictieve demo;
+- automatisch demo-cliënt- en dossier aanmaken via de normale API-keten;
+- volledige gezinssituatie met twee ouders, twee kinderen, wonen en nieuwe partner;
+- kinderalimentatie + partneralimentatie in één berekening;
+- centrale dossierworkflow;
+- calculation snapshots en historische berekeningen;
+- scenario's met expliciete bevestiging en nieuwe snapshot;
+- vergelijking van berekeningen;
+- professionele Case Review;
+- reviewworkflow INCOMPLETE → READY_FOR_REVIEW → REVIEWED → APPROVED → FINAL;
+- approval binding op calculation ID, fingerprint, engine- en normversie;
+- stale approval blokkade bij FINAL;
+- professioneel rapport met provenance-status;
+- audittrail voor review, approval en recalculatie;
+- CI-validatie van tests, build, runtime, Docker en deployment.
+
+**Demo-testpad:**
+
+1. Dashboard → **Start volledige demo**.
+2. Controleer het berekeningsresultaat.
+3. Open **Scenario's** en maak een alternatief scenario.
+4. Open **Historie** en controleer de snapshots/vergelijking.
+5. Open **Professionele review**.
+6. Doorloop READY_FOR_REVIEW → REVIEWED → APPROVED → FINAL.
+7. Open het rapport en controleer de provenance.
+8. Heropen, wijzig de berekening en controleer dat de oude approval niet meer geldig is.
+
+Op een fictief demo-dossier is op de workflowpagina bovendien een **Demo-snelpad** beschikbaar om de reviewstatussen snel achter elkaar te testen. De normale server-side transitie-, review- en snapshotcontroles blijven daarbij actief.
+
+### Fase B — Professionele workspace
+
+Na Fase A volgt de grotere professionaliseringsslag:
+
+- dossierbeheer en zoek/filter-ervaring;
+- professionele documentinname en statusoverzicht;
+- AI-extractie → fact review → approval als één duidelijke workflow;
+- uitgebreide override-workspace;
+- betere scenario- en vergelijkingsworkspace;
+- rapportgeneratie/export en professionele documentpresentatie;
+- gebruikersrollen en resource-level autorisatie;
+- volledige browser WebAuthn ceremony;
+- betere foutafhandeling en gebruikersfeedback;
+- end-to-end demo/reference dossiers;
+- uitgebreidere observability en operationele controles.
+
+### Fase C — Multi-tenant SaaS
+
+- organisaties/praktijken als tenant;
+- gebruikers en rollen per tenant;
+- tenant-isolatie op resource-niveau;
+- uitnodigingen en teambeheer;
+- abonnementen en entitlements;
+- Stripe billing/webhooks;
+- limieten per plan;
+- audit en security events per tenant;
+- custom domains indien gewenst.
+
+### Fase D — Productie en juridische professionalisering
+
+- uitgebreide juridische exception handling;
+- normbeheer en releaseproces;
+- formele referentiedossiers en regressiesuites;
+- security/privacy review;
+- DPIA/verwerkers- en bewaarbeleid waar nodig;
+- productie-monitoring, backups en restore-drills;
+- performance/load tests;
+- deployment rollback;
+- productiedocumentatie en supportprocessen.
 
 De release is **niet juridisch gecertificeerd** en mag niet als vervanging van professioneel juridisch oordeel worden gebruikt.
 
 ## Fase 2 — Berekeningsengine
 
-De volgende ontwikkelfase bouwt voort op de eisen uit de kinderalimentatie-tooling:
+De inhoudelijke enginebasis die voor Fase A wordt gedemonstreerd bestaat uit:
 
 ### 2.1 Canoniek gezinsmodel
 
