@@ -1,3 +1,5 @@
+import { getAiConfig } from "@/lib/ai-config";
+
 export type GeminiAnalysis = {
   documentType?: string;
   personName?: string;
@@ -15,16 +17,17 @@ export type GeminiAnalysis = {
 };
 
 export async function analyzeIncomeDocument(text: string): Promise<GeminiAnalysis> {
-  const key = process.env.GOOGLE_AI_API_KEY;
-  if (!key) throw new Error("GOOGLE_AI_API_KEY ontbreekt");
-  const model = process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash";
-  const prompt = `Je bent een documentextractie-assistent voor Alimenta Pro, een Nederlandse alimentatie-rekenapplicatie. Analyseer uitsluitend de aangeleverde tekst. Verzin niets. Geef JSON terug volgens dit schema: {documentType,personName,employer,grossAnnual,holidayAllowance,thirteenthMonth,ikb,pensionPremium,taxableIncome,netAnnual,detectedComponents,warnings,confidence}. Bedragen zijn jaarlijkse EUR-bedragen als het document een jaarbedrag geeft; anders null. confidence is 0..1. Markeer ontbrekende of dubbelzinnige gegevens in warnings. Dit is extractie, geen juridisch of fiscaal advies.\n\nDOCUMENT:\n${text.slice(0, 120000)}`;
+  const cfg = await getAiConfig();
+  const key = cfg.enabled && cfg.provider === "GOOGLE_GEMINI" ? cfg.apiKey : process.env.GOOGLE_AI_API_KEY;
+  if (!key) throw new Error("Google AI API key ontbreekt");
+  const model = cfg.enabled && cfg.provider === "GOOGLE_GEMINI" && cfg.model ? cfg.model : process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash";
+  const prompt = `${cfg.enabled && cfg.provider === "GOOGLE_GEMINI" && cfg.systemPrompt ? cfg.systemPrompt : "Je bent een documentextractie-assistent voor Alimenta Pro, een Nederlandse alimentatie-rekenapplicatie. Analyseer uitsluitend de aangeleverde tekst. Verzin niets. Geef JSON terug volgens dit schema: {documentType,personName,employer,grossAnnual,holidayAllowance,thirteenthMonth,ikb,pensionPremium,taxableIncome,netAnnual,detectedComponents,warnings,confidence}. Bedragen zijn jaarlijkse EUR-bedragen als het document een jaarbedrag geeft; anders null. confidence is 0..1. Markeer ontbrekende of dubbelzinnige gegevens in warnings. Dit is extractie, geen juridisch of fiscaal advies."}\n\nDOCUMENT:\n${text.slice(0, 120000)}`;
   const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
     method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0, responseMimeType: "application/json" } })
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: cfg.enabled ? cfg.temperature : 0, responseMimeType: "application/json", maxOutputTokens: cfg.enabled ? cfg.maxTokens : 4000 } })
   });
   if (!r.ok) throw new Error(`Gemini API fout (${r.status})`);
-  const j:any = await r.json();
-  const out = j?.candidates?.[0]?.content?.parts?.map((x:any)=>x.text||"").join("") || "{}";
+  const j: any = await r.json();
+  const out = j?.candidates?.[0]?.content?.parts?.map((x: any) => x.text || "").join("") || "{}";
   return JSON.parse(out);
 }
