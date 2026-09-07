@@ -39,6 +39,31 @@ describe('buildProfessionalReport', () => {
     expect(report.provenance.generatedFromApprovedSnapshot).toBe(false);
   });
 
+  it('marks FINAL as provenance-safe only when the approval binding matches the current snapshot', () => {
+    const current = { ...calculation, id: 'calc-final', result: { calculationFingerprint: 'final123' } };
+    const report = buildProfessionalReport({
+      name: 'Final', reviewStatus: 'FINAL', data: { parents: [], children: [] },
+      result: { calculationFingerprint: 'final123', combined: { childSupportTotal: 350 } },
+      calculations: [current],
+      approvalBinding: buildReviewCalculationBinding(current),
+    });
+    expect(report.provenance.generatedFromApprovedSnapshot).toBe(true);
+    expect(report.provenance.snapshotId).toBe('calc-final');
+  });
+
+  it('marks an approved report stale when a newer calculation snapshot replaces the approved one', () => {
+    const approved = { ...calculation, id: 'calc-approved', result: { calculationFingerprint: 'approved123' } };
+    const current = { ...calculation, id: 'calc-new', result: { calculationFingerprint: 'new123' } };
+    const report = buildProfessionalReport({
+      name: 'Stale approval', reviewStatus: 'APPROVED', data: { parents: [], children: [] },
+      result: { calculationFingerprint: 'new123', combined: { childSupportTotal: 350 } },
+      calculations: [current],
+      approvalBinding: buildReviewCalculationBinding(approved),
+    });
+    expect(report.provenance.generatedFromApprovedSnapshot).toBe(false);
+    expect(report.provenance.snapshotId).toBe('calc-new');
+  });
+
   it('does not invent a partner-support amount when PAL is absent', () => {
     const report = buildProfessionalReport({ name: 'KA-only', data: { parents: [{ nbi: 2000 }, { nbi: 1500 }], children: [{ age: 10 }] }, result: { combined: { childSupportTotal: 350 }, totalNeed: 500, totalCapacity: 700 }, calculations: [] });
     expect(report.summary.childSupportMonthly).toBe(350);
