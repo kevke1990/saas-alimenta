@@ -8,70 +8,38 @@ De professional moet direct kunnen zien welk werk prioriteit heeft, zonder door 
 
 ## F2 — Slimme dossierprioritering
 
-De eerste F2-release bouwt voort op `/dashboard/attention` en geeft ieder dossier een **uitlegbare werkscore van 0–100**. De score is nadrukkelijk geen juridisch oordeel en verandert geen berekening, norm, reviewstatus of dossierdata.
-
-De score gebruikt uitsluitend bestaande, server-side geautoriseerde workflowgegevens:
-
-- achterstallige taken: +35
-- taken voor vandaag: +10
-- wachten op professionele review: +30
-- professionele review nog incompleet: +25
-- review uitgevoerd maar goedkeuring ontbreekt: +20
-- voorgestelde inkomensfeiten die beoordeling vragen: +25
-- documenten die nog geen professionele/AI-review hebben afgerond: +15
-- geen berekening beschikbaar: +20
-- berekening gebruikt een andere actieve normversie: +20
-
-De totaalscore wordt begrensd op 100. **Hoog** is 60+, **middel** is 30–59 en **laag** is 0–29. De onderliggende signalen worden naast de score getoond zodat de professional kan zien waarom een dossier hoger staat.
+De F2-release geeft ieder dossier een uitlegbare werkscore van 0–100. De score is geen juridisch oordeel en verandert geen berekening, norm, reviewstatus of dossierdata. Signalen omvatten taken, reviewstatus, openstaande inkomensfeiten, document-/AI-review, ontbrekende berekeningen en afwijkende normversies. De score wordt server-side berekend en resource-geïsoleerd weergegeven.
 
 ### F2 status
-
-- [x] signalen uit reviewworkflow meenemen
-- [x] ontbrekende professionele goedkeuring detecteren
-- [x] verouderde berekening/normversie signaleren
-- [x] openstaande document-/AI-review signaleren
-- [x] één uitlegbare prioriteitsscore per dossier
-- [x] server-side resource isolation behouden
+- [x] reviewworkflow-signalen
+- [x] ontbrekende professionele goedkeuring
+- [x] verouderde normversie
+- [x] document-/AI-review
+- [x] uitlegbare prioriteitsscore
+- [x] server-side resource isolation
 - [x] geen automatische juridische conclusie of berekeningswijziging
 
-## Eerste release
+## F3 — Gecontroleerde automatisering
 
-De eerste Fase-F release bevat `/dashboard/attention` met drie werkstromen:
+F3 bouwt voort op de dossierworkflow met een gecontroleerde automatiseringslaag. Vanuit `/cases/[id]/automation` kan de professional:
 
-1. **Achterstallige taken** — open taken waarvan de deadline is verstreken.
-2. **Taken voor vandaag** — open taken met een deadline binnen de huidige dag.
-3. **Dossiers met opvolging** — dossiers met de hoogste uitlegbare werkscore eerst.
+- [x] opvolgtaken laten voorstellen op basis van dossierstatus en concrete workflowsignalen
+- [x] een voorgestelde taak expliciet accepteren en aan de werkvoorraad toevoegen
+- [x] een agenda-opvolging aanmaken met instelbare herinnering
+- [x] een e-mailconcept genereren vanuit dossiercontext
+- [x] verzending uitsluitend als expliciete professionele actie laten plaatsvinden
+- [x] iedere geaccepteerde taak/agenda-actie auditten
 
-Alle queries zijn strikt gescopeerd op de ingelogde gebruiker. Het actiecentrum leest uitsluitend bestaande dossier-, taak-, document-, inkomensfeit-, berekenings- en normgegevens en verandert geen berekening of reviewstatus.
+Automatisering wijzigt nooit zelfstandig een berekening, norm of reviewstatus. De huidige F3-release gebruikt bestaande `Task`- en `CalendarEvent`-gegevens; er wordt geen aparte scheduler of externe AI vereist voor de workflowvoorstellen.
 
-## Ontwerpprincipes
-
-- Geen automatische juridische conclusies.
-- Geen wijziging van berekeningsuitkomsten zonder expliciete professionele actie.
-- Prioritering moet uitlegbaar zijn.
-- Tenant/resource isolation blijft server-side verplicht.
-- Persoonsgegevens worden niet naar externe AI gestuurd voor alleen dashboardprioritering.
-
-## Volgende stappen binnen Fase F
-
-### F1 — Actiecentrum
-
+## F1 status
 - [x] open taken tonen
 - [x] verlopen taken apart tonen
 - [x] taken voor vandaag tonen
 - [x] open dossiers prioriteren
 - [x] resource-level autorisatie
 
-### F3 — Automatisering
-
-- [ ] taken automatisch voorstellen op basis van dossierstatus
-- [ ] configureerbare reminders
-- [ ] agenda-opvolging
-- [ ] e-mailconcepten vanuit dossiercontext
-- [ ] professionele bevestiging vóór verzending
-
-### F4 — Integratieplatform
-
+## F4 — Integratieplatform
 - [ ] versioned API
 - [ ] scoped API credentials
 - [ ] webhook events
@@ -79,8 +47,7 @@ Alle queries zijn strikt gescopeerd op de ingelogde gebruiker. Het actiecentrum 
 - [ ] integratie-audittrail
 - [ ] rate limiting en entitlement checks
 
-### F5 — Intelligence
-
+## F5 — Intelligence
 - [ ] explainable dossier health
 - [ ] afwijkingsdetectie ten opzichte van eerdere berekeningen
 - [ ] AI als signaleringslaag, nooit als autonome juridische beslisser
