@@ -1,3 +1,5 @@
+import { isReviewBindingCurrent, type ReviewCalculationBinding } from '@/lib/review-binding';
+
 export type ProfessionalReport = {
   title: string;
   generatedAt: string;
@@ -53,7 +55,15 @@ export function buildProfessionalReport(input: any): ProfessionalReport {
   const snapshotId = typeof latest?.id === 'string' ? latest.id : undefined;
   const engineVersion = latest?.engineVersion || result.engineVersion;
   const normVersion = latest?.normVersion || result.normVersion;
-  const approved = String(input.reviewStatus || '') === 'APPROVED' || String(input.reviewStatus || '') === 'FINAL';
+  const currentBinding: ReviewCalculationBinding | undefined = latest?.id ? {
+    calculationId: latest.id,
+    fingerprint: fingerprint ?? null,
+    engineVersion: engineVersion ?? null,
+    normVersion: normVersion ?? null,
+  } : undefined;
+  const suppliedApprovalBinding = input.approvalBinding as ReviewCalculationBinding | undefined;
+  const statusApproved = String(input.reviewStatus || '') === 'APPROVED' || String(input.reviewStatus || '') === 'FINAL';
+  const approved = statusApproved && !!currentBinding && !!suppliedApprovalBinding && isReviewBindingCurrent(suppliedApprovalBinding, currentBinding);
 
   return {
     title: 'Alimenta Pro — professioneel rekenrapport',
