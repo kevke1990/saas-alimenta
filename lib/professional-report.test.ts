@@ -29,7 +29,7 @@ describe('buildProfessionalReport', () => {
         },
         warnings: ['controleer inkomen'],
       },
-      calculations: [{ engineVersion: '1.3.1', normVersion: '2026.1', createdAt: new Date('2026-09-06T10:00:00Z') }],
+      calculations: [{ id: 'calc-1', engineVersion: '1.3.1', normVersion: '2026.1', createdAt: new Date('2026-09-06T10:00:00Z') }],
       review: { score: 90 },
     });
 
@@ -38,11 +38,32 @@ describe('buildProfessionalReport', () => {
     expect(report.summary.partnerSupportGrossMonthly).toBe(300);
     expect(report.summary.partnerSupportNetMonthly).toBe(240);
     expect(report.summary.totalMonthlyPayments).toBe(750);
+    expect(report.calculation.id).toBe('calc-1');
     expect(report.calculation.fingerprint).toBe('abc123');
+    expect(report.provenance).toEqual({
+      snapshotId: 'calc-1',
+      fingerprint: 'abc123',
+      engineVersion: '1.3.1',
+      normVersion: '2026.1',
+      generatedFromApprovedSnapshot: true,
+    });
     expect(report.audit.priorityAudit).toEqual({ childSupportPriorityApplied: true });
     expect(report.audit.warnings).toContain('controleer inkomen');
     expect(report.children).toHaveLength(1);
     expect(report.parents).toHaveLength(2);
+  });
+
+  it('does not label a review-ready report as generated from an approved snapshot', () => {
+    const report = buildProfessionalReport({
+      name: 'Review-ready',
+      reviewStatus: 'READY_FOR_REVIEW',
+      data: { parents: [], children: [] },
+      result: { calculationFingerprint: 'fp-456', combined: {} },
+      calculations: [{ id: 'calc-456', engineVersion: '1.3.1', normVersion: '2026.1' }],
+    });
+
+    expect(report.provenance.snapshotId).toBe('calc-456');
+    expect(report.provenance.generatedFromApprovedSnapshot).toBe(false);
   });
 
   it('does not invent a partner-support amount when PAL is absent', () => {
