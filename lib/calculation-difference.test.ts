@@ -65,6 +65,27 @@ describe('calculation difference', () => {
     ]);
   });
 
+  it('detects changed input when fingerprints are unavailable', () => {
+    const current = {
+      ...previous,
+      fingerprint: null,
+      inputSnapshot: {
+        ...previous.inputSnapshot,
+        parents: [{ nbi: 4100 }, { nbi: 2500 }],
+      },
+    };
+
+    const difference = buildCalculationDifference({
+      previous: { ...previous, fingerprint: null },
+      current,
+    });
+
+    expect(difference.changed).toBe(true);
+    expect(difference.inputChanges).toEqual([
+      { path: 'parents[0].nbi', previous: 4000, current: 4100 },
+    ]);
+  });
+
   it('is stable for identical snapshots', () => {
     const difference = buildCalculationDifference({ previous, current: previous });
 
