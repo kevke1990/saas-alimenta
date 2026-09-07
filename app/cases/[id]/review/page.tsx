@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { reviewCase, type ReviewSeverity } from "@/lib/case-review";
 import { buildCalculationDifference } from "@/lib/calculation-difference";
+import { buildReviewCalculationBinding, isReviewBindingCurrent } from "@/lib/review-binding";
 
 const labels: Record<ReviewSeverity, string> = { CRITICAL: "Kritiek", WARNING: "Controleren", INFO: "Aandacht", OK: "OK" };
 const cls: Record<ReviewSeverity, string> = { CRITICAL: "red", WARNING: "amber", INFO: "gray", OK: "green" };
@@ -22,6 +23,12 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
   const difference = current && previous ? buildCalculationDifference({ previous: { inputSnapshot: previous.inputSnapshot, result: previous.result, fingerprint: (previous.result as any)?.calculationFingerprint || null }, current: { inputSnapshot: current.inputSnapshot, result: current.result, fingerprint: (current.result as any)?.calculationFingerprint || null } }) : null;
   const logs = await db.auditLog.findMany({ where: { userId: u.id, action: { in: ["CASE_REVIEW_COMMENTED", "CASE_REVIEW_STARTED", "CASE_READY_FOR_REVIEW", "CASE_REVIEWED", "CASE_APPROVED", "CASE_FINAL", "CASE_REOPENED"] } }, orderBy: { createdAt: "desc" }, take: 100 });
   const history = logs.filter(x => String((x.metadata as any)?.caseId || "") === id);
+  const latestApprovalAudit = history.find(x => x.action === "CASE_APPROVED");
+  const approvalBinding = latestApprovalAudit?.metadata && typeof latestApprovalAudit.metadata === "object"
+    ? (latestApprovalAudit.metadata as Record<string, unknown>).calculationBinding as ReturnType<typeof buildReviewCalculationBinding> | undefined
+    : undefined;
+  const currentBinding = current ? buildReviewCalculationBinding({ id: current.id, engineVersion: current.engineVersion, normVersion: current.normVersion, result: current.result }) : null;
+  const reportProvenanceCurrent = !!currentBinding && isReviewBindingCurrent(approvalBinding, currentBinding);
   const canMarkReady = c.reviewStatus === "INCOMPLETE" && review.readyForProfessionalReview;
   const canReview = c.reviewStatus === "READY_FOR_REVIEW";
   const canApprove = c.reviewStatus === "REVIEWED";
@@ -38,6 +45,16 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
     </div>
 
     {difference && <section className="panel topgap"><div className="panel-head"><div><h2 className="panel-title">Wijzigingen sinds vorige berekening</h2><div className="panel-sub">De review ziet nu expliciet wat financieel en inhoudelijk is veranderd tussen de twee meest recente snapshots.</div></div><Link className="btn ghost" href={`/cases/${id}/history/compare/${previous!.id}/${current!.id}`}>Volledige vergelijking</Link></div><div className="result-overview"><div className="result-metric"><div className="stat-label">KINDERALIMENTATIE</div><div className="metric-value">{delta(difference.delta.childSupport)}</div><span>verschil per maand</span></div><div className="result-metric"><div className="stat-label">PAL NETTO</div><div className="metric-value">{delta(difference.delta.partnerSupportNet)}</div><span>verschil per maand</span></div><div className="result-metric"><div className="stat-label">PAL BRUTO</div><div className="metric-value">{delta(difference.delta.partnerSupportGross)}</div><span>verschil per maand</span></div><div className="result-metric"><div className="stat-label">TOTAAL</div><div className="metric-value">{delta(difference.delta.totalPayments)}</div><span>verschil per maand</span></div></div><div className="notice topgap">{difference.inputChanges.length} gewijzigde invoerwaarde{difference.inputChanges.length === 1 ? "" : "n"}. De huidige snapshot is {difference.changed ? "inhoudelijk gewijzigd ten opzichte van de vorige snapshot" : "gelijk aan de vorige snapshot"}.</div></section>}
+
+    <section className="panel"><div className="panel-head"><div><h2 className="panel-title">Rapport-provenance</h2><div className="panel-sub">Het professionele rapport kan alleen als goedgekeurd worden aangemerkt wanneer de opgeslagen goedkeuringssnapshot exact overeenkomt met de actuele berekening.</div></div><Link className="btn ghost" href={`/api/cases/${id}/report`}>Open rapport</Link></div>
+      <div className="result-overview">
+        <div className="result-metric"><div className="stat-label">SNAPSHOT</div><div className="metric-value" style={{fontSize: "15px"}}>{current?.id || "—"}</div><span>actuele berekening</span></div>
+        <div className="result-metric"><div className="stat-label">ENGINE</div><div className="metric-value" style={{fontSize: "15px"}}>{current?.engineVersion || "—"}</div><span>rekenengine</span></div>
+        <div className="result-metric"><div className="stat-label">NORM</div><div className="metric-value" style={{fontSize: "15px"}}>{current?.normVersion || "—"}</div><span>normversie</span></div>
+        <div className="result-metric"><div className="stat-label">STATUS</div><div className={`metric-value ${reportProvenanceCurrent ? "green" : ""}`} style={{fontSize: "15px"}}>{reportProvenanceCurrent ? "GEBONDEN" : "NIET GEBONDEN"}</div><span>{approvalBinding ? "goedkeuringssnapshot gevonden" : "nog geen goedkeuringssnapshot"}</span></div>
+      </div>
+      <div className={`notice topgap ${reportProvenanceCurrent ? "success" : "error"}`}>{reportProvenanceCurrent ? "De actuele berekening is exact gelijk aan de snapshot die bij APPROVED is opgeslagen. Het rapport mag deze goedkeuringsprovenance voeren." : "De actuele berekening is nog niet exact gebonden aan een APPROVED-snapshot. Het rapport wordt daarom niet als afkomstig uit een goedgekeurde snapshot gemarkeerd."}</div>
+    </section>
 
     <section className="panel"><div className="panel-head"><div><h2 className="panel-title">Reviewpunten</h2><div className="panel-sub">Alimenta Pro signaleert; de professional beslist.</div></div></div>
       {review.items.map(item => <div className="review-row" key={item.key}><div className="review-icon">{item.severity === "OK" ? "✓" : item.severity === "CRITICAL" ? "!" : "•"}</div><div className="review-copy"><div className="review-title"><b>{item.title}</b><span className={`status ${cls[item.severity]}`}>{labels[item.severity]}</span></div><div className="subtle">{item.detail}</div>{item.action && <div className="review-action">Volgende stap: {item.action}</div>}</div></div>)}
