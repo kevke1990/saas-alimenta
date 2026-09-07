@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { buildReviewCalculationBinding, isReviewBindingCurrent } from "../../../../../../lib/review-binding";
+import { buildReviewCalculationBinding, isReviewBindingCurrent } from "../../../../../lib/review-binding";
 
 const esc=(v:any)=>String(v??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 const money=(v:any)=>new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(Number(v)||0);
@@ -22,7 +22,7 @@ export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
     const currentBinding=calc?buildReviewCalculationBinding(calc):null;
     const approvedSnapshotBound=!!currentBinding&&!!approvalBinding&&isReviewBindingCurrent(approvalBinding,currentBinding);
     const reportIsApproved=c.reviewStatus==="APPROVED"||c.reviewStatus==="FINAL";
-    const reportProvenanceStatus=reportIsApproved?(approvedSnapshotBound?"GEBONDEN AAN GOEDGEKEURDE SNAPSHOT":"GOEDGEKEURDE SNAPSHOT ONTBREEKT OF IS VEROUdERD"):"CONCEPT — NIET GOEDGEKEURD";
+    const reportProvenanceStatus=reportIsApproved?(approvedSnapshotBound?"GEBONDEN AAN GOEDGEKEURDE SNAPSHOT":"GOEDGEKEURDE SNAPSHOT ONTBREEKT OF IS VEROUDERD"):"CONCEPT — NIET GOEDGEKEURD";
     const parents=data.parents||[]; const childrenInput=data.children||[];
     const parentNames=parents.map((p:any,i:number)=>p.name||c.client?.[i===0?"personAName":"personBName"]||`Ouder ${String.fromCharCode(65+i)}`);
     const childNames=childrenInput.map((x:any,i:number)=>x.name||`Kind ${i+1}`);
