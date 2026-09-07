@@ -7,10 +7,18 @@ export type ProfessionalReport = {
   reviewScore?: number;
   reviewStatus?: string;
   calculation: {
+    id?: string;
     engineVersion?: string;
     normVersion?: string;
     fingerprint?: string;
     createdAt?: string;
+  };
+  provenance: {
+    snapshotId?: string;
+    fingerprint?: string;
+    engineVersion?: string;
+    normVersion?: string;
+    generatedFromApprovedSnapshot: boolean;
   };
   summary: {
     childSupportMonthly: number;
@@ -41,6 +49,11 @@ export function buildProfessionalReport(input: any): ProfessionalReport {
   const calculations = Array.isArray(input.calculations) ? input.calculations : [];
   const latest = calculations[0];
   const pal = combined.partnerSupport || result.partnerSupport;
+  const fingerprint = typeof result.calculationFingerprint === 'string' ? result.calculationFingerprint : undefined;
+  const snapshotId = typeof latest?.id === 'string' ? latest.id : undefined;
+  const engineVersion = latest?.engineVersion || result.engineVersion;
+  const normVersion = latest?.normVersion || result.normVersion;
+  const approved = String(input.reviewStatus || '') === 'APPROVED' || String(input.reviewStatus || '') === 'FINAL';
 
   return {
     title: 'Alimenta Pro — professioneel rekenrapport',
@@ -51,10 +64,18 @@ export function buildProfessionalReport(input: any): ProfessionalReport {
     reviewScore: input.review?.score,
     reviewStatus: input.reviewStatus,
     calculation: {
-      engineVersion: latest?.engineVersion || result.engineVersion,
-      normVersion: latest?.normVersion || result.normVersion,
-      fingerprint: result.calculationFingerprint,
+      id: snapshotId,
+      engineVersion,
+      normVersion,
+      fingerprint,
       createdAt: latest?.createdAt ? new Date(latest.createdAt).toISOString() : undefined,
+    },
+    provenance: {
+      snapshotId,
+      fingerprint,
+      engineVersion,
+      normVersion,
+      generatedFromApprovedSnapshot: approved,
     },
     summary: {
       childSupportMonthly: num(combined.childSupportTotal),
