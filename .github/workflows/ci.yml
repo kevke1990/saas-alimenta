@@ -119,7 +119,7 @@ jobs:
       - name: Validate deployment scripts
         run: |
           set -eu
-          for script in deploy/preflight-demo.sh deploy/verify-demo.sh deploy/doctor.sh deploy/backup.sh deploy/restore.sh deploy/update.sh deploy/installer.sh deploy/alimenta; do
+          for script in deploy/preflight-demo.sh deploy/verify-demo.sh deploy/doctor.sh deploy/backup.sh deploy/restore.sh deploy/verify-backup.sh deploy/update.sh deploy/installer.sh deploy/alimenta; do
             test -f "$script"
             bash -n "$script"
           done

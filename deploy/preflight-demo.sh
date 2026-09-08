@@ -8,13 +8,11 @@ docker compose version >/dev/null 2>&1 && ok "Docker Compose" || bad "Docker Com
 [[ -f .env || -f .env.production || -f deploy/.env.production.example ]] && ok "Environment template" || bad "Environment template ontbreekt"
 [[ -f docker-compose.prod.yml ]] && ok "Production Compose" || bad "docker-compose.prod.yml ontbreekt"
 [[ -f Dockerfile ]] && ok "Production Dockerfile" || bad "Dockerfile ontbreekt"
-docker compose -f docker-compose.prod.yml config >/dev/null 2>&1 && ok "Compose config" || bad "Compose config ongeldig"
+docker compose -f docker-compose.prod.yml config >/dev/null 2>&1 && ok "Compose config" || bad "docker-compose.prod.yml ongeldig"
 [[ -f prisma/schema.prisma ]] && ok "Prisma schema" || bad "Prisma schema ontbreekt"
 find prisma/migrations -mindepth 1 -maxdepth 1 -type d | grep -q . && ok "Prisma migrations" || bad "Prisma migrations ontbreken"
-[[ -f deploy/installer.sh ]] && ok "Installer" || bad "Installer ontbreekt"
-[[ -f deploy/doctor.sh ]] && ok "Doctor" || bad "Doctor ontbreekt"
-[[ -f deploy/backup.sh ]] && ok "Backup" || bad "Backup ontbreekt"
-[[ -f deploy/restore.sh ]] && ok "Restore" || bad "Restore ontbreekt"
-[[ -f deploy/update.sh ]] && ok "Update" || bad "Update ontbreekt"
+for item in installer doctor backup restore verify-backup update; do
+  [[ -f "deploy/${item}.sh" ]] && ok "${item}" || bad "deploy/${item}.sh ontbreekt"
+done
 [[ -f deploy/verify-demo.sh ]] && ok "Demo verification" || bad "Demo verification ontbreekt"
 exit $fail
