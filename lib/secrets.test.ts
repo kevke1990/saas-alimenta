@@ -15,7 +15,8 @@ describe("secret encryption", () => {
   it("rejects tampered ciphertext", () => {
     const cipher = encryptSecret("sensitive");
     const parts = cipher.split(".");
-    parts[2] = `${parts[2]}x`;
+    const last = parts[2];
+    parts[2] = `${last.slice(0, -1)}${last.endsWith("A") ? "B" : "A"}`;
     expect(() => decryptSecret(parts.join("."))).toThrow();
   });
 });
