@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { consumeAuthToken, issueAuthToken } from "@/lib/auth-tokens";
+import { consumeAuthToken } from "@/lib/auth-tokens";
 import { sendVerificationEmail } from "@/lib/auth-mail";
 import { currentUser } from "@/lib/auth";
 
@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   return NextResponse.json({ ok: true, verified: true });
 }
 
-export async function POST(req: Request) {
+export async function POST() {
   const user = await currentUser();
   if (!user) return new NextResponse("Niet ingelogd", { status: 401 });
   if (user.emailVerifiedAt) return NextResponse.json({ ok: true, alreadyVerified: true });
