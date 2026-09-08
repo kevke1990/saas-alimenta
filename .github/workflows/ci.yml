@@ -114,7 +114,7 @@ jobs:
             -e 's#APP_ENCRYPTION_KEY="ci-session-secret-0123456789abcdef"#APP_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"#g' \
             -e 's#POSTMARK_INBOUND_SECRET="ci-change-me-LONG-RANDOM-SECRET"#POSTMARK_INBOUND_SECRET="ci-inbound-secret-long-enough"#g' \
             .env.production
-          ./deploy/validate-production-env.sh .env.production
+          bash ./deploy/validate-production-env.sh .env.production
           ln -s .env.production .env
           docker compose -f docker-compose.prod.yml config >/tmp/alimenta-compose.yml
           grep -q 'no-new-privileges:true' /tmp/alimenta-compose.yml
@@ -154,4 +154,4 @@ jobs:
             echo "STAGING_URL is not configured; skipping external staging smoke test."
             exit 0
           fi
-          ./deploy/staging-smoke.sh
+          bash ./deploy/staging-smoke.sh
