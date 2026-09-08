@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { db } from "@/lib/db";
 import { getStripeClient, getWebhookSecret } from "@/lib/stripe";
 import { mapStripeStatus, periodEnd, planForSubscription } from "@/lib/stripe-subscription";
+import { stripeWebhookAction } from "@/lib/stripe-events";
 
 function planFromPrice(priceId: string) { return db.stripePlan.findFirst({ where: { stripePriceId: priceId } }); }
 
@@ -37,14 +38,28 @@ export async function POST(req: Request) {
     if (!secret) return new NextResponse("Webhook secret ontbreekt", { status: 500 });
     const event = stripe.webhooks.constructEvent(body, sig, secret);
     if (await db.stripeEvent.findUnique({ where: { eventId: event.id } })) return NextResponse.json({ received: true, duplicate: true });
-    switch (event.type) {
-      case "checkout.session.completed": { const session = event.data.object as Stripe.Checkout.Session; if (session.subscription) await syncSubscription(await stripe.subscriptions.retrieve(String(session.subscription))); break; }
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted": await syncSubscription(event.data.object as Stripe.Subscription); break;
-      case "invoice.payment_failed": await markPaymentFailed(event.data.object as Stripe.Invoice); break;
-      case "invoice.payment_succeeded": { const invoice = event.data.object as Stripe.Invoice; const subscriptionId = String((invoice as any).subscription || ""); if (subscriptionId) await syncSubscription(await stripe.subscriptions.retrieve(subscriptionId)); break; }
+
+    switch (stripeWebhookAction(event.type)) {
+      case "SYNC_SUBSCRIPTION": {
+        if (event.type === "checkout.session.completed") {
+          const session = event.data.object as Stripe.Checkout.Session;
+          if (session.subscription) await syncSubscription(await stripe.subscriptions.retrieve(String(session.subscription)));
+        } else if (event.type === "invoice.payment_succeeded") {
+          const invoice = event.data.object as Stripe.Invoice;
+          const subscriptionId = String((invoice as any).subscription || "");
+          if (subscriptionId) await syncSubscription(await stripe.subscriptions.retrieve(subscriptionId));
+        } else {
+          await syncSubscription(event.data.object as Stripe.Subscription);
+        }
+        break;
+      }
+      case "MARK_PAYMENT_FAILED":
+        await markPaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+      case "IGNORE":
+        break;
     }
+
     try { await db.stripeEvent.create({ data: { eventId: event.id, type: event.type } }); }
     catch (error: any) { if (error?.code === "P2002") return NextResponse.json({ received: true, duplicate: true }); throw error; }
     return NextResponse.json({ received: true });
