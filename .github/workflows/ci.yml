@@ -139,13 +139,19 @@ jobs:
           echo "Deployment scripts passed shell syntax validation."
 
   staging-smoke:
-    if: ${{ github.event_name == 'workflow_dispatch' && secrets.STAGING_URL != '' }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
+    env:
+      STAGING_URL: ${{ secrets.STAGING_URL }}
+      EXPECTED_RELEASE_VERSION: ${{ vars.STAGING_RELEASE_VERSION }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Run staging smoke test
-        env:
-          STAGING_URL: ${{ secrets.STAGING_URL }}
-          EXPECTED_RELEASE_VERSION: ${{ vars.STAGING_RELEASE_VERSION }}
-        run: ./deploy/staging-smoke.sh
+      - name: Run staging smoke test when configured
+        run: |
+          set -eu
+          if [ -z "${STAGING_URL:-}" ]; then
+            echo "STAGING_URL is not configured; skipping external staging smoke test."
+            exit 0
+          fi
+          ./deploy/staging-smoke.sh
