@@ -23,7 +23,7 @@ describe("authentication mail templates", () => {
       url: 'https://example.test/?x=" onmouseover="alert(1)',
     });
     expect(result.htmlBody).not.toContain("<img");
-    expect(result.htmlBody).not.toContain("onerror=");
+    expect(result.htmlBody).not.toContain('href="https://example.test/?x=" onmouseover=');
     expect(result.htmlBody).toContain("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
     expect(result.htmlBody).toContain("&quot; onmouseover=&quot;");
   });
