@@ -129,7 +129,18 @@ export async function POST(req: Request) {
       const apiKey = String(b.apiKey || "").trim();
       const webhookSecret = String(b.webhookSecret || "").trim();
       if (!fromEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(fromEmail)) throw new Error("Geldig afzenderadres is verplicht");
-      await db.$executeRaw`UPDATE "AppConfig" SET "mailProvider"=${provider}, "mailFromName"=${fromName || null}, "mailFromEmail"=${fromEmail}, "mailReplyTo"=${replyTo || null}, "mailApiKeyCipher"=${apiKey ? encryptSecret(apiKey) : null}, "mailWebhookSecretCipher"=${webhookSecret ? encryptSecret(webhookSecret) : null}, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"='singleton'`;
+      const apiKeyCipher = apiKey ? encryptSecret(apiKey) : null;
+      const webhookSecretCipher = webhookSecret ? encryptSecret(webhookSecret) : null;
+      await db.$executeRaw`
+        UPDATE "AppConfig"
+        SET "mailProvider"=${provider},
+            "mailFromName"=${fromName || null},
+            "mailFromEmail"=${fromEmail},
+            "mailReplyTo"=${replyTo || null},
+            "mailApiKeyCipher"=CASE WHEN ${Boolean(apiKey)} THEN ${apiKeyCipher} ELSE "mailApiKeyCipher" END,
+            "mailWebhookSecretCipher"=CASE WHEN ${Boolean(webhookSecret)} THEN ${webhookSecretCipher} ELSE "mailWebhookSecretCipher" END,
+            "updatedAt"=CURRENT_TIMESTAMP
+        WHERE "id"='singleton'`;
       await auditSecurity(admin.id, "ADMIN_MAIL_CONFIG_UPDATED", { provider, fromEmail });
       return NextResponse.json({ ok: true });
     }
