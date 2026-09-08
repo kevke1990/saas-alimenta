@@ -20,6 +20,8 @@ export async function sendVerificationEmail(user: { id: string; email: string; n
   const url = `${appUrl()}/verifieer-email?token=${encodeURIComponent(token)}`;
   const greeting = user.name ? `Hoi ${user.name},` : "Hoi,";
   await sendTransactionalEmail({
+    userId: user.id,
+    eventType: "EMAIL_VERIFICATION",
     from: systemFrom(),
     to: [user.email],
     subject: "Bevestig je e-mailadres voor Alimenta Pro",
@@ -33,6 +35,8 @@ export async function sendPasswordResetEmail(user: { id: string; email: string; 
   const url = `${appUrl()}/wachtwoord-reset?token=${encodeURIComponent(token)}`;
   const greeting = user.name ? `Hoi ${user.name},` : "Hoi,";
   await sendTransactionalEmail({
+    userId: user.id,
+    eventType: "PASSWORD_RESET",
     from: systemFrom(),
     to: [user.email],
     subject: "Wachtwoord resetten voor Alimenta Pro",
