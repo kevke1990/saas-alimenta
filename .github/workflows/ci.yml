@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test-and-build:
@@ -101,7 +102,19 @@ jobs:
           test -f docker-compose.prod.yml
           test -f deploy/.env.production.example
           cp deploy/.env.production.example .env.production
-          sed -i 's/GENERATE-A-LONG-RANDOM-PASSWORD/ci-postgres-password/g; s/GENERATE-A-LONG-RANDOM-SECRET/ci-session-secret-0123456789abcdef/g; s/USE-A-LONG-UNIQUE-PASSWORD/ci-admin-password/g; s/change-this-to-a-long-random-secret/ci-privacy-salt/g; s/CHANGE-ME-LONG-RANDOM-SECRET/ci-inbound-secret/g' .env.production
+          sed -i \
+            -e 's#CHANGE-ME#ci-change-me#g' \
+            -e 's#GENERATE-A-LONG-RANDOM-PASSWORD#ci-postgres-password#g' \
+            -e 's#GENERATE-A-LONG-RANDOM-SECRET#ci-session-secret-0123456789abcdef#g' \
+            -e 's#USE-A-LONG-UNIQUE-PASSWORD#ci-admin-password#g' \
+            -e 's#change-this-to-a-long-random-secret#ci-privacy-salt-long-enough#g' \
+            -e 's#jouwdomein.nl#staging.example.test#g' \
+            -e 's#admin@example.nl#admin@staging.example.test#g' \
+            -e 's#https://app.staging.example.nl#https://staging.example.test#g' \
+            -e 's#APP_ENCRYPTION_KEY="ci-session-secret-0123456789abcdef"#APP_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"#g' \
+            -e 's#POSTMARK_INBOUND_SECRET="ci-change-me-LONG-RANDOM-SECRET"#POSTMARK_INBOUND_SECRET="ci-inbound-secret-long-enough"#g' \
+            .env.production
+          ./deploy/validate-production-env.sh .env.production
           ln -s .env.production .env
           docker compose -f docker-compose.prod.yml config >/tmp/alimenta-compose.yml
           grep -q 'no-new-privileges:true' /tmp/alimenta-compose.yml
@@ -119,8 +132,20 @@ jobs:
       - name: Validate deployment scripts
         run: |
           set -eu
-          for script in deploy/preflight-demo.sh deploy/verify-demo.sh deploy/doctor.sh deploy/backup.sh deploy/restore.sh deploy/verify-backup.sh deploy/update.sh deploy/installer.sh deploy/alimenta; do
+          for script in deploy/preflight-demo.sh deploy/verify-demo.sh deploy/doctor.sh deploy/backup.sh deploy/restore.sh deploy/verify-backup.sh deploy/update.sh deploy/installer.sh deploy/alimenta deploy/launch-gate.sh deploy/staging-smoke.sh deploy/validate-production-env.sh; do
             test -f "$script"
             bash -n "$script"
           done
           echo "Deployment scripts passed shell syntax validation."
+
+  staging-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && secrets.STAGING_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Run staging smoke test
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+          EXPECTED_RELEASE_VERSION: ${{ vars.STAGING_RELEASE_VERSION }}
+        run: ./deploy/staging-smoke.sh
