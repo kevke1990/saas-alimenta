@@ -1,13 +1,11 @@
-import { describe, expect, it, beforeEach } from "vitest";
-import { requireSameOrigin } from "@/lib/request-security";
-import { rateLimit } from "@/lib/rate-limit";
-import { retentionCutoff, validateRetentionPolicy } from "@/lib/retention";
+import { describe, expect, it } from "vitest";
+import { requireSameOrigin } from "../lib/request-security";
+import { rateLimit } from "../lib/rate-limit";
+import { retentionCutoff, validateRetentionPolicy } from "../lib/retention";
 
 describe("request security", () => {
   it("rejects cross-site fetch metadata", () => {
-    const req = new Request("https://app.example.test/api/admin", {
-      headers: { "sec-fetch-site": "cross-site" },
-    });
+    const req = new Request("https://app.example.test/api/admin", { headers: { "sec-fetch-site": "cross-site" } });
     expect(() => requireSameOrigin(req)).toThrow("CROSS_ORIGIN_REQUEST");
   });
 
@@ -15,21 +13,16 @@ describe("request security", () => {
     const previous = process.env.APP_URL;
     process.env.APP_URL = "https://app.example.test";
     try {
-      const req = new Request("https://app.example.test/api/admin", {
-        headers: { origin: "https://app.example.test", "sec-fetch-site": "same-origin" },
-      });
+      const req = new Request("https://app.example.test/api/admin", { headers: { origin: "https://app.example.test", "sec-fetch-site": "same-origin" } });
       expect(() => requireSameOrigin(req)).not.toThrow();
     } finally {
-      process.env.APP_URL = previous;
+      if (previous === undefined) delete process.env.APP_URL;
+      else process.env.APP_URL = previous;
     }
   });
 });
 
 describe("rate limit", () => {
-  beforeEach(() => {
-    // Use a unique key per test so the process-local fallback never leaks state between cases.
-  });
-
   it("blocks the request after the configured limit", () => {
     const key = `test:${Date.now()}:${Math.random()}`;
     expect(rateLimit(key, 2, 60_000).ok).toBe(true);
