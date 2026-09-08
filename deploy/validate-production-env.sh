@@ -33,7 +33,22 @@ for placeholder in \
 done
 
 app_url="$(get_value APP_URL)"
-case "$app_url" in https://*) ;; *) echo "[FAIL] APP_URL moet HTTPS gebruiken"; fail=1 ;; esac
+demo_mode="$(get_value DEMO_MODE)"
+case "$app_url" in
+  https://*) ;;
+  http://*)
+    if [[ "$demo_mode" != "true" ]]; then
+      echo "[FAIL] APP_URL moet HTTPS gebruiken buiten DEMO_MODE"
+      fail=1
+    else
+      echo "[WARN] HTTP toegestaan omdat DEMO_MODE=true (alleen voor lokale/demo-VM's)"
+    fi
+    ;;
+  *)
+    echo "[FAIL] APP_URL moet beginnen met http:// of https://"
+    fail=1
+    ;;
+esac
 
 node_env="$(get_value NODE_ENV)"
 [[ "$node_env" == "production" ]] || { echo "[FAIL] NODE_ENV moet production zijn"; fail=1; }
