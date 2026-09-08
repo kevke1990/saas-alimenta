@@ -33,11 +33,20 @@ async function markPaymentFailed(inv: Stripe.Invoice) {
 export async function POST(req: Request) {
   const body = await req.text(); const sig = req.headers.get("stripe-signature");
   if (!sig) return new NextResponse("Missing signature", { status: 400 });
+
+  let claimedEventId: string | null = null;
   try {
     const stripe = await getStripeClient(); const secret = await getWebhookSecret();
     if (!secret) return new NextResponse("Webhook secret ontbreekt", { status: 500 });
     const event = stripe.webhooks.constructEvent(body, sig, secret);
-    if (await db.stripeEvent.findUnique({ where: { eventId: event.id } })) return NextResponse.json({ received: true, duplicate: true });
+
+    try {
+      await db.stripeEvent.create({ data: { eventId: event.id, type: event.type } });
+      claimedEventId = event.id;
+    } catch (error: any) {
+      if (error?.code === "P2002") return NextResponse.json({ received: true, duplicate: true });
+      throw error;
+    }
 
     switch (stripeWebhookAction(event.type)) {
       case "SYNC_SUBSCRIPTION": {
@@ -60,8 +69,11 @@ export async function POST(req: Request) {
         break;
     }
 
-    try { await db.stripeEvent.create({ data: { eventId: event.id, type: event.type } }); }
-    catch (error: any) { if (error?.code === "P2002") return NextResponse.json({ received: true, duplicate: true }); throw error; }
     return NextResponse.json({ received: true });
-  } catch (e: any) { return new NextResponse(e?.message || "Invalid webhook", { status: 400 }); }
+  } catch (e: any) {
+    if (claimedEventId) {
+      try { await db.stripeEvent.delete({ where: { eventId: claimedEventId } }); } catch { /* allow Stripe retry if cleanup itself fails */ }
+    }
+    return new NextResponse(e?.message || "Invalid webhook", { status: 400 });
+  }
 }
