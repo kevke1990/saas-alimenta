@@ -3,12 +3,16 @@ import { sendTransactionalEmail } from "@/lib/mail";
 
 function appUrl() {
   const value = process.env.APP_URL;
-  if (!value || !value.startsWith("https://")) throw new Error("APP_URL moet HTTPS zijn voor auth e-mail");
+  if (!value || (!value.startsWith("https://") && !(process.env.NODE_ENV !== "production" && value.startsWith("http://")))) {
+    throw new Error("APP_URL moet HTTPS zijn in productie");
+  }
   return value.replace(/\/$/, "");
 }
 
 function systemFrom() {
-  return process.env.MAIL_FROM || process.env.POSTMARK_FROM || "Alimenta Pro <noreply@example.invalid>";
+  const value = process.env.MAIL_FROM;
+  if (!value) throw new Error("MAIL_FROM ontbreekt");
+  return value;
 }
 
 export async function sendVerificationEmail(user: { id: string; email: string; name?: string | null }) {
