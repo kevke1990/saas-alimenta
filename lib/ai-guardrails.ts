@@ -10,7 +10,7 @@ export function hashAiInput(text: string) {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 
-export function parseAiJson<T extends Record<string, unknown>>(raw: string): T {
+export function parseAiJson<T>(raw: string): T {
   const cleaned = raw
     .trim()
     .replace(/^```(?:json)?\s*/i, "")
