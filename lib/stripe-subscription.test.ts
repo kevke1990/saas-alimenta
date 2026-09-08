@@ -34,4 +34,20 @@ describe("Stripe subscription lifecycle mapping", () => {
     expect(periodEnd(undefined)).toBeNull();
     expect(periodEnd(1790000000)?.getTime()).toBe(1790000000 * 1000);
   });
+
+  it("covers the full subscription lifecycle", () => {
+    const lifecycle: Array<["trialing" | "active" | "past_due" | "canceled" | "incomplete" | "incomplete_expired" | "unpaid" | "paused", string]> = [
+      ["trialing", "TRIALING"],
+      ["active", "ACTIVE"],
+      ["past_due", "PAST_DUE"],
+      ["canceled", "CANCELED"],
+      ["incomplete", "INCOMPLETE"],
+      ["incomplete_expired", "INCOMPLETE"],
+      ["unpaid", "INCOMPLETE"],
+      ["paused", "INCOMPLETE"],
+    ];
+    for (const [stripeStatus, appStatus] of lifecycle) {
+      expect(mapStripeStatus(stripeStatus)).toBe(appStatus);
+    }
+  });
 });
