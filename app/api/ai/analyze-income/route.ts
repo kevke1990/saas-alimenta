@@ -3,6 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { auditSecurity } from "@/lib/team-security";
 import { distributedRateLimit } from "@/lib/rate-limit";
+import { measure } from "@/lib/performance";
+import { logError, logInfo, safeErrorMessage } from "@/lib/observability";
 import {
   AI_INCOME_LIMIT,
   AI_INCOME_MAX_INPUT_CHARS,
@@ -60,14 +62,16 @@ export async function POST(req: Request) {
     });
     aiRunId = run.id;
     await auditSecurity(user.id, "AI_ANALYSIS_STARTED", { operation: "ANALYZE_INCOME", model });
+    logInfo("AI_ANALYSIS_STARTED", { userId: user.id, operation: "ANALYZE_INCOME", model });
 
-    const result = await analyzeIncomeDocument(text);
+    const result = await measure("ai.analyze_income", () => analyzeIncomeDocument(text));
 
     await db.aiRun.update({
       where: { id: run.id },
       data: { status: "SUCCEEDED", output: result, finishedAt: new Date() },
     });
     await auditSecurity(user.id, "AI_ANALYSIS_COMPLETED", { operation: "ANALYZE_INCOME", model });
+    logInfo("AI_ANALYSIS_COMPLETED", { userId: user.id, operation: "ANALYZE_INCOME", model });
 
     return NextResponse.json({
       ok: true,
@@ -93,6 +97,12 @@ export async function POST(req: Request) {
         operation: "ANALYZE_INCOME",
         reason: message.includes("te lang") ? "TIMEOUT" : "ERROR",
       }).catch(() => undefined);
+      logError("AI_ANALYSIS_FAILED", {
+        userId,
+        operation: "ANALYZE_INCOME",
+        reason: message.includes("te lang") ? "TIMEOUT" : "ERROR",
+        error: safeErrorMessage(e),
+      });
     }
 
     const status = message.includes("limiet") ? 429 : message.includes("uitgeschakeld") ? 403 : 400;
