@@ -41,28 +41,42 @@ function publicConfig(c: any) {
 export async function GET() {
   try {
     const admin = await requireAdmin();
-    const [users, clients, cases, subscriptions, activeSubscriptions, pastDue, recentUsers, recentCases, logs, aiRuns, stripe, app] = await Promise.all([
-      db.user.count(), db.client.count(), db.case.count(), db.subscription.count(),
+    const [users, clients, cases, subscriptions, activeSubscriptions, pastDue, mailSent, mailFailed, recentMailLogs, recentUsers, recentCases, logs, aiRuns, stripe, app] = await Promise.all([
+      db.user.count(),
+      db.client.count(),
+      db.case.count(),
+      db.subscription.count(),
       db.user.count({ where: { subscriptionStatus: { in: ["ACTIVE", "TRIALING"] } } }),
       db.user.count({ where: { subscriptionStatus: "PAST_DUE" } }),
+      db.mailLog.count({ where: { status: "SENT" } }),
+      db.mailLog.count({ where: { status: "FAILED" } }),
+      db.mailLog.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: { id: true, userId: true, eventType: true, toEmail: true, subject: true, status: true, providerId: true, error: true, createdAt: true },
+      }),
       db.user.findMany({ orderBy: { createdAt: "desc" }, take: 50, select: { id: true, name: true, email: true, companyName: true, plan: true, role: true, lockedAt: true, subscriptionStatus: true, subscriptionEndsAt: true, stripeCustomerId: true, stripeSubscriptionId: true, createdAt: true, lastLoginAt: true, _count: { select: { clients: true, cases: true } } } }),
       db.case.findMany({ orderBy: { updatedAt: "desc" }, take: 20, select: { id: true, name: true, status: true, reviewStatus: true, updatedAt: true, user: { select: { email: true, name: true } }, client: { select: { name: true } } } }),
       db.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 50, select: { id: true, userId: true, action: true, metadata: true, createdAt: true } }),
       db.aiRun.findMany({ orderBy: { startedAt: "desc" }, take: 20, select: { id: true, userId: true, operation: true, model: true, status: true, startedAt: true, finishedAt: true, error: true } }),
-      db.stripeConfig.findFirst(), config(),
+      db.stripeConfig.findFirst(),
+      config(),
     ]);
     return NextResponse.json({
       admin: { email: admin.email },
-      stats: { users, clients, cases, subscriptions, activeSubscriptions, pastDue },
+      stats: { users, clients, cases, subscriptions, activeSubscriptions, pastDue, mailSent, mailFailed },
       users: recentUsers,
       cases: recentCases,
+      mailLogs: recentMailLogs,
       logs,
       aiRuns,
       stripe: { configured: !!stripe?.secretKeyCipher || !!process.env.STRIPE_SECRET_KEY, mode: stripe?.mode ?? "test", webhookEndpoint: `${process.env.APP_URL ?? ""}/api/stripe/webhook` },
       config: publicConfig(app),
       server: { nodeEnv: process.env.NODE_ENV, appUrlConfigured: !!process.env.APP_URL, sessionConfigured: !!process.env.SESSION_SECRET },
     });
-  } catch (e: any) { return new NextResponse(e?.message || "Forbidden", { status: 403 }); }
+  } catch (e: any) {
+    return new NextResponse(e?.message || "Forbidden", { status: 403 });
+  }
 }
 
 export async function POST(req: Request) {
