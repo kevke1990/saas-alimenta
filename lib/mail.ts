@@ -29,7 +29,7 @@ async function logMail(input: TransactionalEmailInput, status: "SENT" | "FAILED"
       },
     });
   } catch {
-    // Mail logging must never turn a successfully handled mail request into a failure.
+    // Mail logging must never turn a mail request into a failure.
   }
 }
 
@@ -66,18 +66,14 @@ export async function sendTransactionalEmail(input: TransactionalEmailInput) {
     const result: any = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const error = result?.Message || `Postmark fout (${response.status})`;
-      await logMail(input, "FAILED", result?.MessageID, error);
-      throw new Error(error);
+      throw new Error(result?.Message || `Postmark fout (${response.status})`);
     }
 
     await logMail(input, "SENT", result?.MessageID);
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Onbekende mailfout";
-    if (!message.startsWith("Postmark fout") && !(error instanceof Error && message === "Postmark fout")) {
-      await logMail(input, "FAILED", undefined, message);
-    }
+    await logMail(input, "FAILED", undefined, message);
     throw error;
   }
 }
