@@ -44,6 +44,7 @@ export async function sendTransactionalEmail(input: TransactionalEmailInput) {
   const body: Record<string, unknown> = {
     From: input.from,
     To: input.to.join(","),
+    Cc: input.cc?.join(",") || undefined,
     Subject: input.subject,
     TextBody: input.textBody || "",
     HtmlBody: input.htmlBody || undefined,
@@ -53,6 +54,7 @@ export async function sendTransactionalEmail(input: TransactionalEmailInput) {
     Metadata: input.metadata || undefined,
   };
 
+  let failureLogged = false;
   try {
     const response = await fetch("https://api.postmarkapp.com/email", {
       method: "POST",
@@ -66,14 +68,19 @@ export async function sendTransactionalEmail(input: TransactionalEmailInput) {
     const result: any = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(result?.Message || `Postmark fout (${response.status})`);
+      const message = result?.Message || `Postmark fout (${response.status})`;
+      failureLogged = true;
+      await logMail(input, "FAILED", result?.MessageID, message);
+      throw new Error(message);
     }
 
     await logMail(input, "SENT", result?.MessageID);
     return result;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Onbekende mailfout";
-    await logMail(input, "FAILED", undefined, message);
+    if (!failureLogged) {
+      const message = error instanceof Error ? error.message : "Onbekende mailfout";
+      await logMail(input, "FAILED", undefined, message);
+    }
     throw error;
   }
 }
