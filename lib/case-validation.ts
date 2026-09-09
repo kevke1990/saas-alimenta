@@ -41,6 +41,7 @@ const partnerSupport = z.object({
   enabled: z.boolean(), payerIndex: z.union([z.literal(0),z.literal(1)]), historicalNBGI: z.number().finite().nonnegative().optional(), historicalChildCosts: z.number().finite().nonnegative().optional(),
   useHofnorm: z.boolean().optional(), concreteNeedNet: z.number().finite().nonnegative().optional(), recipientVerdiencapaciteit: z.number().finite().nonnegative().optional(),
   recipientOtherIncomeMonthly: z.number().finite().nonnegative().optional(), recipientAssetsIncomeMonthly: z.number().finite().nonnegative().optional(),
+  payerAssetsIncomeMonthly: z.number().finite().nonnegative().optional(),
   payerOtherMaintenanceObligations: z.number().finite().nonnegative().optional(), payerPensionProvisionMonthly: z.number().finite().nonnegative().optional(),
   payerMortgageInterestTaxBenefitMonthly: z.number().finite().nonnegative().optional(), payerTaxableIncomeAnnual: z.number().finite().nonnegative().optional(),
   incomeComparisonEnabled: z.boolean().optional(), durationException: z.enum(["NONE","CHILD_YOUNGER_THAN_12","LONG_MARRIAGE_PRE_1970","RECEIVER_BORN_1970_OR_EARLIER","AGREEMENT_OR_COURT"]).optional()
