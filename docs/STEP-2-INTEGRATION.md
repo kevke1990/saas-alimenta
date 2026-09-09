@@ -1,0 +1,1 @@
+Step 2 integrates the premium dark customer portal shell and login experience into the existing Next.js application. Existing authentication, Prisma data access and calculation semantics remain authoritative.
