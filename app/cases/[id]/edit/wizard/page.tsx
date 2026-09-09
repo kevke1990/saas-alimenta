@@ -11,7 +11,7 @@ export default function EditWizard({params}:{params:Promise<{id:string}>}){
  const locked=reviewStatus==="APPROVED"||reviewStatus==="FINAL";const disabled=locked||busy;
  const setRoot=(k:string,v:any)=>setData((d:any)=>({...d,[k]:v}));
  const setParent=(i:number,k:string,v:any)=>setData((d:any)=>({...d,parents:(d.parents||[]).map((p:any,j:number)=>j===i?{...p,[k]:v}:p)}));
- const setIncome=(i:number,k:string,v:any)=>setData((d:any)=>({...d,parents:(d.parents||[]).map((p:any,j:number)=>j===i?{...p,income:{...(p.income||{}),[k]:v}:p)}));
+ const setIncome=(i:number,k:string,v:any)=>setData((d:any)=>({...d,parents:(d.parents||[]).map((p:any,j:number)=>j===i?{...p,income:{...(p.income||{}),[k]:v}}:p)}));
  const setHousing=(i:number,k:string,v:any)=>setData((d:any)=>({...d,parents:(d.parents||[]).map((p:any,j:number)=>j===i?{...p,housing:{...(p.housing||{}),[k]:v},housingCosts:k==="monthlyCosts"?v:p.housingCosts}:p)}));
  const setPartner=(i:number,k:string,v:any)=>setData((d:any)=>({...d,parents:(d.parents||[]).map((p:any,j:number)=>j===i?{...p,newPartner:{...(p.newPartner||{}),[k]:v}}:p)}));
  const setPartnerChild=(pi:number,ci:number,k:string,v:any)=>setData((d:any)=>({...d,parents:(d.parents||[]).map((p:any,j:number)=>{if(j!==pi)return p;const children=[...(p.newPartner?.children||[])];children[ci]={...(children[ci]||{}),[k]:v};return {...p,newPartner:{...(p.newPartner||{}),children}}})}));
