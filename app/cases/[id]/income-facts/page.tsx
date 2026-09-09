@@ -10,24 +10,19 @@ const statusClass = (s: string) => s === "APPROVED" ? "green" : s === "REJECTED"
 export default async function IncomeFactsPage({ params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
   const { id } = await params;
-  const c = await db.case.findFirst({
-    where: { id, userId: u.id },
-    include: {
-      client: true,
-      incomeFacts: { include: { document: { select: { id: true, name: true, aiStatus: true } } }, orderBy: { createdAt: "desc" } },
-    },
-  });
+  const c = await db.case.findFirst({ where: { id, userId: u.id }, include: { client: true, incomeFacts: { include: { document: { select: { id: true, name: true, aiStatus: true } } }, orderBy: { createdAt: "desc" } } } });
   if (!c) return <AppShell><div className="notice error">Dossier niet gevonden.</div></AppShell>;
 
   const facts = c.incomeFacts;
   const proposed = facts.filter(f => f.status === "PROPOSED").length;
   const approved = facts.filter(f => f.status === "APPROVED").length;
   const rejected = facts.filter(f => f.status === "REJECTED").length;
+  const locked = c.reviewStatus === "APPROVED" || c.reviewStatus === "FINAL";
 
   return <AppShell>
     <div className="page-head">
-      <div><div className="eyebrow">Fase C · AI & gegevenscontrole</div><h1 className="page-title">AI-inkomensfeiten controleren</h1><p className="page-subtitle">{c.name} · {c.client?.name || "Zonder cliënt"}</p></div>
-      <div className="actions"><Link className="btn secondary" href={`/cases/${id}`}>← Dossier</Link><Link className="btn secondary" href={`/cases/${id}/review`}>Professionele review</Link></div>
+      <div><div className="eyebrow">Fase B · AI & gegevenscontrole</div><h1 className="page-title">AI-inkomensfeiten controleren</h1><p className="page-subtitle">{c.name} · {c.client?.name || "Zonder cliënt"}</p></div>
+      <div className="actions"><Link className="btn secondary" href={`/cases/${id}/documenten`}>← Documenten</Link><Link className="btn secondary" href={`/cases/${id}`}>Dossier</Link><Link className="btn" href={`/cases/${id}/edit/wizard`}>{locked ? "Berekening bekijken" : "Wijzig berekening →"}</Link></div>
     </div>
 
     <div className="result-hero">
@@ -37,8 +32,11 @@ export default async function IncomeFactsPage({ params }: { params: Promise<{ id
       <div className="stat-card"><div className="stat-label">TOTAAL</div><div className="stat-value">{facts.length}</div><div className="stat-meta">Geëxtraheerde feiten</div></div>
     </div>
 
+    {proposed > 0 && <div className="notice topgap">Er staan <strong>{proposed} AI-voorstellen</strong> klaar. Beoordeel ze eerst. Na goedkeuring kun je via <strong>Wijzig berekening</strong> de relevante waarden in het bestaande dossier verwerken; opslaan maakt een nieuwe immutable calculation snapshot.</div>}
+    {proposed === 0 && approved > 0 && <div className="notice success topgap"><strong>{approved} feiten zijn professioneel goedgekeurd.</strong> De goedkeuring is vastgelegd in de audittrail. Verwerk gewenste waarden via de bestaande berekeningswizard; alleen daar ontstaat een nieuwe calculation snapshot.</div>}
+
     <section className="panel topgap">
-      <div className="panel-head"><div><h2 className="panel-title">Fact review</h2><div className="panel-sub">AI mag een waarde voorstellen, maar alleen een professional kan het feit accorderen voor gebruik in de verdere dossierworkflow.</div></div></div>
+      <div className="panel-head"><div><h2 className="panel-title">Fact review</h2><div className="panel-sub">AI mag een waarde voorstellen, maar alleen een professional kan het feit accorderen. Goedkeuren en herberekenen zijn bewust twee afzonderlijke stappen.</div></div></div>
       {facts.length === 0 ? <div className="empty">Nog geen AI-inkomensfeiten gevonden. Analyseer eerst een document vanuit de dossierpagina.</div> :
         <div className="table-wrap"><table className="table"><thead><tr><th>Feit</th><th>Waarde</th><th>Bron</th><th>Betrouwbaarheid</th><th>Status</th><th>Actie</th></tr></thead><tbody>
           {facts.map(f => <tr key={f.id}>
@@ -56,9 +54,9 @@ export default async function IncomeFactsPage({ params }: { params: Promise<{ id
         </tbody></table></div>}
     </section>
 
-    <section className="panel topgap"><div className="panel-head"><div><h2 className="panel-title">Veilige gegevensketen</h2><div className="panel-sub">Deze pagina maakt de overgang van AI-extractie naar professionele beoordeling expliciet.</div></div></div>
-      <div className="notice success">Document → AI-extractie → voorgesteld feit → professionele goedkeuring → pas daarna beschikbaar voor de verdere workflow.</div>
-      <div className="notice topgap">Het goedkeuren van een feit wijzigt niet automatisch de berekening. Een berekening wordt pas opnieuw uitgevoerd via de normale berekenings-/dossierworkflow, zodat iedere wijziging een nieuwe calculation snapshot en auditspoor kan krijgen.</div>
+    <section className="panel topgap"><div className="panel-head"><div><h2 className="panel-title">Professionele gegevensketen</h2><div className="panel-sub">De volledige B-workflow blijft controleerbaar en reproduceerbaar.</div></div></div>
+      <div className="notice success">Document → AI-extractie → voorgesteld feit → professionele goedkeuring → verwerking in bestaande berekening → nieuwe calculation snapshot → review opnieuw uitvoeren.</div>
+      <div className="actions topgap"><Link className="btn secondary" href={`/cases/${id}/documenten`}>Documentregister</Link><Link className="btn" href={`/cases/${id}/edit/wizard`}>Naar bestaande berekening →</Link><Link className="btn secondary" href={`/cases/${id}/review`}>Volledige review</Link></div>
     </section>
   </AppShell>;
 }
