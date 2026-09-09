@@ -85,7 +85,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         recipientVerdiencapaciteit: Number(ps.recipientVerdiencapaciteit || 0),
         recipientOtherIncomeMonthly: Number(ps.recipientOtherIncomeMonthly || 0),
         recipientAssetsIncomeMonthly: Number(ps.recipientAssetsIncomeMonthly || 0),
-        payerAssetsIncomeMonthly: 0,
+        payerAssetsIncomeMonthly: Number(ps.payerAssetsIncomeMonthly || 0),
         payerOwnHome: payer.housing?.type === "OWNED",
         incomeComparisonEnabled: !!ps.incomeComparisonEnabled,
         durationException: ps.durationException || "NONE",
