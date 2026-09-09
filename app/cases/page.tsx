@@ -21,7 +21,7 @@ export default async function CasesPage({ searchParams }: { searchParams?: Searc
   const cases = await db.case.findMany({
     where: {
       userId: u.id,
-      status: "DRAFT",
+      status: { in: ["DRAFT", "CALCULATED"] },
       ...(review ? { reviewStatus: review } : {}),
       ...(q ? {
         OR: [
