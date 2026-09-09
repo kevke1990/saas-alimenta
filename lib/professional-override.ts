@@ -21,3 +21,7 @@ export function validateOverride(input: ProfessionalOverrideInput) {
 export function overrideFingerprint(overrides: ProfessionalOverrideInput[]) {
   return createHash('sha256').update(JSON.stringify(overrides)).digest('hex');
 }
+
+export function professionalAdjustmentFingerprint(previousFingerprint: string, override: ProfessionalOverrideInput) {
+  return createHash('sha256').update(JSON.stringify({ previousFingerprint, override: { field: override.field, overrideValue: override.overrideValue, reason: override.reason } })).digest('hex');
+}
