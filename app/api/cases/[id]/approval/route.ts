@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { reviewCase } from '@/lib/case-review';
 import { isAllowedReviewTransition, isExplicitReopen, isReviewStatus, reviewTransitionMessage } from '@/lib/review-workflow';
 import { buildReviewCalculationBinding, isReviewBindingCurrent } from '@/lib/review-binding';
+import { buildProfessionalReviewState } from '@/lib/professional-review';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,10 +20,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!isAllowedReviewTransition(c.reviewStatus, status)) return new NextResponse(reviewTransitionMessage(c.reviewStatus, status), { status: 409 });
 
     const review = reviewCase({ data: c.data, documents: c.documents, calculations: c.calculations, result: c.result });
+    const currentCalculation = c.calculations[0];
+    const reviewLogs = await db.auditLog.findMany({ where: { userId: user.id, action: 'CASE_REVIEW_CHECKED', metadata: { path: ['caseId'], equals: id } }, orderBy: { createdAt: 'desc' }, take: 200 });
+    const professionalReview = buildProfessionalReviewState(reviewLogs, currentCalculation?.id);
+
+    if ((status === 'REVIEWED' || status === 'APPROVED' || status === 'FINAL') && !professionalReview.complete) {
+      return new NextResponse(`Professionele review onvolledig: ${professionalReview.totalCount - professionalReview.checkedCount} controleonderdeel/onderdelen ontbreken.`, { status: 409 });
+    }
     if ((status === 'APPROVED' || status === 'FINAL') && !review.readyForProfessionalReview) return new NextResponse('Goedkeuring geblokkeerd: los eerst de kritieke Case Review-punten op.', { status: 409 });
     if (status === 'FINAL' && c.reviewStatus !== 'APPROVED') return new NextResponse('Een dossier moet eerst als APPROVED zijn gemarkeerd.', { status: 409 });
-
-    const currentCalculation = c.calculations[0];
     if ((status === 'APPROVED' || status === 'FINAL') && !currentCalculation) return new NextResponse('Goedkeuring geblokkeerd: er is geen berekeningssnapshot beschikbaar.', { status: 409 });
 
     const reopened = isExplicitReopen(c.reviewStatus, status);
@@ -30,10 +36,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (status === 'APPROVED') approvalBinding = buildReviewCalculationBinding(currentCalculation!);
 
     if (status === 'FINAL') {
-      const approvalAudit = await db.auditLog.findFirst({
-        where: { userId: user.id, action: 'CASE_APPROVED', metadata: { path: ['caseId'], equals: id } },
-        orderBy: { createdAt: 'desc' },
-      });
+      const approvalAudit = await db.auditLog.findFirst({ where: { userId: user.id, action: 'CASE_APPROVED', metadata: { path: ['caseId'], equals: id } }, orderBy: { createdAt: 'desc' } });
       const storedBinding = approvalAudit?.metadata && typeof approvalAudit.metadata === 'object'
         ? (approvalAudit.metadata as Record<string, unknown>).calculationBinding as Partial<ReturnType<typeof buildReviewCalculationBinding>> | undefined
         : undefined;
@@ -50,7 +53,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const updated = await db.$transaction(async (tx) => {
       const next = await tx.case.update({ where: { id }, data });
-      await tx.auditLog.create({ data: { userId: user.id, action: reopened ? 'CASE_REOPENED' : `CASE_${status}`, metadata: { caseId: id, calculationId: currentCalculation?.id || null, previousStatus: c.reviewStatus, newStatus: status, reviewScore: review.score, criticalCount: review.criticalCount, explicitReopen: reopened, ...(approvalBinding ? { calculationBinding: approvalBinding } : {}) } } });
+      await tx.auditLog.create({ data: { userId: user.id, action: reopened ? 'CASE_REOPENED' : `CASE_${status}`, metadata: { caseId: id, calculationId: currentCalculation?.id || null, previousStatus: c.reviewStatus, newStatus: status, reviewScore: review.score, criticalCount: review.criticalCount, professionalReviewComplete: professionalReview.complete, explicitReopen: reopened, ...(approvalBinding ? { calculationBinding: approvalBinding } : {}) } } });
       if (comment) await tx.auditLog.create({ data: { userId: user.id, action: 'CASE_REVIEW_COMMENTED', metadata: { caseId: id, calculationId: currentCalculation?.id || null, comment } } });
       return next;
     });
