@@ -1,0 +1,1 @@
+Premium dark portal shell and login redesign; existing backend and calculation semantics remain authoritative.
