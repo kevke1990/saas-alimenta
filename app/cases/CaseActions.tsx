@@ -26,6 +26,7 @@ export default function CaseActions({ caseId, locked }: { caseId: string; locked
     <div className="actions">
       <Link className="btn ghost" href={`/cases/${caseId}`}>Open →</Link>
       <Link className="btn ghost" href={`/cases/${caseId}/edit`}>Wijzigen</Link>
+      <Link className="btn ghost" href={`/cases/${caseId}/history`}>Historie</Link>
       <Link className="btn ghost" href={`/cases/${caseId}/workflow`}>Workflow</Link>
       <Link className="btn ghost" href={`/cases/${caseId}/review`}>Review</Link>
       {!locked && <button className="btn ghost" type="button" onClick={archive} disabled={busy}>{busy ? "Archiveren…" : "Archiveren"}</button>}
