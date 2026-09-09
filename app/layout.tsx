@@ -1,7 +1,9 @@
 import "./globals.css";
+import "./alimenta-public.css";
+import "./portal-premium.css";
 import type { Viewport } from "next";
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#17243b" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#0c1220" };
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

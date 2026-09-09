@@ -1,2 +1,64 @@
-"use client"; import {useState} from "react"; import {useRouter} from "next/navigation"; import Link from "next/link";
-export default function Login(){const[email,setEmail]=useState("");const[password,setPassword]=useState("");const[error,setError]=useState("");const[busy,setBusy]=useState(false);const router=useRouter();async function submit(e:React.FormEvent){e.preventDefault();setError("");setBusy(true);try{const r=await fetch("/api/auth/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password})});if(r.ok)router.push("/dashboard");else setError(await r.text())}catch{setError("Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.")}finally{setBusy(false)}}return <main className="auth-page"><section className="auth-side"><div><div className="brand-lockup" style={{padding:0,border:0,color:"#fff"}}><div className="brand-mark" style={{background:"#fff",color:"#17243b"}}>A</div><div><strong>Alimenta</strong><span>PRO</span></div></div><h1>Rust in je dossier. Zekerheid in je berekening.</h1><p>Een professionele werkplek voor alimentatieprofessionals — van cliëntbeheer tot berekening en rapportage.</p></div><small style={{color:"#7f8ba0"}}>Alimenta Pro · professionele software</small></section><section className="auth-card-wrap"><div className="auth-card"><h2>Welkom terug</h2><p>Log in op je Alimenta Pro-werkplek.</p>{error&&<div className="notice error topgap">{error}</div>}<form onSubmit={submit} className="topgap"><div><label className="label">E-mailadres</label><input className="input" type="email" required value={email} onChange={e=>setEmail(e.target.value)}/></div><div><label className="label">Wachtwoord</label><input className="input" type="password" required value={password} onChange={e=>setPassword(e.target.value)}/></div><button className="btn" disabled={busy} style={{width:"100%",justifyContent:"center"}}>{busy?"Bezig…":"Inloggen"}</button></form><p className="topgap"><Link href="/wachtwoord-vergeten" style={{color:"#315efb",fontWeight:700}}>Wachtwoord vergeten?</Link></p><p className="topgap">Nog geen account? <Link href="/register" style={{color:"#315efb",fontWeight:700}}>Account aanmaken</Link></p></div></section></main>}
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const router = useRouter();
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const r = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
+      if (r.ok) router.push("/dashboard");
+      else setError(await r.text());
+    } catch {
+      setError("Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="auth-page auth-page-premium">
+      <section className="auth-side auth-side-premium">
+        <div className="auth-brand">
+          <div className="brand-mark brand-mark-light">A</div>
+          <div><strong>Alimenta</strong><span>PRO</span></div>
+        </div>
+        <div className="auth-pitch">
+          <div className="eyebrow eyebrow-light">Professionele alimentatiesoftware</div>
+          <h1>Van dossier naar onderbouwd resultaat.</h1>
+          <p>Een rustige, professionele werkplek voor cliënten, berekeningen, onderbouwing en rapportages.</p>
+          <div className="auth-points"><span>✓ Transparante berekeningen</span><span>✓ Professionele rapportage</span><span>✓ Veilige dossieromgeving</span></div>
+        </div>
+        <small>Alimenta Pro · voor alimentatieprofessionals</small>
+      </section>
+
+      <section className="auth-card-wrap auth-card-wrap-premium">
+        <div className="auth-card auth-card-premium">
+          <div className="mobile-auth-brand"><div className="brand-mark">A</div><div><strong>Alimenta</strong><span>PRO</span></div></div>
+          <div className="auth-kicker">Veilige toegang</div>
+          <h2>Welkom terug</h2>
+          <p>Log in op je professionele Alimenta Pro-werkplek.</p>
+          {error && <div className="notice error topgap" role="alert">{error}</div>}
+          <form onSubmit={submit} className="auth-form topgap">
+            <div><label className="label" htmlFor="email">E-mailadres</label><input id="email" className="input" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
+            <div><div className="label-row"><label className="label" htmlFor="password">Wachtwoord</label><Link href="/wachtwoord-vergeten">Vergeten?</Link></div><input id="password" className="input" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></div>
+            <button className="btn btn-premium" disabled={busy} type="submit">{busy ? "Bezig met inloggen…" : "Inloggen"}<span aria-hidden>→</span></button>
+          </form>
+          <div className="auth-divider"><span>Nieuw bij Alimenta Pro?</span></div>
+          <Link href="/register" className="btn secondary auth-register">Account aanmaken</Link>
+          <div className="auth-trust">Je gegevens worden verwerkt binnen je beveiligde werkplek.</div>
+        </div>
+      </section>
+    </main>
+  );
+}
