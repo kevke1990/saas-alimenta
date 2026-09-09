@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildCalculationDifference } from '@/lib/calculation-difference';
+import { buildCalculationDifference } from '../lib/calculation-difference';
 
 describe('buildCalculationDifference', () => {
   it('detects changed inputs and calculates monthly deltas', () => {
