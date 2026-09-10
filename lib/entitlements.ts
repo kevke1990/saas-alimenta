@@ -2,10 +2,11 @@ import type { Plan } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export const CLIENT_LIMITS: Record<Plan, number> = {
-  FREE: 1,
+  FREE: 0,
+  PRIVATE: 1,
   PRO: 5,
-  PRACTICE: 20,
-  ENTERPRISE: Number.MAX_SAFE_INTEGER,
+  PRACTICE: 5,
+  ENTERPRISE: 5,
 };
 
 export async function getClientEntitlement(userId: string, plan: Plan) {
@@ -15,5 +16,11 @@ export async function getClientEntitlement(userId: string, plan: Plan) {
 }
 
 export function planDisplayName(plan: Plan) {
-  return ({ FREE: "Free", PRO: "Professional", PRACTICE: "Practice", ENTERPRISE: "Enterprise" } satisfies Record<Plan, string>)[plan];
+  return ({
+    FREE: "Geen abonnement",
+    PRIVATE: "Particulier",
+    PRO: "Zakelijk",
+    PRACTICE: "Zakelijk",
+    ENTERPRISE: "Zakelijk",
+  } satisfies Record<Plan, string>)[plan];
 }

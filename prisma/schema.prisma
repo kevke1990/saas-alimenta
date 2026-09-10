@@ -9,6 +9,7 @@ datasource db {
 
 enum Plan {
   FREE
+  PRIVATE
   PRO
   PRACTICE
   ENTERPRISE
@@ -44,6 +45,19 @@ model User {
   passwordHash         String
   name                 String?
   companyName          String?
+  accountType          String              @default("BUSINESS")
+  phone                String?
+  addressLine1         String?
+  postalCode           String?
+  city                 String?
+  country              String?             @default("Nederland")
+  billingAddressLine1  String?
+  billingPostalCode    String?
+  billingCity          String?
+  kvkNumber            String?
+  vatNumber            String?
+  website              String?
+  practiceType         String?
   isAdmin              Boolean             @default(false)
   role                 String              @default("PROFESSIONAL")
   mfaEnabled           Boolean             @default(false)
@@ -87,9 +101,11 @@ model Client {
   personAName     String?
   personAEmail    String?
   personAPhone    String?
+  personAGender   String?
   personBName     String?
   personBEmail    String?
   personBPhone    String?
+  personBGender   String?
   status          ClientStatus     @default(ACTIVE)
   notes           String?
   createdAt       DateTime         @default(now())
@@ -414,6 +430,10 @@ model Document {
   sha256           String
   source           String       @default("UPLOAD")
   storageCipher    String
+  category         String       @default("OVERIG")
+  parentIndex      Int?
+  childIndex       Int?
+  tags             Json?
   aiStatus         String       @default("NOT_ANALYZED")
   aiResult         Json?
   createdAt        DateTime     @default(now())
@@ -436,7 +456,7 @@ model IncomeFact {
   caseId           String?
   parentIndex      Int?
   key              String
-  label            String
+  label             String
   valueNumber      Float?
   valueText        String?
   unit             String?

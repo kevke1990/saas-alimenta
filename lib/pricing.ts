@@ -1,42 +1,25 @@
 export const PRICING = {
+  private: {
+    name: "Particulier",
+    annual: 19.95,
+    includedClients: 1,
+    extraClient: 0,
+    key: "private",
+    vatLabel: "incl. btw",
+    description: "Voor één persoonlijk alimentatiedossier, inclusief KA/PAL, documenten en professionele rapportage."
+  },
   pro: {
-    name: "Professional",
+    name: "Zakelijk",
     annual: 249,
     includedClients: 5,
-    extraClient: 19.95,
+    extraClient: 0,
     key: "pro",
-    description: "Voor zelfstandige advocaten, mediators en adviseurs."
-  },
-  practice20: {
-    name: "Practice 20",
-    annual: 495,
-    includedClients: 20,
-    extraClient: 0,
-    key: "practice20",
-    description: "20 eigen klantdossiers inbegrepen; daarna vaste staffel."
-  },
-  practice50: {
-    name: "Practice 50",
-    annual: 895,
-    includedClients: 50,
-    extraClient: 0,
-    key: "practice50",
-    description: "Voor kantoren met structureel veel dossiers."
-  },
-  enterprise: {
-    name: "Enterprise",
-    annual: 1495,
-    includedClients: 999999,
-    extraClient: 0,
-    key: "enterprise",
-    description: "Onbeperkt gebruik, meerdere gebruikers en maatwerk."
+    vatLabel: "excl. btw",
+    description: "Eén professionele praktijklicentie voor advocaten, mediators en financieel adviseurs. 5 actieve cliëntdossiers inbegrepen."
   }
 } as const;
 
 export function priceForClients(plan: keyof typeof PRICING, clients: number) {
   const p = PRICING[plan];
-  if (plan === "pro") {
-    return p.annual + Math.max(0, clients - p.includedClients) * p.extraClient;
-  }
   return p.annual;
 }

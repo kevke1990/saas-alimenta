@@ -1,38 +1,11 @@
 "use client";
-
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import {useState} from "react";
+import {useRouter} from "next/navigation";
 
-export default function NewClientForm() {
-  const [f, setF] = useState({ name: "", email: "", phone: "", personAName: "", personAEmail: "", personAPhone: "", personBName: "", personBEmail: "", personBPhone: "", notes: "" });
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
-  const r = useRouter();
-  const set = (k: string, v: string) => setF(x => ({ ...x, [k]: v }));
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault(); setErr(""); setBusy(true);
-    try {
-      const x = await fetch("/api/clients", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(f) });
-      if (x.ok) { const c = await x.json(); r.push(`/clients/${c.id}`); }
-      else setErr(await x.text());
-    } catch { setErr("Opslaan mislukt. Probeer het opnieuw."); }
-    finally { setBusy(false); }
-  }
-
-  return <div style={{ maxWidth: 980 }}>
-    <div className="page-head"><div><div className="eyebrow">Nieuw gezin</div><h1 className="page-title">Cliënt/gezin toevoegen</h1><p className="page-subtitle">Alimenta Pro maakt automatisch een uniek klantnummer van 6 cijfers aan. Dit nummer blijft gekoppeld aan het gezin.</p></div><Link className="btn secondary" href="/clients">Annuleren</Link></div>
-    <section className="panel"><form onSubmit={submit}><div className="form-grid">
-      <div className="full"><label className="label">Gezinsnaam *</label><input required className="input" placeholder="Bijv. Familie De Vries" value={f.name} onChange={e => set("name", e.target.value)} /></div>
-      <div className="full"><div className="notice">Het klantnummer wordt automatisch gegenereerd zodra je het gezin opslaat.</div></div>
-      <div><label className="label">Algemeen e-mailadres</label><input className="input" type="email" value={f.email} onChange={e => set("email", e.target.value)} /></div>
-      <div><label className="label">Algemene telefoon</label><input className="input" value={f.phone} onChange={e => set("phone", e.target.value)} /></div>
-      <div className="full"><h2 className="panel-title">Persoon A</h2><div className="panel-sub">Hoofdpersoon / ouder A van het gezin.</div></div>
-      <div><label className="label">Naam *</label><input required className="input" value={f.personAName} onChange={e => set("personAName", e.target.value)} /></div><div><label className="label">E-mail</label><input className="input" type="email" value={f.personAEmail} onChange={e => set("personAEmail", e.target.value)} /></div><div><label className="label">Telefoon</label><input className="input" value={f.personAPhone} onChange={e => set("personAPhone", e.target.value)} /></div>
-      <div className="full"><h2 className="panel-title">Persoon B</h2><div className="panel-sub">Hoofdpersoon / ouder B van het gezin.</div></div>
-      <div><label className="label">Naam *</label><input required className="input" value={f.personBName} onChange={e => set("personBName", e.target.value)} /></div><div><label className="label">E-mail</label><input className="input" type="email" value={f.personBEmail} onChange={e => set("personBEmail", e.target.value)} /></div><div><label className="label">Telefoon</label><input className="input" value={f.personBPhone} onChange={e => set("personBPhone", e.target.value)} /></div>
-      <div className="full"><label className="label">Interne notities</label><textarea className="input" rows={5} value={f.notes} onChange={e => set("notes", e.target.value)} /></div>
-    </div>{err && <div className="notice error topgap">{err}</div>}<div className="actions topgap"><button className="btn" disabled={busy}>{busy ? "Opslaan…" : "Gezin opslaan"}</button><Link className="btn secondary" href="/clients">Annuleren</Link></div></form></section>
-  </div>;
+export default function NewClientForm(){
+ const [f,setF]=useState({name:"",email:"",phone:"",personAName:"",personAEmail:"",personAPhone:"",personAGender:"ONBEKEND",personBName:"",personBEmail:"",personBPhone:"",personBGender:"ONBEKEND",notes:""}); const [err,setErr]=useState(""); const [busy,setBusy]=useState(false); const r=useRouter(); const set=(k:string,v:string)=>setF(x=>({...x,[k]:v}));
+ async function submit(e:React.FormEvent){e.preventDefault();setErr("");setBusy(true);try{const x=await fetch("/api/clients",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(f)});if(x.ok){const c=await x.json();r.push(`/clients/${c.id}`);}else setErr(await x.text());}catch{setErr("Opslaan mislukt. Probeer het opnieuw.");}finally{setBusy(false);}}
+ const gender=<><option value="ONBEKEND">Onbekend</option><option value="MAN">Man</option><option value="VROUW">Vrouw</option><option value="ANDERS">Anders</option></>;
+ return <div style={{maxWidth:980}}><div className="page-head"><div><div className="eyebrow">Nieuw gezin</div><h1 className="page-title">Cliënt/gezin toevoegen</h1><p className="page-subtitle">Het klantnummer wordt automatisch gegenereerd. Persoonsgegevens worden alleen voor dossier- en rapportcontext gebruikt.</p></div><Link className="btn secondary" href="/clients">Annuleren</Link></div><section className="panel"><form onSubmit={submit}><div className="form-grid"><div className="full"><label className="label">Gezinsnaam *</label><input required className="input" placeholder="Bijv. Familie De Vries" value={f.name} onChange={e=>set("name",e.target.value)}/></div><div><label className="label">Algemeen e-mailadres</label><input className="input" type="email" value={f.email} onChange={e=>set("email",e.target.value)}/></div><div><label className="label">Algemene telefoon</label><input className="input" value={f.phone} onChange={e=>set("phone",e.target.value)}/></div><div className="full"><h2 className="panel-title">Ouder / persoon A</h2><div className="panel-sub">Geslacht wordt opgeslagen voor persoonscontext en rapportage en verandert nooit de berekening.</div></div><div><label className="label">Naam *</label><input required className="input" value={f.personAName} onChange={e=>set("personAName",e.target.value)}/></div><div><label className="label">Geslacht</label><select className="input" value={f.personAGender} onChange={e=>set("personAGender",e.target.value)}>{gender}</select></div><div><label className="label">E-mail</label><input className="input" type="email" value={f.personAEmail} onChange={e=>set("personAEmail",e.target.value)}/></div><div><label className="label">Telefoon</label><input className="input" value={f.personAPhone} onChange={e=>set("personAPhone",e.target.value)}/></div><div className="full"><h2 className="panel-title">Ouder / persoon B</h2></div><div><label className="label">Naam *</label><input required className="input" value={f.personBName} onChange={e=>set("personBName",e.target.value)}/></div><div><label className="label">Geslacht</label><select className="input" value={f.personBGender} onChange={e=>set("personBGender",e.target.value)}>{gender}</select></div><div><label className="label">E-mail</label><input className="input" type="email" value={f.personBEmail} onChange={e=>set("personBEmail",e.target.value)}/></div><div><label className="label">Telefoon</label><input className="input" value={f.personBPhone} onChange={e=>set("personBPhone",e.target.value)}/></div><div className="full"><label className="label">Interne notities</label><textarea className="input" rows={5} value={f.notes} onChange={e=>set("notes",e.target.value)}/></div></div>{err&&<div className="notice error topgap">{err}</div>}<div className="actions topgap"><button className="btn" disabled={busy}>{busy?"Opslaan…":"Gezin opslaan"}</button><Link className="btn secondary" href="/clients">Annuleren</Link></div></form></section></div>;
 }
