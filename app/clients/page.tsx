@@ -2,6 +2,7 @@ import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import DeleteClientButton from "./[id]/DeleteClientButton";
 
 type SearchParams = Promise<{ q?: string; status?: string }>;
 
@@ -63,8 +64,8 @@ export default async function Clients({ searchParams }: { searchParams?: SearchP
         </div>
 
         {clients.length === 0 ? <div className="empty">Geen cliënten gevonden met deze filters.</div> :
-          <div className="table-wrap"><table className="table"><thead><tr><th>Cliënt</th><th>Klantnummer</th><th>Contact</th><th>Dossiers</th><th></th></tr></thead><tbody>
-            {clients.map(c => <tr key={c.id}><td><Link className="table-link" href={`/clients/${c.id}`}>{c.name}</Link></td><td>{c.reference || "—"}</td><td>{c.email || c.phone || "—"}</td><td>{c._count.cases}</td><td><Link className="table-link" href={`/clients/${c.id}`}>Open →</Link></td></tr>)}
+          <div className="table-wrap"><table className="table"><thead><tr><th>Cliënt</th><th>Klantnummer</th><th>Contact</th><th>Dossiers</th><th>Acties</th></tr></thead><tbody>
+            {clients.map(c => <tr key={c.id}><td><Link className="table-link" href={`/clients/${c.id}`}>{c.name}</Link></td><td>{c.reference || "—"}</td><td>{c.email || c.phone || "—"}</td><td>{c._count.cases}</td><td><div className="client-row-actions"><Link className="table-link" href={`/clients/${c.id}`}>Open →</Link><DeleteClientButton clientId={c.id} clientName={c.name} caseCount={c._count.cases}/></div></td></tr>)}
           </tbody></table></div>}
       </section>
     </AppShell>
