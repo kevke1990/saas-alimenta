@@ -3,7 +3,9 @@ set -Eeuo pipefail
 trap 'echo "UPDATE MISLUKT op regel $LINENO" >&2' ERR
 APP_DIR="${APP_DIR:-/opt/saas-alimenta}"
 cd "$APP_DIR"
-./deploy/backup.sh
+# Invoke repository scripts through bash so execution does not depend on the
+# executable bit preserved by the deployment method/filesystem.
+bash ./deploy/backup.sh
 CURRENT_TAG="$(grep -E '^ALIMENTA_IMAGE_TAG=' .env | cut -d= -f2- | tr -d '"' || true)"
 CURRENT_TAG="${CURRENT_TAG:-1.3.1-rc1}"
 RELEASE_TAG="${ALIMENTA_IMAGE_TAG:-$CURRENT_TAG}"
