@@ -7,6 +7,7 @@ import { caseCreateSchema } from "@/lib/case-validation";
 import { calculationFingerprint } from "@/lib/calculation-snapshot";
 import { buildCombinedAudit } from "@/lib/combined-audit";
 import { calculationLockMessage, isCaseLockedForCalculation } from "@/lib/case-lock";
+import { applyIncomeFactMappings, buildIncomeFactProvenance, mapApprovedIncomeFacts } from "@/lib/income-fact-provenance";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
@@ -48,10 +49,27 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!parsed.success) return new NextResponse("Ongeldige berekeningsinvoer", { status: 422 });
 
     const body = parsed.data;
-    const calculationInput = {
+    const requestedFactIds = Array.isArray(raw.approvedFactIds) ? raw.approvedFactIds.map(String).filter(Boolean) : [];
+    let calculationInput: any = {
       ...body.data,
       parents: body.data.parents.map((parent) => ({ ...parent, nbi: Number(parent.nbi ?? 0) })),
     };
+    let factProvenance: any = null;
+
+    if (requestedFactIds.length) {
+      const approvedFacts = await db.incomeFact.findMany({
+        where: { id: { in: requestedFactIds }, userId: u.id, caseId: id, status: "APPROVED" },
+        select: { id: true, parentIndex: true, key: true, label: true, valueNumber: true, valueText: true, unit: true, confidence: true, documentId: true },
+      });
+      if (approvedFacts.length !== requestedFactIds.length) {
+        return new NextResponse("Een of meer geselecteerde inkomensfeiten zijn niet meer goedgekeurd of horen niet bij dit dossier.", { status: 422 });
+      }
+      const mappings = mapApprovedIncomeFacts(approvedFacts);
+      calculationInput = applyIncomeFactMappings(calculationInput, mappings);
+      factProvenance = buildIncomeFactProvenance(approvedFacts, mappings);
+      calculationInput = { ...calculationInput, provenance: factProvenance };
+    }
+
     const childResult: any = calculate(calculationInput);
     const childPayments = [0, 0];
     for (const t of childResult.transfers || []) childPayments[t.payerIndex] += Number(t.payment || 0);
@@ -127,14 +145,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       ],
     };
     const productionResult = { ...childResult, combined, partnerSupport, family: oldResult.family, identity: oldResult.identity };
-    const fingerprint = calculationFingerprint(body.data, childResult.engineVersion, childResult.normVersion);
+    const fingerprintInput = { ...calculationInput };
+    delete fingerprintInput.provenance;
+    const fingerprint = calculationFingerprint(fingerprintInput, childResult.engineVersion, childResult.normVersion);
 
     const updated = await db.$transaction(async (tx) => {
       const c = await tx.case.update({
         where: { id },
         data: {
           name: body.name,
-          data: body.data,
+          data: calculationInput,
           result: { ...productionResult, calculationFingerprint: fingerprint },
           status: "CALCULATED",
           reviewStatus: "INCOMPLETE",
@@ -145,11 +165,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           metadata: (body.meta ?? existing.metadata ?? {}) as any,
         },
       });
-      const calculation = await tx.calculation.create({ data: { caseId: id, engineVersion: childResult.engineVersion, normVersion: childResult.normVersion, inputSnapshot: body.data, result: { ...productionResult, calculationFingerprint: fingerprint } } });
-      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, fingerprint, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: calculation.id, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: childResult.engineVersion, normVersion: childResult.normVersion } } });
+      const calculation = await tx.calculation.create({ data: { caseId: id, engineVersion: childResult.engineVersion, normVersion: childResult.normVersion, inputSnapshot: calculationInput, result: { ...productionResult, calculationFingerprint: fingerprint } } });
+      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, fingerprint, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: calculation.id, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: childResult.engineVersion, normVersion: childResult.normVersion, approvedFactIds: requestedFactIds, incomeFactProvenance: factProvenance } } });
       return c;
     });
-    return NextResponse.json(updated);
+    return NextResponse.json({ ...updated, appliedIncomeFacts: requestedFactIds.length, incomeFactProvenance: factProvenance });
   } catch (e: any) {
     return new NextResponse(e?.message || "Wijzigen en herberekenen mislukt", { status: 400 });
   }
