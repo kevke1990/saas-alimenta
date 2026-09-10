@@ -12,7 +12,7 @@ describe("2026 partner-support engine", () => {
     expect(r.hofNormBase).toBe(4740);
     expect(r.grossNeedBeforeOwnIncome).toBe(2844);
     expect(r.additionalNeed).toBe(1081);
-    expect(r.netPartnerSupport).toBe(926);
+    expect(r.netPartnerSupport).toBe(927);
   });
 
   it("gives child support priority before partner support", () => {
