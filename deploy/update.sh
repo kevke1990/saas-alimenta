@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 trap 'echo "UPDATE MISLUKT op regel $LINENO" >&2' ERR
-cd /opt/alimenta
+APP_DIR="${APP_DIR:-/opt/saas-alimenta}"
+cd "$APP_DIR"
 ./deploy/backup.sh
 CURRENT_TAG="$(grep -E '^ALIMENTA_IMAGE_TAG=' .env | cut -d= -f2- | tr -d '"' || true)"
 CURRENT_TAG="${CURRENT_TAG:-1.3.1-rc1}"
