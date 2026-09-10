@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Resolve the repository root from this script's location so the script works
-# regardless of where the application is installed (e.g. /opt/saas-alimenta).
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-APP_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+APP_DIR="${APP_DIR:-/opt/alimenta}"
 cd "$APP_DIR"
 
-mkdir -p backups
+BACKUP_DIR="${BACKUP_DIR:-$APP_DIR/backups}"
+RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
+mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
-FILE="backups/alimenta-postgres-${STAMP}.sql.gz"
-docker compose -f docker-compose.prod.yml exec -T db pg_dump -U ka_app -d kinderalimentatie | gzip > "$FILE"
+FILE="$BACKUP_DIR/alimenta-postgres-${STAMP}.sql.gz"
+
+# --clean makes the dump suitable for a controlled full restore.
+docker compose -f docker-compose.prod.yml exec -T db pg_dump --clean --if-exists -U "${POSTGRES_USER:-ka_app}" -d "${POSTGRES_DB:-kinderalimentatie}" | gzip -9 > "$FILE"
 chmod 600 "$FILE"
-find backups -type f -name 'alimenta-postgres-*.sql.gz' -mtime +30 -delete
+gunzip -t "$FILE"
 sha256sum "$FILE" > "$FILE.sha256"
-echo "Backup: $FILE"
+find "$BACKUP_DIR" -type f -name 'alimenta-postgres-*.sql.gz' -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -type f -name 'alimenta-postgres-*.sql.gz.sha256' -mtime +"$RETENTION_DAYS" -delete
+printf 'Backup: %s\nChecksum: %s\n' "$FILE" "$FILE.sha256"

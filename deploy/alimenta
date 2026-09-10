@@ -6,18 +6,22 @@ cmd=${1:-help}
 case "$cmd" in
   install) exec bash deploy/installer.sh ;;
   doctor) exec bash deploy/doctor.sh ;;
+  ops-check) exec bash deploy/ops-check.sh ;;
   status) docker compose -f docker-compose.prod.yml ps ;;
   logs) docker compose -f docker-compose.prod.yml logs --tail="${2:-200}" -f ;;
   backup) exec bash deploy/backup.sh ;;
   restore) exec bash deploy/restore.sh "${2:-}" ;;
   update) exec bash deploy/update.sh ;;
+  schedule) exec bash deploy/install-scheduled-jobs.sh ;;
   *) cat <<'HELP'
 Alimenta Pro beheer
   alimenta status          containers/status
   alimenta logs [N]        live logs, default 200 regels
   alimenta doctor          volledige productiecontrole
+  alimenta ops-check       operationele readinesscontrole
   alimenta backup          PostgreSQL backup + retention
   alimenta restore FILE    herstel PostgreSQL backup
+  alimenta schedule        installeer dagelijkse backup/retention/TLS jobs
   alimenta update          backup -> migration -> build -> healthcheck
 HELP
 esac
