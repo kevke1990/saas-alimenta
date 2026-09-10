@@ -5,6 +5,7 @@ import type { Plan, Prisma } from "@prisma/client";
 const PREFIX = "almt_live_";
 const LIMITS: Record<Plan, { monthly: number; keys: number }> = {
   FREE: { monthly: 100, keys: 1 },
+  PRIVATE: { monthly: 100, keys: 1 },
   PRO: { monthly: 5000, keys: 5 },
   PRACTICE: { monthly: 25000, keys: 20 },
   ENTERPRISE: { monthly: 100000, keys: 100 },

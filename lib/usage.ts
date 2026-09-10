@@ -3,6 +3,7 @@ import { Plan } from "@prisma/client";
 
 const LIMITS: Record<Plan, number> = {
   FREE: 1,
+  PRIVATE: 1,
   PRO: 5,
   PRACTICE: 20,
   ENTERPRISE: 999999
