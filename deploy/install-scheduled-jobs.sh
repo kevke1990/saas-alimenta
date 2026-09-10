@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_DIR="${APP_DIR:-/opt/alimenta}"
+APP_DIR="${APP_DIR:-/opt/saas-alimenta}"
 cd "$APP_DIR"
 CRON_FILE="${CRON_FILE:-/etc/cron.d/alimenta}"
 BACKUP_SCHEDULE="${BACKUP_SCHEDULE:-17 2 * * *}"
