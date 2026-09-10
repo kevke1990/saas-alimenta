@@ -3,6 +3,7 @@ import AppShell from "@/components/AppShell";
 import {requireUser} from "@/lib/auth";
 import {db} from "@/lib/db";
 import DocumentPanel from "./DocumentPanel";
+import DeleteClientButton from "./DeleteClientButton";
 
 const reviewLabel=(v:string)=>({INCOMPLETE:"Te controleren",READY_FOR_REVIEW:"Klaar voor review",REVIEWED:"Gereviewd",APPROVED:"Goedgekeurd",FINAL:"Definitief"}[v]||v||"Onbekend");
 const reviewClass=(v:string)=>v==="FINAL"||v==="APPROVED"||v==="REVIEWED"?"green":v==="READY_FOR_REVIEW"?"amber":"gray";
@@ -19,7 +20,7 @@ export default async function ClientPage({params}:{params:Promise<{id:string}>})
  const attentionCases=cases.filter(x=>x.reviewStatus==="INCOMPLETE");
  const aiPending=c.documents.filter(x=>x.aiStatus!=="COMPLETED").length;
  return <AppShell>
-  <div className="page-head"><div><div className="eyebrow">Cliëntwerkplek · gezin</div><h1 className="page-title">{c.name}</h1><p className="page-subtitle">{c.reference||"Geen klantnummer"} · {c.email||"Geen e-mail geregistreerd"}</p></div><div className="actions"><Link className="btn secondary" href="/clients">← Cliënten</Link><Link className="btn secondary" href={`/clients/${c.id}/edit`}>Gezin bewerken</Link><Link className="btn" href={`/cases/new?clientId=${c.id}`}>+ Nieuw dossier</Link></div></div>
+  <div className="page-head"><div><div className="eyebrow">Cliëntwerkplek · gezin</div><h1 className="page-title">{c.name}</h1><p className="page-subtitle">{c.reference||"Geen klantnummer"} · {c.email||"Geen e-mail geregistreerd"}</p></div><div className="actions"><Link className="btn secondary" href="/clients">← Cliënten</Link><Link className="btn secondary" href={`/clients/${c.id}/edit`}>Gezin bewerken</Link><Link className="btn" href={`/cases/new?clientId=${c.id}`}>+ Nieuw dossier</Link><DeleteClientButton clientId={c.id} clientName={c.name} caseCount={cases.length}/></div></div>
 
   <section className="result-overview">
    <div className="result-metric"><div className="stat-label">DOSSIERS</div><div className="metric-value">{cases.length}</div><span>{openCases.length} open</span></div>
