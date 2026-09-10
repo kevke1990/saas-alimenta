@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_DIR="${APP_DIR:-/opt/alimenta}"
+APP_DIR="${APP_DIR:-/opt/saas-alimenta}"
 cd "$APP_DIR"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yml}"
 
