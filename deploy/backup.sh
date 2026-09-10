@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_DIR="${APP_DIR:-/opt/alimenta}"
+APP_DIR="${APP_DIR:-/opt/saas-alimenta}"
 cd "$APP_DIR"
 
 BACKUP_DIR="${BACKUP_DIR:-$APP_DIR/backups}"
