@@ -17,8 +17,8 @@ describe("canonical family model", () => {
       parentA: "Ouder A",
       parentB: "Ouder B",
       children: [
-        { id: "yuna", name: "Yuna" },
-        { id: "jayda", name: "Jayda" },
+        { id: "yuna", name: "Yuna", gender: "ONBEKEND" },
+        { id: "jayda", name: "Jayda", gender: "ONBEKEND" },
       ],
       childCount: 2,
     });
