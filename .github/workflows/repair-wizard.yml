@@ -1,0 +1,40 @@
+name: Repair wizard syntax
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.sha == '2179dbdb0ed59638fb587159ecc1d25ed9e0e220'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Restore wizard and apply syntax fix
+        shell: bash
+        run: |
+          git checkout e63c509 -- 'app/cases/[id]/edit/wizard/page.tsx'
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/cases/[id]/edit/wizard/page.tsx')
+          s = p.read_text()
+          old = 'onChange={e=>setRoot("partnerSupport",{...(data.partnerSupport||{}),durationException:e.target.value)}><option value="NONE">'
+          new = 'onChange={e=>setRoot("partnerSupport",{...(data.partnerSupport||{}),durationException:e.target.value})}><option value="NONE">'
+          if old not in s:
+              raise SystemExit('Expected broken durationException select syntax not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Commit repaired wizard
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          rm -f .github/workflows/repair-wizard.yml
+          git add 'app/cases/[id]/edit/wizard/page.tsx' .github/workflows/repair-wizard.yml
+          git commit -m 'fix(ai-review): restore wizard and close duration select'
+          git push
