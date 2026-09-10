@@ -5,6 +5,19 @@ import { isCaseLockedForCalculation, calculationLockMessage } from "@/lib/case-l
 
 const ALLOWED = new Set(["PROPOSED", "APPROVED", "REJECTED"]);
 
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const u = await requireUser();
+  const { id } = await params;
+  const c = await db.case.findFirst({ where: { id, userId: u.id }, select: { id: true } });
+  if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
+  const incomeFacts = await db.incomeFact.findMany({
+    where: { userId: u.id, caseId: id },
+    include: { document: { select: { id: true, name: true, aiStatus: true } } },
+    orderBy: { createdAt: "desc" },
+  });
+  return NextResponse.json({ incomeFacts });
+}
+
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const u = await requireUser();
@@ -17,7 +30,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const parentRaw = body.parentIndex === undefined || body.parentIndex === "" ? null : Number(body.parentIndex);
     if (parentRaw !== null && parentRaw !== 0 && parentRaw !== 1) return new NextResponse("Ongeldige ouderkeuze", { status: 400 });
-    if (status === "APPROVED" && parentRaw === null) return new NextResponse("Kies eerst ouder A of ouder B voor dit inkomensfeit.", { status: 422 });
 
     const c = await db.case.findFirst({ where: { id, userId: u.id }, select: { id: true, reviewStatus: true } });
     if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
@@ -25,13 +37,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const fact = await db.incomeFact.findFirst({ where: { id: factId, userId: u.id, caseId: id }, include: { document: true } });
     if (!fact) return new NextResponse("Inkomensfeit niet gevonden", { status: 404 });
-    const changed = fact.status !== status || (status === "APPROVED" && fact.parentIndex !== parentRaw);
+    const nextParentIndex = status === "APPROVED" ? parentRaw : fact.parentIndex;
+    if (status === "APPROVED" && nextParentIndex === null) return new NextResponse("Kies eerst ouder A of ouder B voor dit inkomensfeit.", { status: 422 });
+    const changed = fact.status !== status || (status === "APPROVED" && fact.parentIndex !== nextParentIndex);
 
     const now = new Date();
     const updated = await db.$transaction(async tx => {
       const nextFact = await tx.incomeFact.update({
         where: { id: fact.id },
-        data: { parentIndex: parentRaw, status, approvedAt: status === "APPROVED" ? now : null, approvedByUserId: status === "APPROVED" ? u.id : null },
+        data: { parentIndex: nextParentIndex, status, approvedAt: status === "APPROVED" ? now : null, approvedByUserId: status === "APPROVED" ? u.id : null },
       });
 
       if (changed) {
@@ -40,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
           data: {
             userId: u.id,
             action: status === "APPROVED" ? "INCOME_FACT_APPROVED" : status === "REJECTED" ? "INCOME_FACT_REJECTED" : "INCOME_FACT_REOPENED",
-            metadata: { caseId: id, documentId: fact.documentId, incomeFactId: fact.id, key: fact.key, label: fact.label, valueNumber: fact.valueNumber, confidence: fact.confidence, parentIndex: parentRaw, reviewInvalidated: true },
+            metadata: { caseId: id, documentId: fact.documentId, incomeFactId: fact.id, key: fact.key, label: fact.label, valueNumber: fact.valueNumber, confidence: fact.confidence, parentIndex: nextParentIndex, reviewInvalidated: true },
           },
         });
       }
