@@ -1,5 +1,3 @@
-import type { Prisma } from "@prisma/client";
-
 export type ApprovedIncomeFact = {
   id: string;
   parentIndex: number | null;
@@ -26,11 +24,7 @@ function annualToMonthly(value: number) {
   return Math.round((value / 12) * 100) / 100;
 }
 
-/**
- * Maps only the income facts that have a deterministic equivalent in the
- * calculation input. Unknown facts are deliberately left untouched so AI
- * cannot silently invent calculation fields.
- */
+/** Maps only deterministic calculation-input equivalents; unknown AI facts are ignored. */
 export function mapApprovedIncomeFacts(facts: ApprovedIncomeFact[]): FactMapping[] {
   const mappings: FactMapping[] = [];
   for (const fact of facts) {
@@ -39,11 +33,11 @@ export function mapApprovedIncomeFacts(facts: ApprovedIncomeFact[]): FactMapping
 
     const annual = /annual|jaar|per jaar/i.test(fact.unit || "");
     const monthly = /monthly|month|maand|per maand/i.test(fact.unit || "");
-    const value = (annual && !monthly) ? annualToMonthly(fact.valueNumber) : fact.valueNumber;
+    const value = annual && !monthly ? annualToMonthly(fact.valueNumber) : fact.valueNumber;
     const parentIndex = fact.parentIndex as 0 | 1;
 
     if (fact.key === "grossAnnual") mappings.push({ factId: fact.id, parentIndex, key: fact.key, target: "income.salaryMonthly", value, unit: fact.unit || null, conversion: annual ? "annual_to_monthly" : "direct" });
-    else if (fact.key === "holidayAllowance") mappings.push({ factId: fact.id, parentIndex, key: fact.key, target: annual ? "income.holidayAllowanceMonthly" : "income.holidayAllowanceMonthly", value, unit: fact.unit || null, conversion: annual ? "annual_to_monthly" : "direct" });
+    else if (fact.key === "holidayAllowance") mappings.push({ factId: fact.id, parentIndex, key: fact.key, target: "income.holidayAllowanceMonthly", value, unit: fact.unit || null, conversion: annual ? "annual_to_monthly" : "direct" });
     else if (fact.key === "thirteenthMonth") mappings.push({ factId: fact.id, parentIndex, key: fact.key, target: "income.thirteenthMonthAnnual", value: annual || !monthly ? fact.valueNumber : fact.valueNumber * 12, unit: fact.unit || null, conversion: annual || !monthly ? "direct" : "monthly_to_annual" });
     else if (fact.key === "ikb") mappings.push({ factId: fact.id, parentIndex, key: fact.key, target: "income.ikbMonthly", value, unit: fact.unit || null, conversion: annual ? "annual_to_monthly" : "direct" });
     else if (fact.key === "pensionPremium") mappings.push({ factId: fact.id, parentIndex, key: fact.key, target: "income.pensionMonthly", value, unit: fact.unit || null, conversion: annual ? "annual_to_monthly" : "direct" });
@@ -75,5 +69,5 @@ export function buildIncomeFactProvenance(facts: ApprovedIncomeFact[], mappings:
     appliedFactIds: mappings.map(m => m.factId),
     ignoredFactIds: facts.filter(f => !mappedIds.has(f.id)).map(f => f.id),
     mappings,
-  } as unknown as Prisma.InputJsonValue;
+  };
 }
