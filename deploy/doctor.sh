@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -u
-APP_DIR=/opt/alimenta
+APP_DIR="${APP_DIR:-/opt/saas-alimenta}"
 cd "$APP_DIR"
 PASS=0; WARN=0; FAIL=0
 ok(){ echo "[OK]   $1"; PASS=$((PASS+1)); }
