@@ -6,7 +6,12 @@ export const PRIVACY_POLICY_VERSION = "2026.2";
 export const RIGHTS = ["ACCESS", "RECTIFICATION", "RESTRICTION", "OBJECTION", "PORTABILITY", "ERASURE"] as const;
 export function hashToken(v: string) { return crypto.createHash("sha256").update(v).digest("hex"); }
 export function randomToken() { return crypto.randomBytes(32).toString("hex"); }
-export function hashIp(ip: string | null) { if (!ip) return null; return crypto.createHash("sha256").update(`${process.env.PRIVACY_HASH_SALT || "alimenta"}:${ip}`).digest("hex"); }
+export function hashIp(ip: string | null) {
+  if (!ip) return null;
+  const salt = process.env.PRIVACY_HASH_SALT;
+  if (!salt || salt.length < 32) return null;
+  return crypto.createHash("sha256").update(`${salt}:${ip}`).digest("hex");
+}
 
 export async function buildClientExport(userId: string, clientId: string) {
   const client = await db.client.findFirst({ where: { id: clientId, userId }, include: { cases: { include: { calculations: true } }, calendarEvents: true, usageEvents: true, privacyRequests: true, consentRecords: true, documents: true, mailMessages: true } });
