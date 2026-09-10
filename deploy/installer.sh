@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 trap 'echo "INSTALLATIE MISLUKT op regel $LINENO. Controleer de log hierboven." >&2' ERR
 
-APP_DIR="/opt/alimenta"
+APP_DIR="${APP_DIR:-/opt/saas-alimenta}"
 APP_USER="alimenta"
 DOMAIN="${ALIMENTA_DOMAIN:-}"
 ADMIN_EMAIL_INPUT="${ALIMENTA_ADMIN_EMAIL:-}"
@@ -189,6 +189,9 @@ Geïnstalleerd: $(date -u +%FT%TZ)
 INFO
 chmod 600 "$APP_DIR/secrets/install-info.txt"
 
+# Install the supported scheduled backup/retention/TLS jobs using the same APP_DIR.
+bash deploy/install-scheduled-jobs.sh
+
 echo
 echo "============================================================"
 echo "Alimenta Pro v1.3.1 installatie voltooid"
@@ -196,11 +199,3 @@ echo "URL: https://$DOMAIN"
 echo "Beheer CLI: alimenta doctor | status | logs | backup | update | restore"
 echo "Admin-gegevens staan in $APP_DIR/.env.production (chmod 600)."
 echo "============================================================"
-
-# v1.3.1 security completion: daily retention job (idempotent)
-install -d -m 0750 /opt/alimenta/scripts
-cp -f scripts/retention.ts /opt/alimenta/scripts/retention.ts 2>/dev/null || true
-cat >/etc/cron.d/alimenta-retention <<'EOF'
-17 3 * * * alimenta cd /opt/alimenta && /usr/bin/docker compose run --rm app npm run db:retention >> /var/log/alimenta-retention.log 2>&1
-EOF
-chmod 0644 /etc/cron.d/alimenta-retention
