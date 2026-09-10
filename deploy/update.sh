@@ -17,7 +17,7 @@ docker compose -f docker-compose.prod.yml build --pull app
 docker compose -f docker-compose.prod.yml run --rm app npx prisma migrate deploy
 docker compose -f docker-compose.prod.yml up -d --force-recreate app
 for i in $(seq 1 45); do
-  if curl -fsS http://127.0.0.1:3000/api/health | grep -q '"ok":true'; then
+  if curl -fsS http://127.0.0.1:3000/api/health 2>/dev/null | grep -q '"ok":true'; then
     echo "Update geslaagd ($RELEASE_TAG)."; docker image prune -f; exit 0
   fi
   sleep 2
