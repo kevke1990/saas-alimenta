@@ -23,3 +23,29 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   await db.auditLog.create({ data: { userId: u.id, action: "CLIENT_UPDATED", metadata: { clientId: c.id } } });
   return NextResponse.json(c);
 }
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const u = await requireUser();
+  const { id } = await params;
+  const current = await db.client.findFirst({
+    where: { id, userId: u.id },
+    include: { _count: { select: { cases: true } } },
+  });
+  if (!current) return new NextResponse("Cliënt niet gevonden", { status: 404 });
+
+  // A client with dossiers must remain addressable for calculation history.
+  // Archive it instead of deleting it so immutable calculation snapshots remain intact.
+  if (current._count.cases > 0) {
+    return new NextResponse("Cliënt kan niet worden verwijderd zolang er dossiers aan gekoppeld zijn. Archiveer de cliënt in plaats daarvan.", { status: 409 });
+  }
+
+  await db.$transaction(async (tx) => {
+    // Client-owned documents can contain personal data; remove them together with the client.
+    await tx.document.deleteMany({ where: { clientId: id } });
+    await tx.mailMessage.deleteMany({ where: { clientId: id } });
+    await tx.client.delete({ where: { id } });
+    await tx.auditLog.create({ data: { userId: u.id, action: "CLIENT_DELETED", metadata: { clientId: id } } });
+  });
+
+  return NextResponse.json({ ok: true });
+}
