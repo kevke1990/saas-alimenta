@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createCalculationPdf } from "@/lib/pdf-report";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
+  let user;
+  try {
+    user = await requireUser();
+  } catch {
+    return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
+  }
   const { id } = await params;
   const record = await db.case.findFirst({
     where: { id, userId: user.id },
