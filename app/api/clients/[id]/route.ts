@@ -40,9 +40,14 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   }
 
   await db.$transaction(async (tx) => {
-    // Client-owned documents can contain personal data; remove them together with the client.
+    // A client without dossiers can be fully removed, including client-owned personal data.
     await tx.document.deleteMany({ where: { clientId: id } });
     await tx.mailMessage.deleteMany({ where: { clientId: id } });
+    await tx.calendarEvent.deleteMany({ where: { clientId: id } });
+    await tx.usageEvent.deleteMany({ where: { clientId: id } });
+    await tx.privacyRequest.deleteMany({ where: { clientId: id } });
+    await tx.consentRecord.deleteMany({ where: { clientId: id } });
+    await tx.task.deleteMany({ where: { clientId: id } });
     await tx.client.delete({ where: { id } });
     await tx.auditLog.create({ data: { userId: u.id, action: "CLIENT_DELETED", metadata: { clientId: id } } });
   });
