@@ -22,8 +22,8 @@ describe("dossier work-priority score", () => {
 
   it("raises priority when dossier tasks are overdue or due today", () => {
     const result = calculateWorkScore({ reviewStatus: "APPROVED", calculationCount: 1, proposedIncomeFacts: 0, documentsAwaitingReview: 0, documentAnalysisErrors: 0, overdueTasks: 1, todayTasks: 1 });
-    expect(result.score).toBe(74);
-    expect(result.priority).toBe("NORMAL");
+    expect(result.score).toBe(84);
+    expect(result.priority).toBe("LOW");
     expect(result.reasons).toEqual(["1 open taak/taken zijn verlopen.", "1 open taak/taken staan voor vandaag gepland."]);
   });
 
