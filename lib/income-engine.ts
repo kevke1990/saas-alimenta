@@ -45,7 +45,7 @@ export type IncomeResult = {
   warnings: string[];
 };
 
-const nz = (v?: number) => Math.max(0, Number.isFinite(v as number) ? Number(v) : 0);
+const nz = (v?: number) => Math.max(0, Number.isFinite(v as number) ? v as number : 0);
 const eur = (v: number) => Math.round(Math.max(0, v));
 
 function taxBox1(income: number, aow = false) {
@@ -127,9 +127,6 @@ export function calculateIncome(profile: IncomeProfile): IncomeResult {
   }
 
   const salary = nz(profile.salaryMonthly) * 12;
-  // When a percentage is supplied, the professional input model treats the
-  // percentage as applying to the regular gross remuneration plus IKB. This
-  // keeps the annualisation auditable and matches the income-engine contract.
   const holidayBase = salary + nz(profile.ikbMonthly) * 12;
   const holiday = nz(profile.holidayAllowanceMonthly) > 0 ? nz(profile.holidayAllowanceMonthly) * 12 : holidayBase * (nz(profile.holidayAllowancePct) || 8) / 100;
   const ikb = nz(profile.ikbMonthly) * 12;
@@ -151,12 +148,14 @@ export function calculateIncome(profile: IncomeProfile): IncomeResult {
   const i = iack(laborIncome, !!profile.hasIack, !!profile.aow);
   const override = nz(profile.taxCreditOverrideAnnual);
   const credits = override > 0 ? override : g + l + i;
-  const netAnnual = Math.max(0, taxableBox1 - tax + credits + nz(profile.box3TaxableIncomeAnnual) + nz(profile.netOtherIncomeMonthly) * 12);
+  // Box 3 input is deliberately not added to NBI: a taxable wealth base is not
+  // itself income. A future box-3 module must calculate the tax/return separately.
+  const netAnnual = Math.max(0, taxableBox1 - tax + credits + nz(profile.netOtherIncomeMonthly) * 12);
 
   if (nz(profile.holidayAllowancePct) === 0 && nz(profile.holidayAllowanceMonthly) === 0) warnings.push("Vakantietoeslag ontbreekt; controleer of deze in het salaris/IKB is inbegrepen.");
   if (ikb > 0) warnings.push("IKB/PKB is als bruto inkomenscomponent meegenomen; controleer de loonstrook en fiscale behandeling.");
   if (profile.hasIack) warnings.push("IACK is toegepast op basis van de door de gebruiker bevestigde geschiktheid; controleer de wettelijke voorwaarden.");
-  if (nz(profile.box3TaxableIncomeAnnual) > 0) warnings.push("Box 3 is als opgegeven fiscaal inkomen toegevoegd; controleer de actuele vermogensberekening.");
+  if (nz(profile.box3TaxableIncomeAnnual) > 0) warnings.push("Box 3-grondslag is vastgelegd maar niet als netto inkomen toegevoegd; bereken de eventuele box 3-heffing afzonderlijk voordat dit bedrag in het NBI wordt verwerkt.");
 
   return {
     mode, grossAnnual: eur(grossAnnual), pensionAnnual: eur(pension + disability + otherPremiums), taxableBox1: eur(taxableBox1),
