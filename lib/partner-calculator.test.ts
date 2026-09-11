@@ -42,7 +42,8 @@ describe("2026 partner-support engine", () => {
 
   it("compounds statutory indexation from a source year through the target year", () => {
     const factor = getCumulativeIndexationFactor(2024, 2026);
-    expect(factor).toBeCloseTo(1.062 * 1.065 * 1.046, 12);
+    // The amount is already valid in 2024, so only 2025 and 2026 apply.
+    expect(factor).toBeCloseTo(1.065 * 1.046, 12);
 
     const r = calculatePartnerSupport({
       marriageNBGI: 5548,
