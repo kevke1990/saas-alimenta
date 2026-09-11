@@ -4,15 +4,23 @@
 **Hoofdbranch:** `main`  
 **Statusdocument:** `docs/PROJECT-STATUS.md`
 
-Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, wat momenteel in ontwikkeling is en wat nog nodig is. Bij iedere substantiële fasewijziging moet dit bestand worden bijgewerkt.
+Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, wat momenteel in ontwikkeling is en wat nog nodig is. Bij iedere substantiële fasewijziging wordt dit bestand bijgewerkt.
 
 ## Actuele stand
 
 - Fase F1 — Professionele werkplek: **afgerond**
 - Fase F2 — Slimme dossierprioritering: **afgerond**
-- Fase F3 — Gecontroleerde automatisering: **in afronding / actief uitgewerkt**
-- Fase F4 — Integratieplatform: **volgende hoofdfase, voorbereid**
+- Fase F3 — Gecontroleerde automatisering: **vrijwel afgerond; lifecycle hardening loopt**
+- Fase F4 — Integratieplatform: **start gemaakt; basis aanwezig, hardening/documentatie loopt**
 - Fase F5 — Explainable intelligence: **bestaande basis aanwezig; verdere productisering volgt**
+
+## Recente voortgang
+
+- Persistente e-mailconcepten hebben nu een volledige server-side send lifecycle: een opgeslagen `DRAFT` wordt bij expliciete verzending naar `SENT` gemuteerd in hetzelfde `MailMessage`-record.
+- Verzenden vanuit een opgeslagen concept gebruikt een ownership-check, geverifieerde afzender, geregistreerde provider-ID, `MailLog` en auditactie `MAIL_DRAFT_SENT`.
+- Dossier-workspace heeft een aparte communicatiepagina met e-mailhistorie en open concepten.
+- De workspace verwijst nu direct naar communicatie als onderdeel van de dossierwerkruimtes.
+- Automatische verzending blijft uitgesloten: alleen een expliciete professionele verzendactie kan een concept verzenden.
 
 ## Wat al is gebouwd
 
@@ -37,67 +45,38 @@ Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, 
 
 ### F1 — Professionele werkplek
 
-Afgerond:
-
-- Centraal dossier-workspace op `/cases/[id]/workspace`.
-- Bronnen, inkomensfeiten, berekening, historie, scenario's, review, overrides, rapport en audittrail vanuit één werkplek.
-- Centrale dossierlijst met zoeken/reviewfilter.
-- Centrale werkvoorraad op `/work`.
-- Open taken zichtbaar in de werkvoorraad.
-- Taken expliciet afronden/annuleren.
-- Server-side autorisatie en auditlogging op taakmutaties.
-- Geen automatische wijziging van berekening, norm of reviewstatus.
+Afgerond: centrale dossier-workspace, dossierlijst/search, werkvoorraad, taakafhandeling, server-side autorisatie/audit en bescherming tegen autonome juridische mutaties.
 
 ### F2 — Slimme dossierprioritering
 
-Afgerond:
-
-- Deterministische werkscore 0–100.
-- Prioriteiten `URGENT`, `HIGH`, `NORMAL`, `LOW`.
-- Concrete verklaringen per score.
-- Reviewstatus, voorgestelde inkomensfeiten, documentreview en analysefouten.
-- Ontbrekende berekening.
-- Stale berekening via vergelijking met input snapshot.
-- Grote wijziging tussen opeenvolgende berekeningen.
-- Deadline-druk door verlopen taken en taken voor vandaag.
-- Dezelfde scorelogica in `/work` en `/cases`.
-- Prioriteitsfilter.
-- Regressietests voor score en determinisme.
+Afgerond: deterministische 0–100 werkscore, prioriteiten, verklaringen, review/facts/documenten/errors, stale/large-change detection, deadline-druk, dezelfde logica in `/work` en `/cases`, filters en regressietests.
 
 ## F3 — Gecontroleerde automatisering
 
 ### Afgerond
 
-- Workflow-suggesties voor vervolgtaken.
-- Prioriteit van workflow-suggesties.
-- Expliciet accepteren van een voorgestelde taak.
-- Duplicaatbescherming voor open taken.
-- Due-date ondersteuning voor geaccepteerde taken.
+- Workflow-suggesties en prioriteiten.
+- Expliciete taakacceptatie, due dates en duplicaatbescherming voor open taken.
 - Agenda-opvolging met starttijd, duur en reminder.
-- E-mailconceptgeneratie.
-- E-mailconcepten worden persistent opgeslagen als `MailMessage` met koppeling aan gebruiker, cliënt en dossier.
-- Conceptstatus `DRAFT`.
-- Concepten kunnen worden bewerkt en opgeslagen.
-- Concepten kunnen worden verwijderd.
-- Concepten worden pas bij expliciete verzendactie verzonden.
-- Audittrail voor automation-acties, taakacceptatie, agenda-creatie en e-mailconcepten.
+- Persistent e-mailconcept als `MailMessage` met user/client/case-koppeling.
+- Concept bewerken, opslaan en verwijderen.
+- Server-side verzenden van een opgeslagen concept met lifecycle `DRAFT → SENT`.
+- Provider-ID, `MailLog` en audittrail bij verzending.
+- Dossiercommunicatiehistorie en directe toegang tot conceptbeheer.
 - Geen autonome wijziging van juridische berekeningen, normen of reviewstatus.
 
 ### Nog nodig binnen F3
 
-- Volledige end-to-end lifecycle van suggestie → taak/agenda/conceptmail → opvolging → afronding.
-- Dossierweergave waarin communicatiehistorie en open concepten direct zichtbaar zijn.
-- Sterkere deduplicatie/idempotency voor agenda- en mailacties.
-- Eenduidige statusmachine voor mailconcepten en verzonden berichten.
-- Verzendactie vanuit het opgeslagen concept met behoud van audittrail.
-- Koppeling tussen taak en het object dat uit de taak is voortgekomen (agenda/e-mail), zodat provenance zichtbaar blijft.
-- Tests voor authorization, ownership, duplicate prevention en lifecycle transitions.
-- UX voor fouten, lege ontvanger, ontbrekende afzender en niet-geverifieerde identiteit.
-- Security review van alle automation endpoints.
+1. Sterkere idempotency/deduplicatie voor agenda- en automation-acties.
+2. Taak → voortgekomen agenda/e-mail provenance explicieter maken.
+3. Uitgebreidere authorization/ownership/duplicate/lifecycle endpointtests.
+4. Eenduidige fout- en statusafhandeling in de mail-UI.
+5. Security review van alle automation- en mail-endpoints.
+6. E2E-pad testen: suggestie → actie → object → opvolging → afronding → audit.
 
-## F4 — Begin gemaakt / volgende hoofdfase
+## F4 — Integratieplatform
 
-F4 is het integratieplatform rond Alimenta Pro. De repository bevat al een basis voor:
+### Basis aanwezig
 
 - Versioned API v1.
 - Scoped API credentials.
@@ -106,83 +85,49 @@ F4 is het integratieplatform rond Alimenta Pro. De repository bevat al een basis
 - Integratie-audittrail.
 - Rate limiting en plan-entitlements.
 
-### F4 nog verder uit te werken
+### Eerste F4-stap gestart
 
-1. API v1 volledig documenteren per endpoint en resource.
-2. Credential lifecycle: aanmaken, scopes, rotatie, intrekken en audit.
-3. Webhook lifecycle: subscriptionbeheer, signing, retries, idempotency en delivery history.
+De bestaande F4-basis is nu als aparte integratiefase geregistreerd. De volgende implementaties worden production-ready uitgewerkt zonder bestaande tenant-isolatie of reviewgrenzen te omzeilen.
+
+### F4 nog uit te werken
+
+1. API v1 volledig documenteren per endpoint/resource.
+2. Credential lifecycle: scopes, rotatie, intrekken en audit.
+3. Webhook retries, idempotency en delivery history.
 4. Import/export validatie, versiebeheer en foutmeldingen.
 5. Integratie-events koppelen aan dossier-, cliënt- en communicatieprovenance.
-6. Rate limiting per credential/route/plan verder verharden.
-7. Staging integration smoke tests activeren zodra staging secrets beschikbaar zijn.
+6. Rate limiting per credential/route/plan verharden.
+7. Staging integration smoke tests activeren zodra secrets beschikbaar zijn.
 8. Monitoring, health checks en operationele foutdiagnostiek uitbreiden.
 9. Security/privacy review van externe integraties.
-10. API-documentatie en voorbeeldrequests toevoegen.
+10. API-documentatie en voorbeeldrequests.
 
 ## F5 — Bestaande basis
 
-De explainable-intelligence-laag bestaat al en is bewust signalerend in plaats van autonoom juridisch beslissend.
-
-Aanwezig:
-
-- Unieke signal keys en categorieën.
-- Severity en confidence.
-- Evidence, explanation en voorgestelde action.
-- Signalen voor ontbrekende onderbouwing/lage confidence.
-- Document-/inkomensreview.
-- Review/goedkeuring.
-- Ontbrekende/verouderde berekeningen en normen.
-- Grote wijzigingen tussen berekeningen.
-- Dossierwijzigingen na laatste berekening.
-- Server-side resource isolation.
-- Human-in-the-loop.
-
-Verdere productisering van F5 volgt na de integratie- en automation-hardening.
+De explainable-intelligence-laag bestaat al en is bewust signalerend in plaats van autonoom juridisch beslissend. Verdere productisering volgt na F3/F4-hardening.
 
 ## Technische kwaliteitsstatus
 
-De CI-pipeline controleert minimaal:
+CI controleert repository hygiene, dependencies/security audit, Prisma schema/migrations/generate, tests, production build, runtime health/readiness, production Compose, Docker image/user en deployment scripts. `staging-smoke` wordt alleen uitgevoerd wanneer de benodigde stagingconfiguratie beschikbaar is.
 
-- repository hygiene
-- dependency installation
-- security audit
-- Prisma schema/migrations/generate
-- tests
-- production build
-- runtime health/readiness
-- production Compose
-- production Docker image
-- image user
-- deployment scripts
+## Ontwerpregels
 
-De `staging-smoke` job kan worden overgeslagen wanneer de vereiste stagingconfiguratie/secrets niet beschikbaar zijn. Dat is geen reden om lokaal of in CI een groene stagingtest te simuleren.
+1. Human-in-the-loop voor juridische/workflowbeslissingen.
+2. Geen autonome reken-, norm- of reviewmutaties.
+3. Iedere muterende workflowactie is auditbaar.
+4. Iedere serveractie dwingt resource ownership af.
+5. Workflow/AI-output blijft herleidbaar tot bron/object.
+6. Herhaalde automation requests mogen geen ongecontroleerde duplicaten maken.
+7. Privacy by design.
+8. API-, norm-, reken- en import/exportcontracten blijven expliciet versieerbaar.
 
-## Belangrijke ontwerpregels
+## Ontwikkelvolgorde
 
-1. **Human-in-the-loop:** automatisering mag signaleren, voorbereiden en uitvoeren na expliciete professionele actie, maar beslist niet zelfstandig over juridische inhoud.
-2. **Geen autonome rekenmutaties:** workflow automation mag geen norm, berekening of reviewstatus zelfstandig wijzigen.
-3. **Auditability:** iedere muterende professionele workflowactie moet traceerbaar zijn.
-4. **Resource isolation:** alle serveracties moeten ownership op gebruiker/dossier/cliënt afdwingen.
-5. **Provenance:** AI- en workflowresultaten moeten terug te leiden zijn naar concrete bronnen/objecten.
-6. **Idempotency:** herhaalde automation requests mogen geen ongecontroleerde duplicaten produceren.
-7. **Privacy by design:** communicatiegegevens en dossierdata worden niet onnodig geëxporteerd of blootgesteld.
-8. **Versioning:** API-, norm-, reken- en import/exportcontracten moeten expliciet versieerbaar blijven.
-
-## Ontwikkelvolgorde vanaf hier
-
-**Nu:** F3 volledig afronden en end-to-end maken.  
-**Daarna:** F4 hardening en integratiecontracten production-ready maken.  
-**Daarna:** F5 verder productiseren op basis van de stabiele workflow- en integratielaag.  
-**Parallel:** CI groen houden; geen fase als afgerond markeren zolang de relevante tests en productie-build niet groen zijn.
+**Nu:** F3 lifecycle hardening afronden.  
+**Direct daarna:** F4 API/webhook/integratie-hardening verder uitbouwen.  
+**Daarna:** F5 verder productiseren.  
+**Parallel:** CI groen houden; geen fase als afgerond markeren zolang relevante tests/build niet groen zijn.
 
 ## GitHub-locatie
 
-Dit register staat bewust op:
-
-`docs/PROJECT-STATUS.md`
-
-De bestaande fasebeschrijving staat op:
-
-`docs/PHASE-F.md`
-
-`docs/PHASE-F.md` beschrijft de fase; `docs/PROJECT-STATUS.md` is het actuele centrale projectregister voor **gedaan / bezig / nog nodig / volgende stap**.
+Dit centrale register staat op `docs/PROJECT-STATUS.md`. De fasebeschrijving staat op `docs/PHASE-F.md`; F4-detail op `docs/PHASE-F4.md`.
