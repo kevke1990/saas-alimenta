@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculatePartnerSupport } from "./partner-calculator";
+import { getCumulativeIndexationFactor } from "./indexation";
 
 describe("2026 partner-support engine", () => {
   it("applies the 60% Hofnorm after the child-cost share", () => {
@@ -37,6 +38,31 @@ describe("2026 partner-support engine", () => {
       indexationYear: 2025,
     });
     expect(r.indexedNetPartnerSupport).toBe(987);
+  });
+
+  it("compounds statutory indexation from a source year through the target year", () => {
+    const factor = getCumulativeIndexationFactor(2024, 2026);
+    expect(factor).toBeCloseTo(1.062 * 1.065 * 1.046, 12);
+
+    const r = calculatePartnerSupport({
+      marriageNBGI: 5548,
+      childShareDuringMarriage: 808,
+      payer: { nbi: 4156 },
+      recipientCurrentNBI: 1763,
+      indexationFromYear: 2024,
+      indexationYear: 2026,
+    });
+    expect(r.indexedNetPartnerSupport).toBe(1033);
+    expect(r.warnings.some(w => w.includes("2024") && w.includes("2026"))).toBe(true);
+  });
+
+  it("rejects a source year without a target year", () => {
+    expect(() => calculatePartnerSupport({
+      marriageNBGI: 5000,
+      payer: { nbi: 4000 },
+      recipientCurrentNBI: 1000,
+      indexationFromYear: 2024,
+    })).toThrow("bronjaar");
   });
 
   it("gives child support priority before partner support", () => {
