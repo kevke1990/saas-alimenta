@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { CALCULATION_CONTRACT_VERSION, CALCULATION_ENGINE_V2, fingerprintCalculation } from "./calculation-engine-v2";
 import type { ProvenanceInput } from "./calculation-provenance";
-import { db } from "./db";
 
 export async function persistCaseCalculationV2(input: {
   tx: Prisma.TransactionClient;
@@ -27,5 +26,3 @@ export async function persistCaseCalculationV2(input: {
   }
   return { calculationId, fingerprint: { ...fingerprint, engineVersion: CALCULATION_ENGINE_V2, contractVersion: CALCULATION_CONTRACT_VERSION } };
 }
-
-void db;
