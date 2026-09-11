@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const nav: Array<{ href: Route; label: string; icon: string }> = [
   { href: "/dashboard", label: "Overzicht", icon: "grid" },
+  { href: "/work", label: "Werkvoorraad", icon: "briefcase" },
   { href: "/clients", label: "Cliënten", icon: "users" },
   { href: "/cases", label: "Dossiers", icon: "folder" },
   { href: "/cases/new", label: "Nieuwe berekening", icon: "plus" },
@@ -16,6 +17,7 @@ const nav: Array<{ href: Route; label: string; icon: string }> = [
 
 function Icon({ name }: { name: string }) {
   const common = { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (name === "briefcase") return <svg {...common}><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18M10 12v2h4v-2"/></svg>;
   if (name === "users") return <svg {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
   if (name === "plus") return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>;
   if (name === "scan") return <svg {...common}><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 17h8M12 10v4"/></svg>;
