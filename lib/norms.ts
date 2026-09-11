@@ -41,6 +41,18 @@ export const KGB_2026 = {
   thirdChild: 2580
 };
 
+/**
+ * Studiefinancieringsnormen 2026.
+ * The July 2026 appendix updates the tuition/college-fee component for the
+ * second half of the year. WSF_2026 is intentionally the currently effective
+ * (August-December 2026) set; the first-half values remain available for
+ * historical calculations and audit tooling.
+ */
+export const WSF_2026_H1 = {
+  mbo: { home: 657.49, away: 928.58, tuition: 121.50 },
+  hbo: { home: 936.46, away: 1130.77, tuition: 216.75 }
+};
+
 export const WSF_2026 = {
   mbo: { home: 657.49, away: 928.58, tuition: 125.92 },
   hbo: { home: 936.46, away: 1130.77, tuition: 224.50 }
