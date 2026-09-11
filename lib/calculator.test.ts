@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculate, capacity, careDiscount } from "./calculator";
 import { calculateChildSupportCapacity, calculatePartnerSupportCapacity } from "./support-engine";
 
-describe("Alimenta Pro calculation engine 1.1.0", () => {
+describe("Alimenta Pro calculation engine 1.2.0", () => {
   it("uses the official 2026 capacity formula above the threshold", () => {
     expect(capacity({ nbi: 5000 })).toBe(1495);
   });
@@ -24,7 +24,7 @@ describe("Alimenta Pro calculation engine 1.1.0", () => {
       children: [{ age: 10, residence: "A" }],
     });
 
-    expect(r.engineVersion).toBe("1.1.0");
+    expect(r.engineVersion).toBe("1.2.0");
     expect(r.normVersion).toBe("2026.1");
     expect(r.totalNeed).toBe(680);
     expect(r.transfers[0].payerIndex).toBe(1);
