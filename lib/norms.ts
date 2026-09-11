@@ -74,4 +74,17 @@ export const WSF_2026 = {
   hbo: { home: 936.46, away: 1130.77, tuition: 224.50 }
 };
 
-export const INDEXATION_2026 = 0.046;
+/** Wettelijke indexering alimentatie per 1 januari. */
+export const ALIMENTATION_INDEXATION: Record<number, number> = {
+  2024: 0.062,
+  2025: 0.065,
+  2026: 0.046
+};
+
+export function getIndexationFactor(year: number): number {
+  const rate = ALIMENTATION_INDEXATION[year];
+  if (rate === undefined) throw new Error(`Geen wettelijke alimentatie-indexering bekend voor ${year}.`);
+  return 1 + rate;
+}
+
+export const INDEXATION_2026 = ALIMENTATION_INDEXATION[2026];

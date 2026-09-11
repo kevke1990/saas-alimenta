@@ -15,6 +15,30 @@ describe("2026 partner-support engine", () => {
     expect(r.netPartnerSupport).toBe(927);
   });
 
+  it("applies legal indexation when an explicit indexation year is supplied", () => {
+    const r = calculatePartnerSupport({
+      marriageNBGI: 5548,
+      childShareDuringMarriage: 808,
+      payer: { nbi: 4156 },
+      recipientCurrentNBI: 1763,
+      indexationYear: 2026,
+    });
+    expect(r.netPartnerSupport).toBe(927);
+    expect(r.indexedNetPartnerSupport).toBe(970);
+    expect(r.warnings.some(w => w.includes("2026"))).toBe(true);
+  });
+
+  it("allows older legal indexation years for historical calculations", () => {
+    const r = calculatePartnerSupport({
+      marriageNBGI: 5548,
+      childShareDuringMarriage: 808,
+      payer: { nbi: 4156 },
+      recipientCurrentNBI: 1763,
+      indexationYear: 2025,
+    });
+    expect(r.indexedNetPartnerSupport).toBe(987);
+  });
+
   it("gives child support priority before partner support", () => {
     const r = calculatePartnerSupport({
       marriageNBGI: 6000,

@@ -1,4 +1,5 @@
 import { calculatePartnerSupportCapacity, type SupportCapacityInput } from "./support-engine";
+import { getIndexationFactor } from "./norms";
 
 export const PARTNER_ENGINE_VERSION = "2.0.0";
 
@@ -11,7 +12,10 @@ export type PartnerSupportInput = {
   payerChildSupportShare?: number;
   payerOtherPartnerSupport?: number;
   payerCapacityPercentage?: 0.6 | 0.45;
+  /** Explicit manual factor for legacy/custom agreements. */
   indexationFactor?: number;
+  /** Legal indexation year; used when no manual factor is supplied. */
+  indexationYear?: number;
 };
 
 export type PartnerSupportResult = {
@@ -67,12 +71,19 @@ export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupp
   const otherPartner = num(input.payerOtherPartnerSupport);
   const remaining = Math.max(0, payerCapacity.capacity - childShareNow - otherPartner);
   const net = Math.min(additionalNeed, remaining);
-  const factor = input.indexationFactor && input.indexationFactor > 0 ? input.indexationFactor : 1;
+  const factor = input.indexationFactor && input.indexationFactor > 0
+    ? input.indexationFactor
+    : input.indexationYear !== undefined
+      ? getIndexationFactor(input.indexationYear)
+      : 1;
 
   const warnings: string[] = [
     "De hofnorm is een aanbeveling; de rechter kan op grond van de omstandigheden van het geval afwijken.",
     "Kinderen tot 21 jaar hebben voorrang op partneralimentatie; het opgegeven kinderaandeel is daarom vóór partneralimentatie afgetrokken.",
   ];
+  if (input.indexationYear !== undefined && input.indexationFactor === undefined) {
+    warnings.push(`Wettelijke indexering voor ${input.indexationYear} toegepast.`);
+  }
   if (recipientCapacity > 0) warnings.push("Verdiencapaciteit van de onderhoudsgerechtigde is als mogelijke eigen bron meegenomen; onderbouwing blijft vereist.");
   if (input.payerCapacityPercentage === 0.45) warnings.push("45%-gezinsroute toegepast. Deze route is niet automatisch; de concrete gezinssituatie moet worden onderbouwd.");
   if (additionalNeed === 0) warnings.push("Geen aanvullende behoefte na aftrek van het huidige inkomen/verdiencapaciteit.");
