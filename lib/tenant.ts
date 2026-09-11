@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import { db } from "@/lib/db";
+import { db } from "./db";
 
 export const TENANT_ROLES = ["OWNER", "ADMIN", "PROFESSIONAL", "READ_ONLY"] as const;
 export type TenantRole = (typeof TENANT_ROLES)[number];
@@ -33,6 +33,7 @@ export async function requireTenantRole(user: { id: string; email: string; name?
 export function assertTenantRole(role: string, minimum: TenantRole) {
   const actual = ROLE_RANK[role as TenantRole];
   if (!actual || actual < ROLE_RANK[minimum]) throw new Error("Onvoldoende organisatierechten.");
+  return true;
 }
 
 export async function tenantUserIds(organizationId: string) {
