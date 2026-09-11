@@ -16,4 +16,11 @@ describe("2026 income engine", () => {
     expect(r.taxBeforeCredits).toBe(0);
     expect(r.warnings.length).toBeGreaterThan(0);
   });
+  it("does not treat a Box 3 taxable base as spendable net income", () => {
+    const withoutBox3 = calculateIncome({ mode: "GROSS", salaryMonthly: 4000 });
+    const withBox3 = calculateIncome({ mode: "GROSS", salaryMonthly: 4000, box3TaxableIncomeAnnual: 50000 });
+    expect(withBox3.nbiMonthly).toBe(withoutBox3.nbiMonthly);
+    expect(withBox3.box3TaxableIncome).toBe(50000);
+    expect(withBox3.warnings.some(w => w.includes("Box 3"))).toBe(true);
+  });
 });
