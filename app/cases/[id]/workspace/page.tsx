@@ -1,0 +1,63 @@
+import Link from "next/link";
+import AppShell from "@/components/AppShell";
+import { requireUser } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+const date = (v: Date) => new Intl.DateTimeFormat("nl-NL", { dateStyle: "medium", timeStyle: "short" }).format(new Date(v));
+
+const cards = [
+  { key: "review", title: "Reviewcentrum", text: "Controleer invoer, afwijkingen, verschillen en goedkeuring.", path: "review" },
+  { key: "history", title: "Berekeningshistorie", text: "Bekijk eerdere snapshots en vergelijk versies.", path: "history" },
+  { key: "activity", title: "Audittrail", text: "Chronologische dossieractiviteit en professionele beslissingen.", path: "activity" },
+  { key: "documents", title: "Documenten", text: "Beheer bronstukken en de AI-documentketen.", path: "documenten" },
+  { key: "income", title: "Inkomensfeiten", text: "Controleer voorgestelde en goedgekeurde inkomensgegevens.", path: "income-facts" },
+  { key: "scenarios", title: "Scenario's", text: "Werk alternatieve uitgangspunten uit zonder het dossier te overschrijven.", path: "scenarios" },
+  { key: "overrides", title: "Professionele afwijkingen", text: "Leg gemotiveerde handmatige correcties vast.", path: "overrides" },
+  { key: "pal", title: "Partneralimentatie", text: "Bekijk de volledige PAL-rekenslag en prioriteit.", path: "partneralimentatie" },
+];
+
+export default async function CaseWorkspacePage({ params }: { params: Promise<{ id: string }> }) {
+  const u = await requireUser();
+  const { id } = await params;
+  const c = await db.case.findFirst({
+    where: { id, userId: u.id },
+    include: { client: true, _count: { select: { calculations: true, documents: true, incomeFacts: true, overrides: true, scenarios: true, tasks: true } } },
+  });
+  if (!c) return <AppShell><div className="notice error">Dossier niet gevonden.</div></AppShell>;
+
+  const review = String(c.reviewStatus);
+  const reviewLabel = review === "FINAL" ? "Definitief" : review === "APPROVED" ? "Goedgekeurd" : review === "REVIEWED" ? "Gereviewd" : review === "READY_FOR_REVIEW" || review === "IN_REVIEW" ? "In review" : "Nog te controleren";
+  const reviewTone = review === "FINAL" || review === "APPROVED" ? "green" : review === "READY_FOR_REVIEW" || review === "IN_REVIEW" ? "amber" : "gray";
+
+  return <AppShell><main className="content" style={{ maxWidth: 1180 }}>
+    <div className="page-head">
+      <div><div className="eyebrow">Dossier · professioneel werkblad</div><h1 className="page-title">{c.name}</h1><p className="page-subtitle">{c.client?.name || "Zonder cliënt"} · laatst bijgewerkt {date(c.updatedAt)}</p></div>
+      <div className="actions"><span className={`status ${reviewTone}`}>{reviewLabel}</span><Link className="btn secondary" href={`/cases/${id}`}>Dossieroverzicht</Link><a className="btn" href={`/api/cases/${id}/report`} target="_blank" rel="noreferrer">Rapport ↗</a></div>
+    </div>
+
+    <section className="result-overview">
+      <div className="result-primary"><div className="stat-label">WERKSTROOM</div><div className="result-amount">{reviewLabel}</div><div className="stat-meta">Rekenengine {c.calculationVersion} · norm {c.normVersionId || "2026.1"}</div></div>
+      <div className="result-metric"><div className="stat-label">BEREKENINGEN</div><div className="metric-value">{c._count.calculations}</div><span>snapshots</span></div>
+      <div className="result-metric"><div className="stat-label">DOCUMENTEN</div><div className="metric-value">{c._count.documents}</div><span>bronstukken</span></div>
+      <div className="result-metric"><div className="stat-label">INKOMENSFEITEN</div><div className="metric-value">{c._count.incomeFacts}</div><span>te beoordelen / goedgekeurd</span></div>
+    </section>
+
+    <section className="panel topgap"><div className="panel-head"><div><div className="section-kicker">Volgende stap</div><h2 className="panel-title">Professionele workflow</h2><div className="panel-sub">Werk vanuit één scherm door het dossier heen; iedere stap blijft gekoppeld aan de audittrail.</div></div></div>
+      <div className="detail-grid">
+        <div className="detail-card"><div className="detail-card-head"><b>1. Bronnen</b><span>{c._count.documents} documenten</span></div><p className="subtle">Controleer bronstukken en laat AI alleen voorstellen doen; professionele goedkeuring blijft leidend.</p><div className="actions"><Link className="btn secondary" href={`/cases/${id}/documenten`}>Documenten openen</Link><Link className="btn secondary" href={`/cases/${id}/income-facts`}>Inkomensfeiten</Link></div></div>
+        <div className="detail-card"><div className="detail-card-head"><b>2. Berekenen</b><span>{c._count.calculations} versies</span></div><p className="subtle">Maak of controleer de berekening en gebruik scenario's voor alternatieven.</p><div className="actions"><Link className="btn secondary" href={`/cases/${id}/edit`}>Dossier wijzigen</Link><Link className="btn secondary" href={`/cases/${id}/history`}>Historie</Link></div></div>
+        <div className="detail-card"><div className="detail-card-head"><b>3. Review</b><span>{reviewLabel}</span></div><p className="subtle">Leg controlepunten en professionele afwijkingen vast voordat het dossier definitief wordt.</p><div className="actions"><Link className="btn" href={`/cases/${id}/review`}>Reviewcentrum</Link><Link className="btn secondary" href={`/cases/${id}/overrides`}>Afwijkingen</Link></div></div>
+        <div className="detail-card"><div className="detail-card-head"><b>4. Rapportage</b><span>PDF</span></div><p className="subtle">Gebruik de actuele, geauthenticeerde rapportage nadat de juiste versie is gecontroleerd.</p><div className="actions"><a className="btn" href={`/api/cases/${id}/pdf`} target="_blank" rel="noreferrer">PDF openen ↗</a><Link className="btn secondary" href={`/cases/${id}/activity`}>Audittrail</Link></div></div>
+      </div>
+    </section>
+
+    <section className="panel topgap"><div className="panel-head"><div><div className="section-kicker">Alle dossieronderdelen</div><h2 className="panel-title">Werkruimtes</h2></div></div><div className="detail-grid">
+      {cards.map(card => <Link key={card.key} href={`/cases/${id}/${card.path}`} className="detail-card" style={{ textDecoration: "none", color: "inherit" }}><div className="detail-card-head"><b>{card.title}</b><span>Openen →</span></div><p className="subtle">{card.text}</p></Link>)}
+    </div></section>
+
+    <section className="panel topgap"><div className="panel-head"><div><div className="section-kicker">Dossierstatus</div><h2 className="panel-title">Controleer voordat je definitief maakt</h2></div></div><div className="audit-grid">
+      <div className="detail-card"><div className="summary-line"><span>Reviewstatus</span><b>{reviewLabel}</b></div><div className="summary-line"><span>Laatste wijziging</span><b>{date(c.updatedAt)}</b></div><div className="summary-line"><span>Goedkeuring</span><b>{c.approvedAt ? date(c.approvedAt) : "Niet vastgelegd"}</b></div></div>
+      <div className="detail-card"><div className="summary-line"><span>Scenario's</span><b>{c._count.scenarios}</b></div><div className="summary-line"><span>Professionele afwijkingen</span><b>{c._count.overrides}</b></div><div className="summary-line"><span>Open taken</span><b>{c._count.tasks}</b></div></div>
+    </div></section>
+  </main></AppShell>;
+}
