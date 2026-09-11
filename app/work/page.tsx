@@ -3,7 +3,7 @@ import AppShell from "@/components/AppShell";
 import TaskActions from "@/app/tasks/TaskActions";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { calculateWorkScore } from "@/lib/work-score";
+import { calculateWorkScore, hasLargeCalculationChange } from "@/lib/work-score";
 
 const date = (v: Date) => new Intl.DateTimeFormat("nl-NL", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(v));
 const priorityLabel = (p: string) => ({ URGENT: "Urgent", HIGH: "Hoog", NORMAL: "Normaal", LOW: "Laag" } as Record<string, string>)[p] || p;
@@ -13,15 +13,10 @@ const allowedPriorities = ["URGENT", "HIGH", "NORMAL", "LOW"] as const;
 type SearchParams = Promise<{ priority?: string }>;
 
 export default async function WorkPage({ searchParams }: { searchParams?: SearchParams }) {
-  const user = await requireUser();
-  const params = searchParams ? await searchParams : {};
+  const user = await requireUser(); const params = searchParams ? await searchParams : {};
   const priority = allowedPriorities.includes(String(params.priority) as (typeof allowedPriorities)[number]) ? String(params.priority) : "";
   const [cases, tasks] = await Promise.all([
-    db.case.findMany({
-      where: { userId: user.id, status: { in: ["DRAFT", "CALCULATED"] } },
-      include: { client: true, calculations: { orderBy: { createdAt: "desc" }, take: 2 }, documents: { select: { aiStatus: true, incomeFacts: { select: { status: true } } } }, tasks: { where: { userId: user.id, status: "OPEN" }, select: { dueAt: true } } },
-      orderBy: { updatedAt: "desc" },
-    }),
+    db.case.findMany({ where: { userId: user.id, status: { in: ["DRAFT", "CALCULATED"] } }, include: { client: true, calculations: { orderBy: { createdAt: "desc" }, take: 2 }, documents: { select: { aiStatus: true, incomeFacts: { select: { status: true } } } }, tasks: { where: { userId: user.id, status: "OPEN" }, select: { dueAt: true } } }, orderBy: { updatedAt: "desc" } }),
     db.task.findMany({ where: { userId: user.id, status: "OPEN" }, orderBy: [{ priority: "desc" }, { dueAt: "asc" }, { createdAt: "desc" }], take: 20, include: { case: { select: { id: true, name: true } } } }),
   ]);
   const now = new Date(); const todayStart = new Date(now); todayStart.setHours(0, 0, 0, 0); const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
@@ -31,7 +26,9 @@ export default async function WorkPage({ searchParams }: { searchParams?: Search
     const documentAnalysisErrors = c.documents.filter(d => d.aiStatus === "FAILED").length;
     const overdueTasks = c.tasks.filter(t => t.dueAt && new Date(t.dueAt) < now).length;
     const todayTasks = c.tasks.filter(t => t.dueAt && new Date(t.dueAt) >= todayStart && new Date(t.dueAt) <= todayEnd).length;
-    const score = calculateWorkScore({ reviewStatus: c.reviewStatus, calculationCount: c.calculations.length, proposedIncomeFacts: proposed, documentsAwaitingReview, documentAnalysisErrors, overdueTasks, todayTasks });
+    const [latest, previous] = c.calculations; const stale = !!latest && JSON.stringify(c.data) !== JSON.stringify(latest.inputSnapshot);
+    const largeChange = !!latest && !!previous && hasLargeCalculationChange(latest.result, previous.result);
+    const score = calculateWorkScore({ reviewStatus: c.reviewStatus, calculationCount: c.calculations.length, proposedIncomeFacts: proposed, documentsAwaitingReview, documentAnalysisErrors, calculationStale: stale, largeCalculationChange: largeChange, overdueTasks, todayTasks });
     return { c, score };
   }).sort((a, b) => b.score.score - a.score.score || new Date(b.c.updatedAt).getTime() - new Date(a.c.updatedAt).getTime());
   const visible = priority ? scored.filter(x => x.score.priority === priority) : scored;
