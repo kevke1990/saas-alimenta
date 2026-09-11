@@ -7,18 +7,34 @@ export const NEED_TABLE: Record<number, number[]> = {
 };
 export const NBGI_POINTS = [2000,2500,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500];
 
+/** Official 2026 child-support capacity table from the Rechtspraak table.
+ * Values are the recommended rounded monthly capacity for the lower-income
+ * bands. From the final threshold onward the 70% formula applies.
+ */
 export const CAPACITY = {
   underAow: {
     low: [
-      [1950, 25],[2000,50],[2050,77],[2100,96],[2150,109],[2200,116]
+      [1950, 50],
+      [2000, 77],
+      [2050, 96],
+      [2100, 109],
+      [2150, 116]
     ],
+    minimumNbi: 1950,
+    formulaThreshold: 2200,
     necessary: 1365,
     housingPct: 0.30
   },
   aow: {
     low: [
-      [2180, 25],[2230,51],[2280,77],[2330,97],[2380,109],[2430,116]
+      [2180, 51],
+      [2230, 77],
+      [2280, 97],
+      [2330, 109],
+      [2380, 116]
     ],
+    minimumNbi: 2180,
+    formulaThreshold: 2430,
     necessary: 1525,
     housingPct: 0.30
   }
