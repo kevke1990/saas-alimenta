@@ -6,6 +6,8 @@ export type WorkScoreInput = {
   documentAnalysisErrors: number;
   calculationStale?: boolean;
   largeCalculationChange?: boolean;
+  overdueTasks?: number;
+  todayTasks?: number;
 };
 
 export type WorkScore = {
@@ -56,6 +58,14 @@ export function calculateWorkScore(input: WorkScoreInput): WorkScore {
   if (input.largeCalculationChange) {
     score -= 10;
     reasons.push("De laatste uitkomst wijkt sterk af van de vorige berekening.");
+  }
+  if ((input.overdueTasks ?? 0) > 0) {
+    score -= Math.min(25, (input.overdueTasks ?? 0) * 8);
+    reasons.push(`${input.overdueTasks} open taak/taken zijn verlopen.`);
+  }
+  if ((input.todayTasks ?? 0) > 0) {
+    score -= Math.min(10, (input.todayTasks ?? 0) * 3);
+    reasons.push(`${input.todayTasks} open taak/taken staan voor vandaag gepland.`);
   }
   score = Math.max(0, Math.min(100, Math.round(score)));
   const priority = score < 40 ? "URGENT" : score < 60 ? "HIGH" : score < 80 ? "NORMAL" : "LOW";
