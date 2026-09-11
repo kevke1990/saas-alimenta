@@ -16,10 +16,24 @@ export type WorkScore = {
   reasons: string[];
 };
 
-/**
- * Deterministic professional work-priority score. This is a workflow hint,
- * never a legal judgement and never an input to a calculation.
- */
+export function hasLargeCalculationChange(latestResult: unknown, previousResult: unknown, threshold = 0.25): boolean {
+  const readAmount = (value: unknown): number | null => {
+    if (!value || typeof value !== "object") return null;
+    const root = value as Record<string, unknown>;
+    const combined = root.combined;
+    const combinedAmount = combined && typeof combined === "object" ? Number((combined as Record<string, unknown>).totalMonthlyPayments) : NaN;
+    const totalNeed = Number(root.totalNeed);
+    const fallback = Number(root.totalMonthlyPayments);
+    const amount = Number.isFinite(combinedAmount) ? combinedAmount : Number.isFinite(totalNeed) ? totalNeed : fallback;
+    return Number.isFinite(amount) && amount >= 0 ? amount : null;
+  };
+  const latest = readAmount(latestResult);
+  const previous = readAmount(previousResult);
+  if (latest === null || previous === null || previous === 0) return false;
+  return Math.abs(latest - previous) / previous >= threshold;
+}
+
+/** Deterministic professional work-priority score; never a legal judgement or calculation input. */
 export function calculateWorkScore(input: WorkScoreInput): WorkScore {
   let score = 100;
   const reasons: string[] = [];
