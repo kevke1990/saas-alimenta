@@ -14,12 +14,11 @@ export async function POST(req: Request) {
     if (!d) return new NextResponse("Document niet gevonden", { status: 404 });
 
     if (d.caseId) {
-      await requireCaseTenantAccess(u.id, d.caseId, "READ_ONLY");
+      await requireCaseTenantAccess(u.id, d.caseId, "PROFESSIONAL");
     } else if (d.userId !== u.id) {
       return new NextResponse("Geen toegang tot document", { status: 403 });
     }
 
-    const previousAiResult = d.aiResult && typeof d.aiResult === "object" && !Array.isArray(d.aiResult) ? d.aiResult as Record<string, unknown> : {};
     await db.document.update({ where: { id: d.id }, data: { aiStatus: "PROCESSING" } });
     try {
       const analysis = await analyzeDocumentBytes({ data: decryptDocument(d.storageCipher), mimeType: d.mimeType, name: d.name });
