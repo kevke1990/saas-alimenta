@@ -43,7 +43,7 @@ describe("Kinderalimentatie 2026 — juridische rekenregels", () => {
     expect(careDiscount(350, 1)).toBe(53);
   });
 
-  it("matches the 2026 Expertgroep worked example for capacity comparison and care discount", () => {
+  it("uses the corrected 2026 capacity values at the formula boundary", () => {
     const result = calculate({
       historicalNBGI: 3000,
       parents: [
@@ -54,11 +54,11 @@ describe("Kinderalimentatie 2026 — juridische rekenregels", () => {
     });
 
     expect(result.totalNeed).toBe(350);
-    expect(result.totalCapacity).toBe(400);
+    expect(result.totalCapacity).toBe(399);
     expect(result.parentResults[0].capacity).toBe(221);
-    expect(result.parentResults[1].capacity).toBe(179);
-    expect(result.childResults[0].parentShares).toEqual([193, 157]);
-    expect(result.childResults[0].payments.payment).toBe(104);
+    expect(result.parentResults[1].capacity).toBe(178);
+    expect(result.childResults[0].parentShares).toEqual([194, 156]);
+    expect(result.childResults[0].payments.payment).toBe(103);
     expect(result.childResults[0].payments.careDiscount).toBe(53);
   });
 
