@@ -2,13 +2,51 @@
 
 Fase F maakt van Alimenta Pro een actieve professionele werkplek in plaats van alleen een reken- en dossierapplicatie.
 
+## F1 — Professionele werkplek
+
+**Status: afgerond.**
+
+De professional kan vanuit één centrale werkplek door een dossier werken en direct naar de juiste vervolgstap springen.
+
+- [x] centraal professioneel dossier-werkblad (`/cases/[id]/workspace`)
+- [x] dossieronderdelen vanuit één scherm: bronnen, inkomensfeiten, berekening, historie, scenario's, review, overrides, rapport en audittrail
+- [x] centrale actieve dossierlijst met zoeken en reviewfilter
+- [x] centrale werkvoorraad (`/work`)
+- [x] open taken vanuit dossiers zichtbaar in de werkvoorraad
+- [x] expliciet afronden/annuleren van taken
+- [x] taakstatusmutaties server-side geautoriseerd en geaudit
+- [x] geen automatische mutatie van berekeningen, normen of reviewstatus
+
 ## F2 — Slimme dossierprioritering
 
-De F2-release geeft ieder dossier een uitlegbare werkscore van 0–100. De score is geen juridisch oordeel en verandert geen berekening, norm, reviewstatus of dossierdata.
+**Status: afgerond.**
+
+De F2-release geeft ieder actief dossier een deterministische, uitlegbare werkscore van 0–100. De score is geen juridisch oordeel en verandert geen berekening, norm, reviewstatus of dossierdata.
+
+- [x] werkscore 0–100
+- [x] prioriteitsklassen URGENT / HIGH / NORMAL / LOW
+- [x] uitleg per score met concrete redenen
+- [x] reviewstatus en professionele controlepunten meegenomen
+- [x] voorgestelde inkomensfeiten meegenomen
+- [x] documenten in review en documentanalysefouten meegenomen
+- [x] ontbrekende berekeningssnapshot meegenomen
+- [x] stale berekening gedetecteerd via vergelijking met de opgeslagen input snapshot
+- [x] grote wijziging tussen opeenvolgende berekeningen gedetecteerd
+- [x] verlopen taken en taken voor vandaag verhogen de werkdrukscore
+- [x] dezelfde scorelogica in werkvoorraad en dossierlijst
+- [x] prioriteitsfilter in de centrale werkvoorraad
+- [x] deterministische regressietests voor score, redenen, deadline-druk en grote wijzigingen
 
 ## F3 — Gecontroleerde automatisering
 
 F3 voegt gecontroleerde opvolgtaken, agenda-opvolging en e-mailconcepten toe. Iedere muterende automatiseringsactie is expliciet en wordt geaudit. Automatisering wijzigt nooit zelfstandig een berekening, norm of reviewstatus.
+
+- [x] voorgestelde opvolgtaken
+- [x] expliciet taak aanmaken
+- [x] agenda-opvolging
+- [x] e-mailconcepten
+- [x] audittrail op muterende automation-acties
+- [x] expliciet afronden/annuleren van taken
 
 ## F4 — Integratieplatform
 
