@@ -30,6 +30,7 @@ export function calculateWorkScore(input: WorkScoreInput): WorkScore {
   };
   const penalty = reviewPenalty[input.reviewStatus] ?? 10;
   score -= penalty;
+  if (input.reviewStatus === "INCOMPLETE") reasons.push("Dossier is nog niet compleet voor professionele verwerking.");
   if (input.reviewStatus === "READY_FOR_REVIEW") reasons.push("Professionele review staat open.");
   if (input.reviewStatus === "REVIEWED") reasons.push("Professionele goedkeuring staat open.");
   if (input.proposedIncomeFacts > 0) {
