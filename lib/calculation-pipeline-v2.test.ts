@@ -15,7 +15,7 @@ describe("calculation pipeline v2", () => {
     expect(a.fingerprint.contractVersion).toBe("2026.2");
     expect(a.fingerprint.inputHash).toMatch(/^[a-f0-9]{64}$/);
     expect(a.fingerprint.resultHash).toMatch(/^[a-f0-9]{64}$/);
-    expect(a.ruleEngineVersion).toBe("1.0.0");
+    expect(a.ruleEngineVersion).toBe("1.1.0");
     expect(a.fingerprint.inputHash).not.toBe(b.fingerprint.inputHash);
   });
 
