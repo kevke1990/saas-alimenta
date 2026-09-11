@@ -2,7 +2,10 @@ import { NEED_TABLE, NBGI_POINTS, CARE_DISCOUNT, NORM_VERSION, WSF_2026 } from "
 import { calculateIncome, type IncomeProfile, type IncomeResult } from "./income-engine";
 import { calculateChildSupportCapacity } from "./support-engine";
 
-export const ENGINE_VERSION = "1.0.0";
+export const ENGINE_VERSION = "1.1.0";
+
+// 2026 child-support methodology: need table, official capacity table/formula,
+// capacity comparison, care discount and insufficient-capacity correction.
 
 type Residence = "A" | "B" | "50-50";
 export type Child = {
@@ -25,7 +28,6 @@ export type Parent = {
   careDaysPerWeek?: number;
   receivesBijstand?: boolean;
   stepParentLiable?: boolean;
-  // Optional: allows a professional to record an actual capacity adjustment.
   capacityAdjustment?: number;
   income?: IncomeProfile;
 };
@@ -45,7 +47,7 @@ const money = (v: number) => round(Math.max(0, v));
 function interpolate(x: number, xs: number[], ys: number[]) {
   if (x <= xs[0]) return ys[0];
   if (x >= xs[xs.length - 1]) return ys[ys.length - 1];
-  for (let i = 0; i < xs.length - 1; i++) {
+  for (let i = 0; i < xs.length - 1; i += 1) {
     if (x >= xs[i] && x <= xs[i + 1]) {
       const t = (x - xs[i]) / (xs[i + 1] - xs[i]);
       return ys[i] + t * (ys[i + 1] - ys[i]);
@@ -64,7 +66,6 @@ export function studentNeed(child: Child) {
   if (child.age < 18 || child.age > 21) return null;
   const group = child.studentType === "HBO" ? WSF_2026.hbo : WSF_2026.mbo;
   const living = child.livesAtHome ? group.home : group.away;
-  // Own income and actual non-repayable study grant can reduce the need.
   return money(living + group.tuition - n(child.ownIncome) - n(child.studyGrant));
 }
 
@@ -109,9 +110,6 @@ function careParentForChild(child: Child, parentIndex: number) {
 export function calculate(input: CaseInput) {
   validate(input);
   const childCount = input.children.length;
-
-  // For an intact family the historical NBGI is the starting point. It should
-  // already include the KGB for the relevant period, as required by the 2026 method.
   const suppliedNBGI = n(input.historicalNBGI);
   const incomeResults: (IncomeResult | null)[] = input.parents.map(p => p.income ? calculateIncome(p.income) : null);
   const calculatedNBGI = round(input.parents.reduce((sum, p, i) => sum + (incomeResults[i]?.nbiIncludingKgbMonthly ?? (n(p.nbi) + n(p.kgb))), 0));
@@ -138,7 +136,6 @@ export function calculate(input: CaseInput) {
     };
   });
 
-  // Keep the distributed table amount exact after rounding to whole euros.
   const minorIndexes = childResults.map((c, i) => c.age < 18 ? i : -1).filter(i => i >= 0);
   if (minorIndexes.length) {
     const target = minorTableTotal + minorIndexes.reduce((sum, i) => sum + n(childResults[i].specialCosts), 0);
@@ -150,21 +147,21 @@ export function calculate(input: CaseInput) {
   const totalNeed = childResults.reduce((sum, c) => sum + c.need, 0);
   const parentResults = input.parents.map((parent, parentIndex) => {
     const hasCareResidence = input.children.some(c => residenceParent(c) === parentIndex);
-    const cap = calculateChildSupportCapacity({
+    const capResult = calculateChildSupportCapacity({
       ...parent,
       nbi: incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi,
       childCount,
       isCareParent: hasCareResidence,
-    }).capacity;
+    });
     return {
       parentIndex,
       nbi: money(incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi),
       kgb: money(n(parent.kgb)),
       income: incomeResults[parentIndex],
-      capacity: cap,
+      capacity: capResult.capacity,
       careDaysPerWeek: n(parent.careDaysPerWeek),
       careDiscountPctByChild: childResults.map(c => careParentForChild(input.children[c.childIndex - 1], parentIndex) ? careDiscountPercentage(n(parent.careDaysPerWeek)) : 0),
-      capacityMethod: n(parent.specialNecessaryCosts) > 0 || n(parent.otherMaintenance) > 0 || n(parent.capacityAdjustment) !== 0 || (incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi) >= (parent.aow ? 2430 : 2200) ? "FORMULA_70" : "TABLE_2026",
+      capacityMethod: capResult.method,
     };
   });
 
@@ -172,27 +169,29 @@ export function calculate(input: CaseInput) {
   const capacitySufficient = totalCapacity >= totalNeed;
   const allocatable = Math.min(totalNeed, totalCapacity);
 
-  // Step 1: allocate the actual child costs across parents according to capacity.
+  // The 2026 report distributes the costs in proportion to each parent's
+  // capacity. Whole-euro rounding is performed only after the proportional
+  // share is calculated, with the rounding remainder assigned once so totals
+  // remain internally consistent.
   const childAllocations = childResults.map(child => {
-    const weights = parentResults.map(p => totalCapacity > 0 ? p.capacity / totalCapacity : 0);
-    const shares = parentResults.map((p, i) => money(allocatable * weights[i] * (child.need / Math.max(totalNeed, 1))));
-    const rawSum = shares.reduce((a, b) => a + b, 0);
-    if (rawSum !== money(allocatable * child.need / Math.max(totalNeed, 1))) {
-      const target = money(allocatable * child.need / Math.max(totalNeed, 1));
-      const delta = target - rawSum;
-      shares[0] = Math.max(0, shares[0] + delta);
+    const target = money(allocatable * child.need / Math.max(totalNeed, 1));
+    const rawShares = parentResults.map(p => totalCapacity > 0 ? target * p.capacity / totalCapacity : 0);
+    const shares = rawShares.map(money);
+    const delta = target - shares.reduce((a, b) => a + b, 0);
+    if (delta !== 0) {
+      const largest = parentResults.reduce((best, p, i) => p.capacity > parentResults[best].capacity ? i : best, 0);
+      shares[largest] = Math.max(0, shares[largest] + delta);
     }
     const sourceChild = input.children[child.childIndex - 1];
-    const careBase = child.baseNeed;
     const care = parentResults.map((p, i) => careParentForChild(sourceChild, i)
-      ? careDiscount(careBase, p.careDaysPerWeek)
+      ? careDiscount(child.baseNeed, p.careDaysPerWeek)
       : 0);
     return { childIndex: child.childIndex, need: child.need, parentShares: shares, careDiscounts: care };
   });
 
-  // Step 2: turn shares into payment obligations. The resident parent receives;
-  // the non-resident parent pays. With 50/50, both sides can be compared and the
-  // net transfer is calculated rather than inventing a one-way payer.
+  // When joint capacity is insufficient, the shortfall is borne equally for
+  // purposes of determining how much of the care discount can actually be
+  // monetised. This is the explicit 2026 shortfall correction.
   const careTotal = childAllocations.reduce((sum, c) => sum + Math.max(...c.careDiscounts), 0);
   const shortfall = Math.max(0, totalNeed - totalCapacity);
   const careCreditReduction = shortfall > 0 ? Math.min(careTotal, shortfall / 2) : 0;
@@ -202,49 +201,45 @@ export function calculate(input: CaseInput) {
     const allocation = childAllocations[i];
     const resident = residenceParent(child);
     const effectiveCare = allocation.careDiscounts.map(v => money(v * careMultiplier));
-    const afterCare = allocation.parentShares.map((share, parentIndex) =>
-      Math.max(0, share - effectiveCare[parentIndex])
-    );
+    const afterCare = allocation.parentShares.map(share => Math.max(0, share));
 
     if (!capacitySufficient) {
-      const sourceChild = input.children[i];
-      const payer = resident === 0 ? 1 : resident === 1 ? 0 : (afterCare[1] >= afterCare[0] ? 1 : 0);
+      const payer = resident === 0 ? 1 : resident === 1 ? 0 : (allocation.parentShares[1] >= allocation.parentShares[0] ? 1 : 0);
       const receiver = payer === 0 ? 1 : 0;
       const payerCapacityShare = totalCapacity > 0
         ? money(parentResults[payer].capacity * (childResults[i].need / Math.max(totalNeed, 1)))
         : 0;
       const care = effectiveCare[payer];
-      const payment = careMultiplier === 0 ? payerCapacityShare : Math.max(0, payerCapacityShare - care);
+      const payment = Math.max(0, payerCapacityShare - care);
       return {
         childIndex: i + 1,
         direction: `${payer === 0 ? "A" : "B"}->${receiver === 0 ? "A" : "B"}`,
         payerIndex: payer,
         receiverIndex: receiver,
         grossShare: payerCapacityShare,
-        careDiscount: money(careMultiplier === 0 ? 0 : care),
+        careDiscount: money(care),
         payment: money(payment),
         note: careMultiplier === 0
-          ? "Gezamenlijke draagkracht is onvoldoende en het tekort is ten minste tweemaal de zorgkorting; de zorgkorting wordt niet verzilverd."
+          ? "Gezamenlijke draagkracht is onvoldoende en het tekort is ten minste tweemaal de zorgkorting; de zorgkorting is niet verzilverbaar."
           : "Gezamenlijke draagkracht is onvoldoende; het tekort wordt volgens de draagkracht verdeeld en de zorgkorting wordt slechts voor zover verzilverbaar toegepast.",
       };
     }
 
     if (resident !== null) {
       const payer = resident === 0 ? 1 : 0;
-      const receiver = resident;
       return {
         childIndex: i + 1,
-        direction: `${payer === 0 ? "A" : "B"}->${receiver === 0 ? "A" : "B"}`,
+        direction: `${payer === 0 ? "A" : "B"}->${resident === 0 ? "A" : "B"}`,
         payerIndex: payer,
-        receiverIndex: receiver,
+        receiverIndex: resident,
         grossShare: allocation.parentShares[payer],
         careDiscount: effectiveCare[payer],
-        payment: money(afterCare[payer]),
+        payment: money(Math.max(0, allocation.parentShares[payer] - effectiveCare[payer])),
         note: "Zorgkorting in mindering gebracht op het aandeel van de ouder bij wie het kind niet het hoofdverblijf heeft.",
       };
     }
 
-    const net = afterCare[1] - afterCare[0];
+    const net = (afterCare[1] - effectiveCare[1]) - (afterCare[0] - effectiveCare[0]);
     return {
       childIndex: i + 1,
       direction: net >= 0 ? "A->B" : "B->A",
@@ -263,7 +258,7 @@ export function calculate(input: CaseInput) {
   const warnings: string[] = [];
   if (!suppliedNBGI) warnings.push("Geen historisch NBGI opgegeven; het systeem gebruikt de actuele som van de ingevoerde NBI's als rekenkundige benadering. Voor een definitieve behoefteberekening moet het relevante historische NBGI worden vastgelegd.");
   if (suppliedNBGI > 0) warnings.push("Het ingevoerde historische NBGI moet het relevante KGB uit de samenwoonperiode al bevatten.");
-  if (!capacitySufficient) warnings.push("De gezamenlijke draagkracht is lager dan de berekende behoefte; er is geen draagkrachtvergelijking. De ouders wenden hun beschikbare draagkracht aan en de verzilverbaarheid van zorgkorting is afzonderlijk getoetst.");
+  if (!capacitySufficient) warnings.push("De gezamenlijke draagkracht is lager dan de berekende behoefte; het tekort is over de ouders verdeeld en de verzilverbaarheid van de zorgkorting is volgens de 2026-regel gecorrigeerd.");
   if (input.children.some(c => c.age >= 18 && c.age <= 21)) warnings.push("Voor jongmeerderjarigen is WSF als uitgangspunt gebruikt; controleer beurs, eigen inkomsten en concrete studiekosten.");
   if (input.children.some(c => n(c.specialCosts) > 0)) warnings.push("Bijzondere kindkosten zijn toegevoegd. De zorgkorting wordt berekend over de basisbehoefte en niet over deze aanvullende kosten; controleer de kwalificatie en bewijsstukken.");
   if (input.parents.some(p => n(p.otherMaintenance) > 0)) warnings.push("Andere onderhoudsverplichtingen zijn als capaciteitscorrectie verwerkt; controleer rangorde en toerekening per onderhoudsgerechtigde.");
@@ -299,8 +294,8 @@ export function calculate(input: CaseInput) {
       { step: 1, title: "Behoefte", value: money(totalNeed), formula: "2026 behoeftetabel of WSF voor 18–21 jaar" },
       { step: 2, title: "Draagkracht", value: money(totalCapacity), formula: "2026 draagkrachttabel/formule per ouder" },
       { step: 3, title: "Draagkrachtvergelijking", value: money(allocatable), formula: "eigen draagkracht / gezamenlijke draagkracht × behoefte" },
-      { step: 4, title: "Zorgkorting", value: money(transfers.reduce((s, t) => s + t.careDiscount, 0)), formula: "5/15/25/35% afhankelijk van gemiddeld aantal zorgdagen" },
-      { step: 5, title: "Bijdrage", value: money(transfers.reduce((s, t) => s + t.payment, 0)), formula: "aandeel ouder minus toepasselijke zorgkorting" },
+      { step: 4, title: "Zorgkorting", value: money(transfers.reduce((s, t) => s + t.careDiscount, 0)), formula: "5/15/25/35% afhankelijk van gemiddeld aantal zorgdagen; bij tekort gecorrigeerd voor verzilverbaarheid" },
+      { step: 5, title: "Bijdrage", value: money(transfers.reduce((s, t) => s + t.payment, 0)), formula: "aandeel ouder minus toepasselijke, verzilverbare zorgkorting" },
     ],
     incomeResults,
     warnings,
