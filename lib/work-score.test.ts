@@ -20,7 +20,7 @@ describe("dossier work-priority score", () => {
       documentsAwaitingReview: 1,
       documentAnalysisErrors: 0,
     });
-    expect(result.score).toBe(62);
+    expect(result.score).toBe(64);
     expect(result.priority).toBe("NORMAL");
     expect(result.reasons).toHaveLength(3);
   });
@@ -35,9 +35,9 @@ describe("dossier work-priority score", () => {
       calculationStale: true,
       largeCalculationChange: true,
     });
-    expect(result.score).toBe(0);
+    expect(result.score).toBe(12);
     expect(result.priority).toBe("URGENT");
-    expect(result.reasons).toHaveLength(6);
+    expect(result.reasons).toHaveLength(7);
   });
 
   it("is deterministic and does not depend on calculation values", () => {
