@@ -52,7 +52,7 @@ export default async function CaseWorkspacePage({ params }: { params: Promise<{ 
     </section>
 
     <section className="panel topgap"><div className="panel-head"><div><div className="section-kicker">Alle dossieronderdelen</div><h2 className="panel-title">Werkruimtes</h2></div></div><div className="detail-grid">
-      {cards.map(card => <Link key={card.key} href={`/cases/${id}/${card.path}`} className="detail-card" style={{ textDecoration: "none", color: "inherit" }}><div className="detail-card-head"><b>{card.title}</b><span>Openen →</span></div><p className="subtle">{card.text}</p></Link>)}
+      {cards.map(card => <Link key={card.key} href={(`/cases/${id}/${card.path}`) as any} className="detail-card" style={{ textDecoration: "none", color: "inherit" }}><div className="detail-card-head"><b>{card.title}</b><span>Openen →</span></div><p className="subtle">{card.text}</p></Link>)}
     </div></section>
 
     <section className="panel topgap"><div className="panel-head"><div><div className="section-kicker">Dossierstatus</div><h2 className="panel-title">Controleer voordat je definitief maakt</h2></div></div><div className="audit-grid">
