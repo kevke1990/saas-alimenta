@@ -23,6 +23,6 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     input,
     result,
     fingerprint: { ...fingerprint, engineVersion: CALCULATION_ENGINE_V2, contractVersion: CALCULATION_CONTRACT_VERSION },
-    ruleEngineVersion: "1.0.0",
+    ruleEngineVersion: "1.1.0",
   };
 }
