@@ -1,6 +1,6 @@
 # Phase F4 — Integratieplatform
 
-Status: implemented
+Status: in uitvoering
 
 ## API v1
 
@@ -16,6 +16,8 @@ Available endpoints:
 - `POST /api/v1/import/cases` — import contract v1.0 (`cases:write`)
 
 The API is resource-scoped to the authenticated user. API usage is rate-limited and counted against the user's plan entitlement.
+
+The machine-readable contract is maintained at `docs/openapi-v1.yaml`.
 
 ## API credentials
 
@@ -58,6 +60,10 @@ Imports create a new tenant-scoped client/case and always start in `DRAFT` / `IN
 - API credentials and webhook lifecycle changes are written to the audit log.
 - API request usage is recorded for entitlement enforcement.
 
-## Next
+## Next implementation blocks
 
-F5 can add explainable intelligence and AI signals on top of the existing workflow without allowing AI to silently alter legal inputs or professional decisions.
+1. Webhook delivery idempotency, retry policy and delivery history.
+2. Credential rotation/revocation lifecycle tests.
+3. Import/export schema validation and explicit error codes.
+4. API contract tests against the OpenAPI document.
+5. Operational monitoring and integration smoke tests.
