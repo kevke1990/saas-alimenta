@@ -17,8 +17,9 @@ describe("rate-limit policy", () => {
   it("rejects requests at the limit", () => {
     const decision = decideRateLimit(5, { limit: 5, retryAfterSeconds: 12 });
     expect(decision).toEqual({ allowed: false, remaining: 0, retryAfterSeconds: 12 });
-    expect(rateLimitHeaders(decision, { limit: 5, windowSeconds: 60 })).toEqual(
-      expect.objectContaining({})
-    );
+    const headers = rateLimitHeaders(decision, { limit: 5, windowSeconds: 60 });
+    expect(headers.get("x-ratelimit-limit")).toBe("5");
+    expect(headers.get("x-ratelimit-remaining")).toBe("0");
+    expect(headers.get("retry-after")).toBe("12");
   });
 });
