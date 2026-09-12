@@ -50,7 +50,13 @@ Delivery policy primitives are implemented in `lib/webhook-delivery.ts` and cove
 - Maximum of five attempts before permanent failure.
 - Explicit states: `PENDING`, `RETRYING`, `DELIVERED` and `FAILED`.
 
-The dispatcher is deliberately best-effort: an external integration can never change a calculation, review state, norm version, or approval state from an outbound webhook. Persisted delivery history and queue execution remain the next implementation step.
+### Persisted delivery history
+
+Migration `20260912100000_webhook_delivery_history` adds the `WebhookDelivery` table. It stores the tenant owner, subscription/event identifiers, payload, signature, status, attempt counters, last response/error, retry timing and delivery timestamps.
+
+The unique constraint on `(subscriptionId, eventId)` is the database-level idempotency boundary. The migration is intentionally separated from the live dispatcher; the next implementation step is the repository/worker layer that claims due records safely and applies the retry policy.
+
+The dispatcher is deliberately best-effort: an external integration can never change a calculation, review state, norm version, or approval state from an outbound webhook.
 
 ## Import/export contract
 
@@ -68,7 +74,7 @@ Imports create a new tenant-scoped client/case and always start in `DRAFT` / `IN
 
 ## Next implementation blocks
 
-1. Persisted webhook delivery history and queue worker.
+1. Webhook delivery repository and safe queue/worker execution.
 2. Credential rotation/revocation lifecycle tests.
 3. Import/export schema validation and explicit error codes.
 4. API contract tests against the OpenAPI document.
