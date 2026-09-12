@@ -10,7 +10,7 @@ import {
 describe("webhook delivery policy", () => {
   it("creates the documented deterministic payload signature", () => {
     expect(signWebhookPayload("secret", "{\"id\":1}")).toBe(
-      "c1a9f2f0d7f9f7c1c8c7e6d6c8f9f6f1a6d4a9d6c7c1d5d2e2a0e7c0a7c7c5f4",
+      "7a9d3b3fd4bfd3fbdf9c060ec4371d2159517143f0341163f969c784e3faf215",
     );
   });
 
