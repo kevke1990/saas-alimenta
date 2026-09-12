@@ -1,0 +1,70 @@
+import { isDeliveryDue, markDeliveryAttempt, QueueDelivery } from "./webhook-delivery-queue";
+import { WebhookDeliveryState } from "./webhook-delivery";
+
+export type StoredWebhookDelivery = QueueDelivery & {
+  id: string;
+  userId: string;
+  payload: unknown;
+  signature: string;
+  eventType: string;
+  lastStatusCode?: number | null;
+  lastError?: string | null;
+  deliveredAt?: string | null;
+};
+
+/**
+ * Persistence adapter required by the webhook worker.
+ * The adapter is deliberately small so Prisma transactions can implement it
+ * without leaking database details into the delivery policy.
+ */
+export type WebhookDeliveryStore = {
+  insertIfAbsent(input: Omit<StoredWebhookDelivery, "id">): Promise<StoredWebhookDelivery>;
+  claimDue(input: { id: string; now: Date }): Promise<StoredWebhookDelivery | null>;
+  updateResult(input: {
+    id: string;
+    state: WebhookDeliveryState;
+    statusCode?: number;
+    error?: string;
+    nextAttemptAt?: string | null;
+    deliveredAt?: string | null;
+  }): Promise<StoredWebhookDelivery>;
+};
+
+export function createWebhookDeliveryRepository(store: WebhookDeliveryStore) {
+  return {
+    enqueue(input: Omit<StoredWebhookDelivery, "id">) {
+      return store.insertIfAbsent(input);
+    },
+
+    async claim(id: string, now = new Date()) {
+      const candidate = await store.claimDue({ id, now });
+      if (!candidate || !isDeliveryDue(candidate, now)) return null;
+      const claimed = markDeliveryAttempt(candidate);
+      return store.updateResult({
+        id: claimed.id,
+        state: claimed.state,
+        nextAttemptAt: null,
+      });
+    },
+
+    complete(input: { id: string; statusCode: number }) {
+      return store.updateResult({
+        id: input.id,
+        state: "DELIVERED",
+        statusCode: input.statusCode,
+        deliveredAt: new Date().toISOString(),
+        nextAttemptAt: null,
+      });
+    },
+
+    fail(input: {
+      id: string;
+      state: "RETRYING" | "FAILED";
+      statusCode?: number;
+      error?: string;
+      nextAttemptAt?: string | null;
+    }) {
+      return store.updateResult(input);
+    },
+  };
+}
