@@ -42,9 +42,15 @@ Events:
 - `case.calculated`
 - `case.approved`
 
-Delivery uses HTTPS POST and includes `x-alimenta-event` and `x-alimenta-signature` headers. The signature is a SHA-256 digest over `secret + '.' + payload`.
+Delivery policy primitives are implemented in `lib/webhook-delivery.ts` and covered by `lib/webhook-delivery.test.ts`:
 
-The dispatcher is deliberately best-effort: an external integration can never change a calculation, review state, norm version, or approval state from an outbound webhook.
+- SHA-256 payload signing using `secret + '.' + payload`.
+- Retryable statuses: `408`, `425`, `429` and `5xx`.
+- Exponential backoff starting at one second, capped at one hour.
+- Maximum of five attempts before permanent failure.
+- Explicit states: `PENDING`, `RETRYING`, `DELIVERED` and `FAILED`.
+
+The dispatcher is deliberately best-effort: an external integration can never change a calculation, review state, norm version, or approval state from an outbound webhook. Persisted delivery history and queue execution remain the next implementation step.
 
 ## Import/export contract
 
@@ -62,7 +68,7 @@ Imports create a new tenant-scoped client/case and always start in `DRAFT` / `IN
 
 ## Next implementation blocks
 
-1. Webhook delivery idempotency, retry policy and delivery history.
+1. Persisted webhook delivery history and queue worker.
 2. Credential rotation/revocation lifecycle tests.
 3. Import/export schema validation and explicit error codes.
 4. API contract tests against the OpenAPI document.
