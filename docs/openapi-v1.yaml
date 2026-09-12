@@ -1,0 +1,232 @@
+openapi: 3.0.3
+info:
+  title: Alimenta Pro API
+  version: 1.0.0
+  description: >-
+    Tenant-scoped integration API for Alimenta Pro. Legal calculations,
+    review states and approval decisions remain under professional control.
+servers:
+  - url: https://example.invalid
+    description: Replace with the deployed Alimenta Pro origin.
+security:
+  - bearerAuth: []
+tags:
+  - name: Cases
+  - name: ImportExport
+paths:
+  /api/v1/cases:
+    get:
+      tags: [Cases]
+      summary: List accessible cases
+      operationId: listCases
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Case list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaseSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/cases/{id}:
+    get:
+      tags: [Cases]
+      summary: Get one accessible case
+      operationId: getCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      responses:
+        '200':
+          description: Case detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/export/cases/{id}:
+    get:
+      tags: [ImportExport]
+      summary: Export a case using contract v1.0
+      operationId: exportCase
+      parameters:
+        - $ref: '#/components/parameters/CaseId'
+      responses:
+        '200':
+          description: Versioned case export
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseExport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/import/cases:
+    post:
+      tags: [ImportExport]
+      summary: Import a new case using contract v1.0
+      operationId: importCase
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaseImport'
+      responses:
+        '201':
+          description: Imported case
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaseDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: AlimentaApiToken
+  parameters:
+    CaseId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    CaseSummary:
+      type: object
+      required: [id, name, status]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string }
+        updatedAt: { type: string, format: date-time }
+    CaseDetail:
+      type: object
+      additionalProperties: true
+      required: [id, name, status]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        status: { type: string }
+        reviewStatus: { type: string }
+        data: { type: object, additionalProperties: true }
+        result: { type: object, nullable: true, additionalProperties: true }
+    CaseExport:
+      type: object
+      required: [schemaVersion]
+      properties:
+        schemaVersion:
+          type: string
+          enum: ['1.0']
+        source:
+          type: object
+          additionalProperties: true
+        client:
+          type: object
+          additionalProperties: true
+        case:
+          type: object
+          additionalProperties: true
+        calculations:
+          type: array
+          items: { type: object, additionalProperties: true }
+        incomeFacts:
+          type: array
+          items: { type: object, additionalProperties: true }
+        tasks:
+          type: array
+          items: { type: object, additionalProperties: true }
+    CaseImport:
+      type: object
+      required: [schemaVersion, client, case]
+      properties:
+        schemaVersion:
+          type: string
+          enum: ['1.0']
+        client:
+          type: object
+          additionalProperties: true
+        case:
+          type: object
+          additionalProperties: true
+        calculations:
+          type: array
+          items: { type: object, additionalProperties: true }
+        incomeFacts:
+          type: array
+          items: { type: object, additionalProperties: true }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        message: { type: string }
+        code: { type: string }
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Missing required scope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Resource not found in the token tenant
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Conflict or non-repeatable mutation
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    RateLimited:
+      description: Rate limit or plan entitlement exceeded
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
