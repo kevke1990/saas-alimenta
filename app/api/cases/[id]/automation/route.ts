@@ -40,7 +40,10 @@ export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
       const title=String(body.title||`Opvolging ${c.name}`).trim();const start=new Date(String(body.startAt||""));const duration=Math.max(15,Math.min(480,Number(body.durationMins)||30));
       if(Number.isNaN(start.getTime()))return new NextResponse("Ongeldige starttijd.",{status:422});
       const reminderRaw=Number(body.reminderMins);const reminder=Number.isFinite(reminderRaw)?Math.max(0,Math.min(1440,reminderRaw)):30;
-      const event=await db.calendarEvent.create({data:{userId:u.id,clientId:c.clientId,title,description:String(body.description||`Opvolging dossier ${c.name}`),startAt:start,endAt:new Date(start.getTime()+duration*60000),attendeeEmail:c.client?.email||null,attendeeName:c.client?.name||null,reminderMins:reminder}});
+      const end=new Date(start.getTime()+duration*60000);
+      const duplicate=await db.calendarEvent.findFirst({where:{userId:u.id,clientId:c.clientId,title,startAt:start,endAt:end}});
+      if(duplicate)return NextResponse.json({...duplicate,duplicate:true},{status:200});
+      const event=await db.calendarEvent.create({data:{userId:u.id,clientId:c.clientId,title,description:String(body.description||`Opvolging dossier ${c.name}`),startAt:start,endAt:end,attendeeEmail:c.client?.email||null,attendeeName:c.client?.name||null,reminderMins:reminder}});
       await db.auditLog.create({data:{userId:u.id,action:"AUTOMATION_CALENDAR_CREATED",metadata:{caseId:id,eventId:event.id}}});return NextResponse.json(event);
     }
     if(action==="email-draft"){
