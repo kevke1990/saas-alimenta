@@ -51,10 +51,11 @@ export function createWebhookDeliveryRepository(store: WebhookDeliveryStore) {
       });
     },
 
-    complete(input: { id: string; statusCode: number }) {
+    complete(input: { id: string; statusCode: number; attempt?: number }) {
       return store.updateResult({
         id: input.id,
         state: "DELIVERED",
+        attempt: input.attempt,
         statusCode: input.statusCode,
         deliveredAt: new Date().toISOString(),
         nextAttemptAt: null,
@@ -64,6 +65,7 @@ export function createWebhookDeliveryRepository(store: WebhookDeliveryStore) {
     fail(input: {
       id: string;
       state: "RETRYING" | "FAILED";
+      attempt?: number;
       statusCode?: number;
       error?: string;
       nextAttemptAt?: string | null;
