@@ -25,9 +25,6 @@ export async function processWebhookDelivery(
   now = new Date(),
 ): Promise<WebhookWorkerResult> {
   const repository = createWebhookDeliveryRepository(store);
-  const candidate = await store.claimDue({ id, now });
-  if (!candidate) return { status: "SKIPPED", reason: "NOT_DUE" };
-
   const claimed = await repository.claim(id, now);
   if (!claimed) return { status: "SKIPPED", reason: "NOT_DUE" };
 
