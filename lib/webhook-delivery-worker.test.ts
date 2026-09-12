@@ -42,7 +42,7 @@ describe("processWebhookDelivery", () => {
 
     expect(result.status).toBe("RETRYING");
     expect(result).toMatchObject({ attempt: 1, statusCode: 503 });
-    expect(store.updateResult).toHaveBeenCalledWith(expect.objectContaining({ state: "RETRYING", attempt: 1, statusCode: 503 }));
+    expect(store.updateResult).toHaveBeenLastCalledWith(expect.objectContaining({ state: "RETRYING", attempt: 1, statusCode: 503, error: "temporarily unavailable" }));
   });
 
   it("converts transport exceptions into retryable failures", async () => {
