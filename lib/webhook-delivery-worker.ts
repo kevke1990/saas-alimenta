@@ -53,6 +53,10 @@ export async function processWebhookDelivery(
     return { status: "DELIVERED", attempt: claimed.attempt, statusCode: response.statusCode };
   }
 
+  if (transition.state === "PENDING") {
+    return { status: "SKIPPED", reason: "NOT_DUE" };
+  }
+
   const updated = await repository.fail({
     id: claimed.id,
     state: transition.state,
