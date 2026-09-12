@@ -11,7 +11,7 @@ function delivery(id: string): StoredWebhookDelivery {
     eventType: "case.updated",
     payload: { id },
     signature: "signature",
-    status: "PENDING",
+    state: "PENDING",
     attempt: 0,
     maxAttempts: 5,
     nextAttemptAt: null,
@@ -24,7 +24,7 @@ function storeFor(ids: string[]): WebhookDeliveryStore {
     insertIfAbsent: vi.fn(async (input) => ({ ...input, id: "new-id" })),
     claimDue: vi.fn(async ({ id }) => {
       const record = records.get(id);
-      return record && record.status === "PENDING" ? { ...record } : null;
+      return record && (record.state === "PENDING" || record.state === "RETRYING") ? { ...record } : null;
     }),
     updateResult: vi.fn(async (input) => {
       const record = records.get(input.id) ?? delivery(input.id);
