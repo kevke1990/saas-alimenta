@@ -16,8 +16,8 @@ export type PageResult<T> = {
 export function parsePageInput(input: PageInput, options: PageOptions = {}) {
   const defaultLimit = Math.max(1, Math.floor(options.defaultLimit ?? 25));
   const maxLimit = Math.max(defaultLimit, Math.floor(options.maxLimit ?? 100));
-  const raw = typeof input.limit === "string" ? Number(input.limit) : input.limit;
-  const limit = Number.isFinite(raw) && raw !== null ? Math.floor(Number(raw)) : defaultLimit;
+  const numericLimit = typeof input.limit === "string" ? Number(input.limit) : input.limit ?? defaultLimit;
+  const limit = Number.isFinite(numericLimit) ? Math.floor(numericLimit) : defaultLimit;
   const cursor = typeof input.cursor === "string" && input.cursor.trim() ? input.cursor.trim() : undefined;
 
   return {
