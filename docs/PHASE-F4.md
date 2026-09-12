@@ -58,15 +58,15 @@ The unique constraint on `(subscriptionId, eventId)` is the database-level idemp
 
 ### Worker orchestration
 
-`lib/webhook-delivery-worker.ts` now orchestrates one delivery attempt through injected repository and transport dependencies. It:
+`lib/webhook-delivery-worker.ts` orchestrates one delivery attempt through injected repository and transport dependencies. `lib/webhook-worker-orchestrator.ts` adds an explicit batch boundary that:
 
-- claims a due delivery;
-- skips unavailable or already-complete deliveries;
-- converts transport exceptions into retryable `503` failures;
-- applies the central retry/state policy;
-- persists delivered, retrying or permanently failed outcomes.
+- deduplicates delivery IDs;
+- bounds concurrency between one and twenty workers;
+- aggregates delivered, retrying, failed and skipped outcomes;
+- delegates state transitions to the existing worker/repository;
+- does not create timers, background loops or hidden outbound requests.
 
-The worker deliberately does not create timers, background loops, credentials or hidden outbound requests. Scheduling and transport remain explicit responsibilities of the caller.
+The worker deliberately does not create credentials or autonomous scheduling. The caller remains responsible for selecting due IDs, authorization, tenant scoping and supplying the transport.
 
 The dispatcher is deliberately best-effort: an external integration can never change a calculation, review state, norm version, or approval state from an outbound webhook.
 
