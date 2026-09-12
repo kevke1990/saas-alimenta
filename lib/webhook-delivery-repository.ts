@@ -7,7 +7,9 @@ export type StoredWebhookDelivery = QueueDelivery & {
   payload: unknown;
   signature: string;
   eventType: string;
+  statusCode?: number | null;
   lastStatusCode?: number | null;
+  error?: string | null;
   lastError?: string | null;
   deliveredAt?: string | null;
 };
@@ -42,7 +44,7 @@ export function createWebhookDeliveryRepository(store: WebhookDeliveryStore) {
       if (!candidate || !isDeliveryDue(candidate, now)) return null;
       const claimed = markDeliveryAttempt(candidate);
       return store.updateResult({
-        id: claimed.id,
+        id: candidate.id,
         state: claimed.state,
         attempt: claimed.attempt,
         nextAttemptAt: null,
