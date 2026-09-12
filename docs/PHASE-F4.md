@@ -50,6 +50,16 @@ Delivery policy primitives are implemented in `lib/webhook-delivery.ts` and cove
 - Maximum of five attempts before permanent failure.
 - Explicit states: `PENDING`, `RETRYING`, `DELIVERED` and `FAILED`.
 
+### Validated event envelope
+
+`lib/webhook-event-envelope.ts` normalizes and validates event identifiers and timestamps before queueing. It also derives:
+
+- a canonical ISO-8601 occurrence timestamp;
+- a SHA-256 payload hash for provenance and diagnostics;
+- a stable `subscriptionId:eventId` idempotency key.
+
+The validation and determinism guarantees are covered by `lib/webhook-event-envelope.test.ts`. Invalid identifiers and timestamps are rejected before persistence.
+
 ### Persisted delivery history
 
 Migration `20260912100000_webhook_delivery_history` adds the `WebhookDelivery` table. It stores the tenant owner, subscription/event identifiers, payload, signature, status, attempt counters, last response/error, retry timing and delivery timestamps.
