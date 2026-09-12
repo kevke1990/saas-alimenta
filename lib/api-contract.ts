@@ -19,8 +19,28 @@ export type ApiErrorBody = {
   };
 };
 
-export function apiSuccess<T>(data: T, status = 200, headers?: HeadersInit) {
-  return NextResponse.json(data, { status, headers });
+export function createRequestId() {
+  return `req_${crypto.randomUUID()}`;
+}
+
+export function requestIdFromHeaders(headers: Headers) {
+  const value = headers.get("x-request-id")?.trim();
+  return value && value.length <= 128 ? value : undefined;
+}
+
+export function resolveRequestId(headers: Headers) {
+  return requestIdFromHeaders(headers) ?? createRequestId();
+}
+
+export function withRequestId(headers: HeadersInit | undefined, requestId: string) {
+  const result = new Headers(headers);
+  result.set("x-request-id", requestId);
+  return result;
+}
+
+export function apiSuccess<T>(data: T, status = 200, headers?: HeadersInit, requestId?: string) {
+  const responseHeaders = requestId ? withRequestId(headers, requestId) : headers;
+  return NextResponse.json(data, { status, headers: responseHeaders });
 }
 
 export function apiError(
@@ -38,13 +58,12 @@ export function apiError(
     },
   };
 
+  const responseHeaders = options.requestId
+    ? withRequestId(options.headers, options.requestId)
+    : options.headers;
+
   return NextResponse.json(body, {
     status,
-    headers: options.headers,
+    headers: responseHeaders,
   });
-}
-
-export function requestIdFromHeaders(headers: Headers) {
-  const value = headers.get("x-request-id")?.trim();
-  return value && value.length <= 128 ? value : undefined;
 }
