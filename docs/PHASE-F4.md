@@ -54,7 +54,19 @@ Delivery policy primitives are implemented in `lib/webhook-delivery.ts` and cove
 
 Migration `20260912100000_webhook_delivery_history` adds the `WebhookDelivery` table. It stores the tenant owner, subscription/event identifiers, payload, signature, status, attempt counters, last response/error, retry timing and delivery timestamps.
 
-The unique constraint on `(subscriptionId, eventId)` is the database-level idempotency boundary. The migration is intentionally separated from the live dispatcher; the next implementation step is the repository/worker layer that claims due records safely and applies the retry policy.
+The unique constraint on `(subscriptionId, eventId)` is the database-level idempotency boundary.
+
+### Worker orchestration
+
+`lib/webhook-delivery-worker.ts` now orchestrates one delivery attempt through injected repository and transport dependencies. It:
+
+- claims a due delivery;
+- skips unavailable or already-complete deliveries;
+- converts transport exceptions into retryable `503` failures;
+- applies the central retry/state policy;
+- persists delivered, retrying or permanently failed outcomes.
+
+The worker deliberately does not create timers, background loops, credentials or hidden outbound requests. Scheduling and transport remain explicit responsibilities of the caller.
 
 The dispatcher is deliberately best-effort: an external integration can never change a calculation, review state, norm version, or approval state from an outbound webhook.
 
@@ -74,8 +86,9 @@ Imports create a new tenant-scoped client/case and always start in `DRAFT` / `IN
 
 ## Next implementation blocks
 
-1. Webhook delivery repository and safe queue/worker execution.
-2. Credential rotation/revocation lifecycle tests.
-3. Import/export schema validation and explicit error codes.
-4. API contract tests against the OpenAPI document.
-5. Operational monitoring and integration smoke tests.
+1. Prisma-backed `WebhookDeliveryStore` with transaction-safe claims.
+2. Authenticated worker endpoint or queue consumer.
+3. Credential rotation/revocation lifecycle tests.
+4. Import/export schema validation and explicit error codes.
+5. API contract tests against the OpenAPI document.
+6. Operational monitoring and integration smoke tests.
