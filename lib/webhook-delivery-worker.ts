@@ -45,13 +45,18 @@ export async function processWebhookDelivery(
   });
 
   if (transition.state === "DELIVERED") {
-    await repository.complete({ id: claimed.id, statusCode: response.statusCode });
+    await repository.complete({
+      id: claimed.id,
+      attempt: claimed.attempt,
+      statusCode: response.statusCode,
+    });
     return { status: "DELIVERED", attempt: claimed.attempt, statusCode: response.statusCode };
   }
 
   const updated = await repository.fail({
     id: claimed.id,
     state: transition.state,
+    attempt: claimed.attempt,
     statusCode: response.statusCode,
     error: response.error,
     nextAttemptAt: transition.nextAttemptAt ?? null,
