@@ -23,6 +23,7 @@ export type WebhookDeliveryStore = {
   updateResult(input: {
     id: string;
     state: WebhookDeliveryState;
+    attempt?: number;
     statusCode?: number;
     error?: string;
     nextAttemptAt?: string | null;
@@ -43,6 +44,7 @@ export function createWebhookDeliveryRepository(store: WebhookDeliveryStore) {
       return store.updateResult({
         id: claimed.id,
         state: claimed.state,
+        attempt: claimed.attempt,
         nextAttemptAt: null,
       });
     },
