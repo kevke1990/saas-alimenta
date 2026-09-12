@@ -11,7 +11,7 @@ Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, 
 - Fase F1 — Professionele werkplek: **afgerond**
 - Fase F2 — Slimme dossierprioritering: **afgerond**
 - Fase F3 — Gecontroleerde automatisering: **vrijwel afgerond; lifecycle hardening loopt**
-- Fase F4 — Integratieplatform: **in uitvoering; API-contractdocumentatie toegevoegd**
+- Fase F4 — Integratieplatform: **in uitvoering; API-contract en webhookbeleid aanwezig**
 - Fase F5 — Explainable intelligence: **bestaande basis aanwezig; verdere productisering volgt**
 
 ## Recente voortgang
@@ -20,7 +20,8 @@ Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, 
 - Verzenden vanuit een opgeslagen concept gebruikt ownership-check, geverifieerde afzender, provider-ID, `MailLog` en auditactie `MAIL_DRAFT_SENT`.
 - Dossier-workspace heeft een aparte communicatiepagina met e-mailhistorie en open concepten.
 - Agenda-opvolging voorkomt dubbele afspraken met dezelfde eigenaar, cliënt, titel en tijdsinterval.
-- De API v1 heeft nu naast Markdown-documentatie ook een machineleesbaar OpenAPI-contract op `docs/openapi-v1.yaml`.
+- De API v1 heeft Markdown-documentatie en een machineleesbaar OpenAPI-contract op `docs/openapi-v1.yaml`.
+- Webhook delivery policy primitives zijn toegevoegd met signing, retry-classificatie, backoff en attemptlimiet; tests staan in `lib/webhook-delivery.test.ts`.
 - Automatische verzending blijft uitgesloten: alleen een expliciete professionele verzendactie kan een concept verzenden.
 
 ## F3 — Gecontroleerde automatisering
@@ -55,12 +56,13 @@ Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, 
 - Import/export-contracten.
 - Integratie-audittrail.
 - Rate limiting en plan-entitlements.
-- Eerste API v1-documentatie in `docs/API-V1.md`.
+- API-documentatie in `docs/API-V1.md`.
 - Machineleesbaar OpenAPI-contract in `docs/openapi-v1.yaml`.
+- Webhook signing- en retrybeleid in `lib/webhook-delivery.ts` met regressietests.
 
 ### Nog uit te werken
 
-1. Webhook retries, idempotency en delivery history.
+1. Persistente webhook delivery history en queue/worker-integratie.
 2. Credential rotatie/intrekken verder verharden en testen.
 3. Import/export validatie, versiebeheer en foutcontracten.
 4. Contracttests tegen het OpenAPI-document.
@@ -88,7 +90,7 @@ CI controleert repository hygiene, dependencies/security audit, Prisma schema/mi
 ## Ontwikkelvolgorde
 
 **Nu:** F3 lifecycle hardening en endpointtests afronden.  
-**Daarna:** F4 webhook/import-export hardening en contracttests.  
+**Daarna:** F4 persistente webhook delivery, import/export-hardening en contracttests.  
 **Vervolgens:** F5 verder productiseren.  
 **Parallel:** CI groen houden; geen fase als afgerond markeren zolang relevante tests/build niet groen zijn.
 
