@@ -11,7 +11,7 @@ Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, 
 - Fase F1 — Professionele werkplek: **afgerond**
 - Fase F2 — Slimme dossierprioritering: **afgerond**
 - Fase F3 — Gecontroleerde automatisering: **vrijwel afgerond; lifecycle hardening loopt**
-- Fase F4 — Integratieplatform: **in uitvoering; API-contract, request-correlatie en webhookbeleid aanwezig**
+- Fase F4 — Integratieplatform: **in uitvoering; API-contract, request-correlatie, rate-limitintegratie en webhookbeleid aanwezig**
 - Fase F5 — Explainable intelligence: **bestaande basis aanwezig; verdere productisering volgt**
 
 ## Recente voortgang
@@ -22,8 +22,9 @@ Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, 
 - Agenda-opvolging voorkomt dubbele afspraken met dezelfde eigenaar, cliënt, titel en tijdsinterval.
 - De API v1 heeft Markdown-documentatie en een machineleesbaar OpenAPI-contract op `docs/openapi-v1.yaml`.
 - Webhook delivery policy primitives zijn toegevoegd met signing, retry-classificatie, backoff en attemptlimiet; tests staan in `lib/webhook-delivery.test.ts`.
-- Request-ID-correlatie is toegevoegd aan het API-contract, inclusief `x-request-id`-responseheaders.
-- Rate-limit policy primitives zijn toegevoegd met veilige limieten, resterende capaciteit en `Retry-After`-ondersteuning.
+- Request-ID-correlatie is toegevoegd aan API-responses en API-requestregistratie.
+- De bestaande v1-cases-route gebruikt nu request-ID’s en gestandaardiseerde rate-limitheaders.
+- Rate-limit policy primitives zijn aanwezig met veilige limieten, resterende capaciteit en `Retry-After`-ondersteuning.
 - Automatische verzending blijft uitgesloten: alleen een expliciete professionele verzendactie kan een concept verzenden.
 
 ## F3 — Gecontroleerde automatisering
@@ -57,32 +58,33 @@ Dit document is het centrale ontwikkelregister. Het beschrijft wat is afgerond, 
 - Webhook subscriptions/events.
 - Import/export-contracten.
 - Integratie-audittrail.
-- Rate-limit policy primitives met responseheaders; productieopslag/tellerkoppeling volgt nog.
+- Request-ID-correlatie in API-responses en API-requestmetadata.
+- Rate-limit policy en eerste integratie op `GET /api/v1/cases`.
 - API-documentatie in `docs/API-V1.md`.
 - Machineleesbaar OpenAPI-contract in `docs/openapi-v1.yaml`.
-- Request-ID-correlatie in `lib/api-contract.ts`.
 - Webhook signing- en retrybeleid in `lib/webhook-delivery.ts` met regressietests.
 - Delivery queue-, repository-, worker- en orchestratorcontracten met unit-tests.
 - Gevalideerde webhook-eventenvelop met deterministische idempotency-key.
 
 ### Nog uit te werken
 
-1. Prisma-backed webhook delivery history en queue/worker-integratie.
-2. Credential rotatie/intrekken verder verharden en testen.
-3. Import/export validatie, versiebeheer en foutcontracten.
-4. Contracttests tegen het OpenAPI-document.
-5. Provenance voor integratie-events.
-6. Rate limiting per credential/route/plan verder verharden met gedeelde opslag.
+1. Rate limiting uniform toepassen op alle v1-routes en credential-/route-sleutels gebruiken.
+2. Prisma-backed webhook delivery history en queue/worker-integratie.
+3. Credential rotatie/intrekken verder verharden en testen.
+4. Import/export validatie, versiebeheer en foutcontracten.
+5. Contracttests tegen het OpenAPI-document.
+6. Provenance voor integratie-events.
 7. Staging integration smoke tests zodra secrets beschikbaar zijn.
 8. Monitoring, health checks en operationele foutdiagnostiek.
 9. Security/privacy review van externe integraties.
 
-## Versnelde batch B — 12 september 2026
+## Versnelde batch — API hardening
 
-- `lib/api-contract.ts` uitgebreid met request-ID-generatie, validatie en responseheaders.
-- `lib/rate-limit-policy.ts` toegevoegd als deterministische rate-limitpolicylaag.
-- Tests toegevoegd in `lib/rate-limit-policy.test.ts`.
-- Details en vervolgstappen staan in `docs/DEVELOPMENT-BATCH-2026-09-12-B.md`.
+- `lib/integration-api.ts` uitgebreid met veilige request-ID-validatie en generatie.
+- `lib/integration-api.ts` uitgebreid met gestandaardiseerde rate-limitheaders en `Retry-After`.
+- `app/api/v1/cases/route.ts` gebruikt request-correlatie, rate-limitheaders en uniforme 429-responses.
+- De bestaande maandelijkse entitlementcontrole blijft actief naast de korte rate-limitwindow.
+- De wijziging is bewust beperkt gehouden tot een bestaande v1-route; volledige routebrede uitrol volgt na contracttests.
 
 ## Technische kwaliteitsstatus
 
@@ -101,7 +103,7 @@ CI controleert repository hygiene, dependencies/security audit, Prisma schema/mi
 
 ## Ontwikkelvolgorde
 
-**Nu:** F3 lifecycle hardening en endpointtests afronden.  
+**Nu:** rate limiting routebreed uitrollen en v1-contracttests toevoegen.  
 **Daarna:** F4 persistente webhook delivery, import/export-hardening en contracttests.  
 **Vervolgens:** F5 verder productiseren.  
 **Parallel:** CI groen houden; geen fase als afgerond markeren zolang relevante tests/build niet groen zijn.
