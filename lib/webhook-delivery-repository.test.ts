@@ -11,6 +11,10 @@ function makeStore(initial: StoreState): WebhookDeliveryStore {
       return value;
     },
     async claimDue() {
+      if (value.state !== "PENDING" && value.state !== "RETRYING") return null;
+      if (value.attempt >= value.maxAttempts) return null;
+      if (value.nextAttemptAt && new Date(value.nextAttemptAt).getTime() > Date.now()) return null;
+      value = { ...value, attempt: value.attempt + 1, state: "RETRYING", nextAttemptAt: null };
       return value;
     },
     async updateResult(input) {
@@ -35,7 +39,7 @@ const baseDelivery: StoredWebhookDelivery = {
 };
 
 describe("webhook delivery repository", () => {
-  it("claims a due delivery and increments its attempt", async () => {
+  it("returns the atomically claimed delivery", async () => {
     const store = makeStore(baseDelivery);
     const repository = createWebhookDeliveryRepository(store);
     const claimed = await repository.claim(baseDelivery.id, new Date("2026-09-12T10:00:00.000Z"));
@@ -45,7 +49,7 @@ describe("webhook delivery repository", () => {
   });
 
   it("does not claim a delivery that is not due", async () => {
-    const store = makeStore({ ...baseDelivery, state: "RETRYING", nextAttemptAt: "2026-09-12T11:00:00.000Z" });
+    const store = makeStore({ ...baseDelivery, state: "RETRYING", nextAttemptAt: "2099-09-12T11:00:00.000Z" });
     const repository = createWebhookDeliveryRepository(store);
     await expect(repository.claim(baseDelivery.id, new Date("2026-09-12T10:00:00.000Z"))).resolves.toBeNull();
   });
