@@ -1,4 +1,4 @@
-import { isDeliveryDue, markDeliveryAttempt, QueueDelivery } from "./webhook-delivery-queue";
+import { QueueDelivery } from "./webhook-delivery-queue";
 import { WebhookDeliveryState } from "./webhook-delivery";
 
 export type StoredWebhookDelivery = QueueDelivery & {
@@ -18,6 +18,9 @@ export type StoredWebhookDelivery = QueueDelivery & {
  * Persistence adapter required by the webhook worker.
  * The adapter is deliberately small so Prisma transactions can implement it
  * without leaking database details into the delivery policy.
+ *
+ * claimDue is an atomic claim operation: the adapter must return the record
+ * after it has reserved the delivery and incremented its attempt counter.
  */
 export type WebhookDeliveryStore = {
   insertIfAbsent(input: Omit<StoredWebhookDelivery, "id">): Promise<StoredWebhookDelivery>;
@@ -40,15 +43,9 @@ export function createWebhookDeliveryRepository(store: WebhookDeliveryStore) {
     },
 
     async claim(id: string, now = new Date()) {
-      const candidate = await store.claimDue({ id, now });
-      if (!candidate || !isDeliveryDue(candidate, now)) return null;
-      const claimed = markDeliveryAttempt(candidate);
-      return store.updateResult({
-        id: candidate.id,
-        state: claimed.state,
-        attempt: claimed.attempt,
-        nextAttemptAt: null,
-      });
+      // The adapter performs the due check and attempt increment atomically.
+      // Re-applying queue policy here would increment attempts twice for SQL stores.
+      return store.claimDue({ id, now });
     },
 
     complete(input: { id: string; statusCode: number; attempt?: number }) {
