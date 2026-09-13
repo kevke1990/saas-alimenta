@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { db } from "@/lib/db";
 import type { Plan, Prisma } from "@prisma/client";
 
@@ -18,6 +18,22 @@ export function hashApiToken(token: string) {
 export function createApiToken() {
   const secret = randomBytes(32).toString("base64url");
   return { token: `${PREFIX}${secret}`, hash: hashApiToken(`${PREFIX}${secret}`) };
+}
+
+export function getRequestId(request: Request) {
+  const supplied = request.headers.get("x-request-id")?.trim();
+  return supplied && /^[A-Za-z0-9._:-]{1,128}$/.test(supplied) ? supplied : randomUUID();
+}
+
+export function rateLimitHeaders(limit: number, remaining: number, retryAfterSeconds?: number): HeadersInit {
+  const headers: Record<string, string> = {
+    "x-ratelimit-limit": String(Math.max(0, Math.floor(limit))),
+    "x-ratelimit-remaining": String(Math.max(0, Math.floor(remaining))),
+  };
+  if (retryAfterSeconds !== undefined) {
+    headers["retry-after"] = String(Math.max(1, Math.ceil(retryAfterSeconds)));
+  }
+  return headers;
 }
 
 export async function authenticateApiToken(request: Request) {
@@ -62,15 +78,18 @@ export async function enforceApiRateLimit(key: string, limit = 60, windowMs = 60
       create: { key, count: 1, windowAt: now, expiresAt },
       update: { count: 1, windowAt: now, expiresAt },
     });
-    return { allowed: true, remaining: Math.max(0, limit - 1) };
+    return { allowed: true, remaining: Math.max(0, limit - 1), limit, retryAfterSeconds: Math.ceil(windowMs / 1000) };
   }
   const updated = await db.rateLimitBucket.updateMany({
     where: { key, expiresAt: { gt: now }, count: { lt: limit } },
     data: { count: { increment: 1 } },
   });
+  const allowed = updated.count > 0;
   return {
-    allowed: updated.count > 0,
-    remaining: Math.max(0, limit - (bucket.count + (updated.count > 0 ? 1 : 0))),
+    allowed,
+    remaining: Math.max(0, limit - (bucket.count + (allowed ? 1 : 0))),
+    limit,
+    retryAfterSeconds: Math.max(1, Math.ceil((bucket.expiresAt.getTime() - now.getTime()) / 1000)),
   };
 }
 
