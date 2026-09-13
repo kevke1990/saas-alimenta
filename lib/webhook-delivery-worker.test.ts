@@ -22,10 +22,16 @@ function makeDelivery(overrides: Partial<StoredWebhookDelivery> = {}): StoredWeb
 function makeStore(delivery: StoredWebhookDelivery | null): WebhookDeliveryStore {
   return {
     insertIfAbsent: vi.fn(async (input) => ({ ...input, id: "created" })),
-    claimDue: vi.fn(async () =>
-      delivery
-        ? { ...delivery, state: "RETRYING", attempt: Math.min(delivery.attempt + 1, delivery.maxAttempts), nextAttemptAt: null }
-        : null,
+    claimDue: vi.fn(
+      async (): Promise<StoredWebhookDelivery | null> =>
+        delivery
+          ? {
+              ...delivery,
+              state: "RETRYING" as const,
+              attempt: Math.min(delivery.attempt + 1, delivery.maxAttempts),
+              nextAttemptAt: null,
+            }
+          : null,
     ),
     updateResult: vi.fn(async (input) => ({ ...delivery, ...input } as StoredWebhookDelivery)),
   };
