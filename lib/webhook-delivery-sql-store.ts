@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { StoredWebhookDelivery, WebhookDeliveryStore } from "./webhook-delivery-repository";
 import { WebhookDeliveryState } from "./webhook-delivery";
@@ -64,7 +65,7 @@ export function createWebhookDeliverySqlStore(db: WebhookDeliverySqlClient): Web
         INSERT INTO "WebhookDelivery"
           ("id", "userId", "subscriptionId", "eventId", "eventType", "payload", "signature", "status", "attempt", "maxAttempts", "lastStatusCode", "lastError", "nextAttemptAt", "deliveredAt", "createdAt", "updatedAt")
         VALUES
-          (gen_random_uuid()::text, ${input.userId}, ${input.subscriptionId}, ${input.eventId}, ${input.eventType}, ${JSON.stringify(input.payload)}::jsonb, ${input.signature}, ${input.state}, ${input.attempt}, ${input.maxAttempts}, ${input.lastStatusCode ?? input.statusCode ?? null}, ${input.lastError ?? input.error ?? null}, ${input.nextAttemptAt ? new Date(input.nextAttemptAt) : null}, ${input.deliveredAt ? new Date(input.deliveredAt) : null}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          (${randomUUID()}, ${input.userId}, ${input.subscriptionId}, ${input.eventId}, ${input.eventType}, ${JSON.stringify(input.payload)}::jsonb, ${input.signature}, ${input.state}, ${input.attempt}, ${input.maxAttempts}, ${input.lastStatusCode ?? input.statusCode ?? null}, ${input.lastError ?? input.error ?? null}, ${input.nextAttemptAt ? new Date(input.nextAttemptAt) : null}, ${input.deliveredAt ? new Date(input.deliveredAt) : null}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ON CONFLICT ("subscriptionId", "eventId") DO UPDATE SET "updatedAt" = "WebhookDelivery"."updatedAt"
         RETURNING *
       `);
