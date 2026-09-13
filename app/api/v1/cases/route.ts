@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import {
   authenticateApiToken,
   checkApiEntitlement,
@@ -8,6 +7,7 @@ import {
   rateLimitHeaders,
   recordApiRequest,
 } from "@/lib/integration-api";
+import { apiListResponse } from "@/lib/api-list-response";
 
 export const runtime = "nodejs";
 
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     db.case.findMany({
       where: { userId: auth.user.id },
       orderBy: { updatedAt: "desc" },
-      take,
+      take: take + 1,
       select: {
         id: true,
         name: true,
@@ -46,9 +46,9 @@ export async function GET(request: Request) {
       },
     }),
   );
+
   await recordApiRequest(auth.user.id, { endpoint: "/api/v1/cases", method: "GET", requestId });
-  return NextResponse.json(
-    { data: cases, pagination: { limit: take, count: cases.length }, apiVersion: "v1", requestId },
-    { headers },
-  );
+  const response = apiListResponse(cases, take, (item) => item.id, requestId);
+  Object.entries(rateLimitHeaders(rate.limit, rate.remaining)).forEach(([key, value]) => response.headers.set(key, String(value)));
+  return response;
 }
