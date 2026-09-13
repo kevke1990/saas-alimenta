@@ -2,6 +2,14 @@
 
 Alle historische changelog- en release-notities zijn samengebracht in dit ene centrale document. Vanaf v1.3.1-rc1 worden geen losse `CHANGELOG-*` of `RELEASE-*` bestanden meer bijgehouden.
 
+## Fase B — Professional workspace progress
+- Werkvoorraad als centraal actiecentrum met uitlegbare dossierprioriteit.
+- Prioriteitsfiltering voor urgent, hoog, normaal en laag.
+- Open taken en verlopen taken zichtbaar vanuit één werkoverzicht.
+- Documentinname uitgebreid met AI-voorstellen, goedgekeurde feiten en aandacht voor mislukte of lopende analyses.
+- Directe koppeling vanuit het documentregister naar professionele fact review.
+- AI-extractie blijft voorstelgericht; menselijke accordering blijft vereist.
+
 ## v1.3.1-rc1 — Demo Release Candidate
 - Demo mode en zichtbare demo-banner.
 - Geautomatiseerde Debian 13 deployment als primaire VPS-demo route.
