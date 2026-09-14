@@ -65,7 +65,7 @@ describe("Trema 2026 engine", () => {
     });
 
     expect(result.referenceYear).toBe(2026);
-    expect(result.payableMonthly).toBe(0);
+    expect(result.payableMonthly).toBe(400);
     expect(result.steps.map((step) => step.key)).toEqual([
       "capacity.A",
       "capacity.B",
