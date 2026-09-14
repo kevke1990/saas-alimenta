@@ -1,16 +1,20 @@
 /**
- * Trema/Alimentatienormen 2026 calculation core.
+ * Auditable Trema/Alimentatienormen 2026 calculation core.
  *
- * This module implements the published 2026 core schema. Year-specific
- * tables and factual inputs are explicit dependencies; the engine refuses
- * to silently invent missing table values.
+ * Important: the Trema report contains recommendations and year/half-year
+ * dependent tables. This core therefore never invents missing table values.
+ * The UI must provide the applicable official table result or explicitly use
+ * the published formula path for incomes for which that path applies.
  */
 
 export type ParentId = "A" | "B";
 export type Household = "single" | "married" | "pension";
+export type CapacityMethod = "official-table" | "published-formula";
 
 export interface IncomeInput {
+  /** Net disposable income before KGB, monthly. */
   monthlyNbi: number;
+  /** KGB is added only for the child-support calculation. */
   monthlyKgb?: number;
   kgbVerified?: boolean;
   referenceYear: number;
@@ -19,17 +23,19 @@ export interface IncomeInput {
 export interface CapacityInput {
   income: IncomeInput;
   household: Household;
-  grossModelUsed?: boolean;
   aowEligible?: boolean;
+  /** Use an official table result for the applicable income band. */
+  officialCapacityMonthly?: number;
+  capacityMethod?: CapacityMethod;
+  /** Required for the published formula path. */
+  correctedAssistanceNormMonthly?: number;
+  /** Housing budget is normally 30% of NBI; may be supplied explicitly. */
+  housingBudgetMonthly?: number;
   otherNecessaryCostsMonthly?: number;
   existingChildSupportMonthly?: number;
   otherPriorityMaintenanceMonthly?: number;
+  /** Only use after documented professional review. */
   professionalCorrectionMonthly?: number;
-  correctedAssistanceNormMonthly?: number;
-  normRentComponentMonthly?: number;
-  healthPremiumMonthly?: number;
-  healthNormPremiumMonthly?: number;
-  unforeseenCostsMonthly?: number;
 }
 
 export interface ParentCalculationInput {
@@ -61,7 +67,7 @@ export interface Trema2026Input {
 export interface FormulaStep {
   key: string;
   formula: string;
-  inputs: Record<string, number | string | boolean | undefined>;
+  inputs: Record<string, unknown>;
   resultMonthly?: number;
   note?: string;
 }
@@ -78,14 +84,20 @@ export interface Trema2026Result {
   sources: string[];
 }
 
-export const TREMA_2026_ENGINE_VERSION = "3.0.0-trema-2026-core";
-const round = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-const nonNegative = (n: number) => Math.max(0, round(n));
+export const TREMA_2026_ENGINE_VERSION = "3.1.0-trema-2026-auditable";
+
+const round = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100;
+const nonNegative = (value: number): number => Math.max(0, round(value));
+const assertFinite = (name: string, value: number): void => {
+  if (!Number.isFinite(value)) throw new Error(`${name} moet een eindig getal zijn.`);
+};
 
 /**
- * 2026 corrected assistance norm from the report's published example.
- * For production use, the applicable half-year and household-specific value
- * must be supplied explicitly because these values can change.
+ * Published 2026 correction formula:
+ * assistance norm - housing component + health premium - norm premium
+ * + unforeseen costs, rounded to €5. The AOW floor is applied according to
+ * the January 2026 example. Inputs must come from the applicable official
+ * period, not from user-entered guesses.
  */
 export function correctedAssistanceNorm2026(input: {
   assistanceNormMonthly: number;
@@ -95,33 +107,57 @@ export function correctedAssistanceNorm2026(input: {
   unforeseenCostsMonthly: number;
   aowEligible?: boolean;
 }): number {
-  const base = input.assistanceNormMonthly - input.housingComponentMonthly;
-  const health = input.healthPremiumMonthly - input.healthNormPremiumMonthly;
-  const result = base + health + input.unforeseenCostsMonthly;
-  const rounded = Math.round(result / 5) * 5;
+  for (const [name, value] of Object.entries(input)) {
+    if (name !== "aowEligible") assertFinite(name, value as number);
+  }
+  const raw = input.assistanceNormMonthly - input.housingComponentMonthly
+    + input.healthPremiumMonthly - input.healthNormPremiumMonthly
+    + input.unforeseenCostsMonthly;
+  const rounded = Math.round(raw / 5) * 5;
   return input.aowEligible ? Math.max(rounded, 1525) : rounded;
 }
 
 export function calculateCorrectedNorm(capacity: CapacityInput): number {
   if (capacity.correctedAssistanceNormMonthly !== undefined) {
+    assertFinite("correctedAssistanceNormMonthly", capacity.correctedAssistanceNormMonthly);
     return nonNegative(capacity.correctedAssistanceNormMonthly);
   }
-  if (
-    capacity.normRentComponentMonthly === undefined ||
-    capacity.healthPremiumMonthly === undefined ||
-    capacity.healthNormPremiumMonthly === undefined ||
-    capacity.unforeseenCostsMonthly === undefined
-  ) {
-    throw new Error("Ontbrekende invoer voor de gecorrigeerde bijstandsnorm; lever de toepasselijke 2026-waarde of alle componenten aan.");
+  throw new Error(
+    "Ontbrekende gecorrigeerde bijstandsnorm. Lever de officiële toepasselijke 2026-waarde aan; de engine vult deze niet automatisch in."
+  );
+}
+
+function calculateCapacity(parent: ParentCalculationInput, warnings: string[], steps: FormulaStep) {
+  const c = parent.capacity;
+  const nbi = c.income.monthlyNbi;
+  const kgb = c.income.monthlyKgb ?? 0;
+  assertFinite(`ouder ${parent.id}: monthlyNbi`, nbi);
+  assertFinite(`ouder ${parent.id}: monthlyKgb`, kgb);
+  if (nbi < 0 || kgb < 0) throw new Error(`Ouder ${parent.id}: inkomen en KGB mogen niet negatief zijn.`);
+  if (kgb > 0 && c.income.kgbVerified === false) warnings.push(`Ouder ${parent.id}: KGB is niet als geverifieerd gemarkeerd.`);
+
+  const incomeForChildSupport = round(nbi + kgb);
+  const norm = calculateCorrectedNorm(c);
+  const housing = c.housingBudgetMonthly === undefined ? round(nbi * 0.3) : nonNegative(c.housingBudgetMonthly);
+  const other = nonNegative(c.otherNecessaryCostsMonthly ?? 0);
+  const priority = nonNegative((c.existingChildSupportMonthly ?? 0) + (c.otherPriorityMaintenanceMonthly ?? 0));
+  const correction = c.professionalCorrectionMonthly ?? 0;
+  assertFinite(`ouder ${parent.id}: professionalCorrectionMonthly`, correction);
+
+  const room = nonNegative(incomeForChildSupport - norm - housing - other - priority + correction);
+  let capacity: number;
+  if (c.capacityMethod === "official-table") {
+    if (c.officialCapacityMonthly === undefined) throw new Error(`Ouder ${parent.id}: officiële draagkracht uit de toepasselijke tabel ontbreekt.`);
+    assertFinite(`ouder ${parent.id}: officialCapacityMonthly`, c.officialCapacityMonthly);
+    capacity = nonNegative(c.officialCapacityMonthly);
+  } else {
+    capacity = nonNegative(room * 0.7);
+    if (c.capacityMethod !== "published-formula") warnings.push(`Ouder ${parent.id}: draagkrachtpercentage 70% gebruikt als expliciete formule-default; controleer of de officiële tabel van toepassing is.`);
   }
-  return correctedAssistanceNorm2026({
-    assistanceNormMonthly: capacity.household === "pension" ? 1565 : 1402,
-    housingComponentMonthly: capacity.normRentComponentMonthly,
-    healthPremiumMonthly: capacity.healthPremiumMonthly,
-    healthNormPremiumMonthly: capacity.healthNormPremiumMonthly,
-    unforeseenCostsMonthly: capacity.unforeseenCostsMonthly,
-    aowEligible: capacity.aowEligible,
-  });
+
+  steps.inputs = { nbi, kgb, incomeForChildSupport, norm, housing, other, priority, correction, room, capacityMethod: c.capacityMethod ?? "published-formula" };
+  steps.resultMonthly = room;
+  return { capacity, room, incomeForChildSupport, norm, housing, other, priority, correction };
 }
 
 export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
@@ -129,55 +165,54 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
   const warnings: string[] = [];
   const steps: FormulaStep[] = [];
 
-  const capacity = (parent: ParentCalculationInput) => {
-    const c = parent.capacity;
-    const kgb = c.income.monthlyKgb ?? 0;
-    if (kgb > 0 && c.income.kgbVerified === false) warnings.push(`Ouder ${parent.id}: KGB is niet geverifieerd.`);
-    const income = round(c.income.monthlyNbi + kgb);
-    const norm = calculateCorrectedNorm(c);
-    const housing = round(income * 0.30);
-    const other = nonNegative(c.otherNecessaryCostsMonthly ?? 0);
-    const priority = nonNegative((c.existingChildSupportMonthly ?? 0) + (c.otherPriorityMaintenanceMonthly ?? 0));
-    const correction = c.professionalCorrectionMonthly ?? 0;
-    const supportable = nonNegative(income - norm - housing - other - priority + correction);
-    const percentage = 0.70;
-    const result = nonNegative(supportable * percentage);
-    return { income, norm, housing, other, priority, correction, supportable, result };
+  const payerStep: FormulaStep = {
+    key: `capacity.${input.payer.id}`,
+    formula: "draagkrachtruimte = NBI + KGB − gecorrigeerde bijstandsnorm − woonbudget − andere noodzakelijke lasten − prioritaire verplichtingen + gedocumenteerde correctie",
+    inputs: {},
   };
+  const recipientStep: FormulaStep = {
+    key: `capacity.${input.recipient.id}`,
+    formula: "draagkrachtruimte = NBI + KGB − gecorrigeerde bijstandsnorm − woonbudget − andere noodzakelijke lasten − prioritaire verplichtingen + gedocumenteerde correctie",
+    inputs: {},
+  };
+  const payer = calculateCapacity(input.payer, warnings, payerStep);
+  const recipient = calculateCapacity(input.recipient, warnings, recipientStep);
+  steps.push(payerStep, recipientStep);
 
-  const payer = capacity(input.payer);
-  const recipient = capacity(input.recipient);
-  for (const [id, value] of [[input.payer.id, payer], [input.recipient.id, recipient]] as const) {
-    steps.push({ key: `capacity.${id}`, formula: "draagkrachtruimte = inkomen − gecorrigeerde bijstandsnorm − woonbudget − andere noodzakelijke lasten − prioritaire verplichtingen", inputs: value, resultMonthly: value.supportable });
-    steps.push({ key: `capacity.${id}.result`, formula: "draagkracht = draagkrachtruimte × draagkrachtpercentage", inputs: { percentage: 70 }, resultMonthly: value.result });
-  }
-
+  const ownShare = nonNegative(input.need.ownShareMonthly);
   const exceptional = nonNegative((input.need.exceptionalCostsMonthly ?? 0) - (input.need.alreadyIncludedExceptionalCostsMonthly ?? 0));
-  const totalNeed = round(input.need.ownShareMonthly + exceptional);
-  const maximum = round(Math.min(totalNeed, payer.result));
+  const totalNeed = round(ownShare + exceptional);
+  const maximum = round(Math.min(totalNeed, payer.capacity));
+
   let careDiscount = 0;
   if (input.care) {
-    careDiscount = input.care.careDiscountOverrideMonthly ?? round((input.care.careDiscountBaseMonthly ?? input.need.ownShareMonthly) * input.care.carePercentage / 100);
-    steps.push({ key: "care-discount", formula: "zorgkorting = zorgkortingsgrondslag × zorgkortingspercentage", inputs: { percentage: input.care.carePercentage, base: input.care.careDiscountBaseMonthly ?? input.need.ownShareMonthly }, resultMonthly: careDiscount, note: "Bijzondere/verblijfsoverstijgende kosten worden niet automatisch in de zorgkortingsgrondslag opgenomen." });
+    if (input.care.carePercentage < 0 || input.care.carePercentage > 100) throw new Error("Zorgkortingspercentage moet tussen 0 en 100 liggen.");
+    const base = input.care.careDiscountBaseMonthly ?? ownShare;
+    careDiscount = input.care.careDiscountOverrideMonthly ?? round(base * input.care.carePercentage / 100);
+    careDiscount = nonNegative(careDiscount);
+    steps.push({ key: "care-discount", formula: "zorgkorting = zorgkortingsgrondslag × zorgkortingspercentage", inputs: { base, percentage: input.care.carePercentage }, resultMonthly: careDiscount });
   }
-  const correction = nonNegative(input.nonVerzilverbareKgbCorrectionMonthly ?? 0);
-  const payable = nonNegative(Math.min(maximum, payer.result) - careDiscount - correction);
-  steps.push({ key: "maximum", formula: "maximum bijdrage = minimum van eigen aandeel en draagkracht", inputs: { ownShare: totalNeed, capacity: payer.result }, resultMonthly: maximum });
-  steps.push({ key: "payable", formula: "te betalen = maximum bijdrage − zorgkorting − expliciete correcties", inputs: { maximum, careDiscount, correction }, resultMonthly: payable });
+
+  const kgbCorrection = nonNegative(input.nonVerzilverbareKgbCorrectionMonthly ?? 0);
+  const payable = nonNegative(maximum - careDiscount - kgbCorrection);
+  steps.push(
+    { key: "maximum", formula: "maximum bijdrage = minimum van behoefte en draagkracht", inputs: { need: totalNeed, payerCapacity: payer.capacity }, resultMonthly: maximum },
+    { key: "payable", formula: "te betalen = maximum bijdrage − zorgkorting − expliciete niet-verzilverbare-KGB-correctie", inputs: { maximum, careDiscount, kgbCorrection }, resultMonthly: payable },
+  );
 
   return {
     engineVersion: TREMA_2026_ENGINE_VERSION,
     referenceYear: 2026,
     maximumContributionMonthly: maximum,
     payableMonthly: payable,
-    payerCapacityMonthly: payer.result,
-    recipientCapacityMonthly: recipient.result,
+    payerCapacityMonthly: payer.capacity,
+    recipientCapacityMonthly: recipient.capacity,
     steps,
     warnings,
     sources: [
-      "Rapport Alimentatienormen januari 2026, hoofdstuk 4",
-      "Rapport Alimentatienormen januari 2026, hoofdstuk 3",
-      "Rapport Alimentatienormen januari 2026, bijlage 5",
+      "Rapport Alimentatienormen januari 2026, hoofdstuk 3 (behoefte)",
+      "Rapport Alimentatienormen januari 2026, hoofdstuk 4 (draagkracht)",
+      "Rapport Alimentatienormen januari 2026, bijlage 5 (draagkrachttabel/formules)",
       "Artikel 1:397 BW",
       "Artikel 1:404 BW",
     ],
