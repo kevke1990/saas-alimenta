@@ -5,11 +5,13 @@
  */
 import { adaptAlimentaForm, type AlimentaFormPayload } from "@/lib/alimentatie-engine-adapter";
 import { calculateTrema2026 } from "@/lib/alimentatie-engine-trema-2026";
+import { getTremaRolloutDecision } from "@/lib/trema-rollout";
 
 export type TremaCaseAuditStatus = "READY" | "INPUT_INCOMPLETE" | "ERROR";
 
 export type TremaCaseAudit = {
   engine: "trema-2026";
+  rollout: ReturnType<typeof getTremaRolloutDecision>;
   status: TremaCaseAuditStatus;
   missingFields: string[];
   warnings: string[];
@@ -21,11 +23,13 @@ function messageOf(error: unknown): string {
 }
 
 export function buildTremaCaseAudit(payload: unknown): TremaCaseAudit {
+  const rollout = getTremaRolloutDecision("AUDIT_ONLY");
   try {
     const input = adaptAlimentaForm(payload as AlimentaFormPayload);
     const result = calculateTrema2026(input);
     return {
       engine: "trema-2026",
+      rollout,
       status: "READY",
       missingFields: [],
       warnings: result.warnings ?? [],
@@ -36,6 +40,7 @@ export function buildTremaCaseAudit(payload: unknown): TremaCaseAudit {
     const incomplete = /ontbreekt|moet groter zijn|uitsluitend peiljaar|geldige/i.test(message);
     return {
       engine: "trema-2026",
+      rollout,
       status: incomplete ? "INPUT_INCOMPLETE" : "ERROR",
       missingFields: incomplete ? [message] : [],
       warnings: incomplete ? ["De Trema-engine is nog niet leidend; de bestaande berekening blijft actief."] : [],
