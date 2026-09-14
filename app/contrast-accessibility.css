@@ -1,0 +1,36 @@
+/* Professional high-contrast overrides. Keep surfaces calm while making text and controls readable. */
+:root {
+  --ink: #172033;
+  --muted: #4f5d73;
+  --line: #c7d0dc;
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --blue: #1749c6;
+  --blue-soft: #e8efff;
+  --green: #11623f;
+  --amber: #805000;
+  --red: #a51d2d;
+}
+body { color: var(--ink); background: var(--bg); }
+.page-subtitle, .panel-sub, .field-help, .field-error, .muted, .stat-meta,
+.summary-line, .summary-sticky p, .label, .breadcrumbs, .user-chip small { color: var(--muted); }
+.panel, .stat-card, .summary-sticky, .form-card, .review-card { border-color: var(--line); }
+.input, .select, input.input, select.input, textarea.input {
+  color: #172033;
+  background: #fff;
+  border: 1px solid #8b99ad;
+}
+.input::placeholder, textarea::placeholder { color: #66758a; opacity: 1; }
+.input:focus, .select:focus { border-color: #1749c6; box-shadow: 0 0 0 3px #dbe6ff; }
+.label { color: #34445c; }
+.btn { background: #1749c6; }
+.btn.secondary { color: #20304a; background: #fff; border-color: #8b99ad; }
+.notice { color: #513500; background: #fff6dc; border-color: #d9b866; }
+.notice.error { color: #8d1727; background: #fff0f2; border-color: #e4a3ad; }
+.notice.success { color: #0d5b39; background: #e9f7ef; border-color: #9bd2b4; }
+.table th { color: #4f5d73; border-color: var(--line); }
+.table td { border-color: #dce3ec; }
+.side-link { color: #40516a; }
+.side-link:hover, .side-link.active { color: #172033; background: #e8eef8; }
+.wizard-steps button { color: #52627a; }
+.wizard-steps button.active { color: #172033; }
