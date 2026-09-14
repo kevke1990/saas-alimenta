@@ -15,7 +15,7 @@ describe("applyApprovedIncomeFactsWithConflictResolution", () => {
     const result = applyApprovedIncomeFactsWithConflictResolution(
       { parents: [{ income: {} }, {}] },
       facts,
-      [{ conflictKey: "0:income.salaryMonthly", selectedFactId: "f2", decidedBy: "professional-1", reason: "Recent payslip", createdAt: "2026-09-14T10:00:00.000Z" }],
+      [{ conflictKey: "0:income.salaryMonthly", selectedFactId: "f2", decidedBy: "professional-1", reason: "Recent payslip" }],
     );
 
     expect(result.calculationInput.parents[0].income.salaryMonthly).toBe(11000);
