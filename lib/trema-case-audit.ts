@@ -5,6 +5,7 @@
  */
 import { adaptAlimentaForm, type AlimentaFormPayload } from "@/lib/alimentatie-engine-adapter";
 import { calculateTrema2026 } from "@/lib/alimentatie-engine-trema-2026";
+import { compareLegacyWithTrema, type TremaComparison } from "@/lib/trema-comparison";
 import { getTremaRolloutDecision } from "@/lib/trema-rollout";
 
 export type TremaCaseAuditStatus = "READY" | "INPUT_INCOMPLETE" | "ERROR";
@@ -16,24 +17,30 @@ export type TremaCaseAudit = {
   missingFields: string[];
   warnings: string[];
   result: ReturnType<typeof calculateTrema2026> | null;
+  comparison: TremaComparison | null;
 };
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : "Onbekende Trema-enginefout.";
 }
 
-export function buildTremaCaseAudit(payload: unknown): TremaCaseAudit {
+export function buildTremaCaseAudit(
+  payload: unknown,
+  legacyResult: unknown = null,
+): TremaCaseAudit {
   const rollout = getTremaRolloutDecision("AUDIT_ONLY");
   try {
     const input = adaptAlimentaForm(payload as AlimentaFormPayload);
     const result = calculateTrema2026(input);
+    const comparison = legacyResult === null ? null : compareLegacyWithTrema(legacyResult, result);
     return {
       engine: "trema-2026",
       rollout,
       status: "READY",
       missingFields: [],
-      warnings: result.warnings ?? [],
+      warnings: [...(result.warnings ?? []), ...(comparison?.warnings ?? [])],
       result,
+      comparison,
     };
   } catch (error) {
     const message = messageOf(error);
@@ -45,6 +52,7 @@ export function buildTremaCaseAudit(payload: unknown): TremaCaseAudit {
       missingFields: incomplete ? [message] : [],
       warnings: incomplete ? ["De Trema-engine is nog niet leidend; de bestaande berekening blijft actief."] : [],
       result: null,
+      comparison: null,
     };
   }
 }
