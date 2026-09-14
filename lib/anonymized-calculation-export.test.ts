@@ -39,7 +39,7 @@ describe("anonymized calculation export", () => {
     expect(result.notice).toContain("GEANONIMISEERD");
     expect(result.disclaimer).toContain("geen juridisch advies");
     expect(result.normVersion).toBe("2026.1");
-    expect(result.calculation).toEqual({ payment: 556, formula: "Geanonimiseerde naam" });
+    expect(result.calculation).toEqual({ payment: 556, formula: "686 - 130 = 556" });
     expect(result.warnings).toHaveLength(1);
   });
 
