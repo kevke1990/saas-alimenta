@@ -23,6 +23,6 @@ describe("applyApprovedIncomeFactsWithConflictResolution", () => {
     expect(result.provenance.appliedFactIds).toEqual(["f2"]);
     expect(result.provenance.conflictDecisions[0].selectedFactId).toBe("f2");
     expect(result.conflictAudit[0]).toMatchObject({ type: "INCOME_FACT_CONFLICT_RESOLVED", selectedFactId: "f2", selectedDocumentId: "doc-2" });
-    expect(result.conflictAudit[0].createdAt).toMatch(/^20\\d{2}-\\d{2}-\\d{2}T/);
+    expect(result.conflictAudit[0].createdAt).toMatch(/^20\d{2}-\d{2}-\d{2}T/);
   });
 });
