@@ -3,8 +3,8 @@ import {
   calculateCorrectedNorm,
   calculateTrema2026,
   correctedAssistanceNorm2026,
-} from "@/lib/alimentatie-engine-trema-2026";
-import { adaptAlimentaForm } from "@/lib/alimentatie-engine-adapter";
+} from "./alimentatie-engine-trema-2026";
+import { adaptAlimentaForm } from "./alimentatie-engine-adapter";
 
 describe("Trema 2026 engine", () => {
   it("calculates the published corrected assistance norm example", () => {
