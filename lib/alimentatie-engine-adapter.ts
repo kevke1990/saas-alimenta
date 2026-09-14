@@ -26,14 +26,23 @@ function money(value: NumericLike, field: string, fallback?: number): number {
   return parsed;
 }
 
+function firstValue(raw: RawParent, keys: string[]): NumericLike {
+  for (const key of keys) {
+    const value = raw[key];
+    if (value !== undefined && value !== null && value !== "") return value as NumericLike;
+  }
+  return undefined;
+}
+
 function parent(id: "A" | "B", raw: RawParent | undefined): ParentCalculationInput {
   if (!raw) throw new Error(`Gegevens voor ouder ${id} ontbreken.`);
-  const income = money(raw.monthlyNbi as NumericLike, `ouder ${id}: netto besteedbaar inkomen`);
-  const kgb = money(raw.monthlyKgb as NumericLike, `ouder ${id}: KGB`, 0);
+  const nestedIncome = (raw.income && typeof raw.income === "object" ? raw.income : {}) as RawParent;
+  const income = money(firstValue(raw, ["monthlyNbi", "nbi"]) ?? firstValue(nestedIncome, ["netIncomeMonthly", "monthlyNbi"]), `ouder ${id}: netto besteedbaar inkomen`);
+  const kgb = money(firstValue(raw, ["monthlyKgb", "kgb"]) ?? firstValue(nestedIncome, ["kgbMonthly", "monthlyKgb"]), `ouder ${id}: KGB`, 0);
   const capacity: CapacityInput = {
     income: { monthlyNbi: income, monthlyKgb: kgb, kgbVerified: raw.kgbVerified !== false, referenceYear: 2026 },
     household: raw.household === "pension" ? "pension" : raw.household === "married" ? "married" : "single",
-    aowEligible: raw.aowEligible === true,
+    aowEligible: raw.aowEligible === true || raw.aow === true,
     officialCapacityMonthly: raw.officialCapacityMonthly === undefined ? undefined : money(raw.officialCapacityMonthly as NumericLike, `ouder ${id}: officiële draagkracht`),
     capacityMethod: raw.capacityMethod === "official-table" ? "official-table" : "published-formula",
     correctedAssistanceNormMonthly: raw.correctedAssistanceNormMonthly === undefined ? undefined : money(raw.correctedAssistanceNormMonthly as NumericLike, `ouder ${id}: gecorrigeerde bijstandsnorm`),
