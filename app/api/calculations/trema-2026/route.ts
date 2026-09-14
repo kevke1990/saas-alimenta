@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
 import { adaptAlimentaForm, type AlimentaFormPayload } from "@/lib/alimentatie-engine-adapter";
 import { calculateTrema2026 } from "@/lib/alimentatie-engine-trema-2026";
 
 export async function POST(request: Request) {
   try {
+    await requireUser();
     const payload = (await request.json()) as AlimentaFormPayload;
     const input = adaptAlimentaForm(payload);
     const result = calculateTrema2026(input);
