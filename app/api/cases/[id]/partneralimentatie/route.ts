@@ -37,19 +37,42 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
   try {
     const body = await req.json();
-    const result = calculatePartnerSupport(body);
     const partnerCapacity = partnerAnalysis(body);
-    const persistedResult = { type: 'PARTNER_SUPPORT', fingerprint: calculationFingerprint(body, result.engineVersion, result.normVersion), ...result, ...(partnerCapacity ? { partnerCapacity } : {}) };
+    const uncoveredPartnerCare = partnerCapacity?.careObligationsMonthly
+      ? Math.max(0, partnerCapacity.careObligationsMonthly - partnerCapacity.allocatedCapacityMonthly)
+      : 0;
+    const calculationInput = {
+      ...body,
+      payerOtherMaintenanceObligations: Number(body.payerOtherMaintenanceObligations || 0) + uncoveredPartnerCare,
+    };
+    const result = calculatePartnerSupport(calculationInput);
+    const persistedResult = {
+      type: 'PARTNER_SUPPORT',
+      fingerprint: calculationFingerprint(calculationInput, result.engineVersion, result.normVersion),
+      ...result,
+      ...(partnerCapacity ? {
+        partnerCapacity: {
+          ...partnerCapacity,
+          uncoveredCareObligationsAllocatedToOtherPerson: uncoveredPartnerCare,
+          explanation: [
+            ...partnerCapacity.explanation,
+            uncoveredPartnerCare > 0
+              ? `€${uncoveredPartnerCare.toFixed(2)} aan niet-opgevangen zorgverplichtingen is toegevoegd aan de verplichtingen van de andere persoon.`
+              : 'Alle geregistreerde zorgverplichtingen zijn binnen de berekende partnercapaciteit opgevangen.',
+          ],
+        },
+      } : {}),
+    };
     const fingerprint = persistedResult.fingerprint;
     await db.calculation.create({ data: {
       caseId: id,
       engineVersion: result.engineVersion,
       normVersion: result.normVersion,
-      inputSnapshot: body,
+      inputSnapshot: calculationInput,
       result: persistedResult,
     }});
-    await db.case.update({ where: { id }, data: { calculationVersion: result.engineVersion, metadata: { ...(typeof c.metadata === 'object' && c.metadata ? c.metadata as object : {}), partnerInput: body }, result: { ...(typeof c.result === 'object' && c.result ? c.result as object : {}), partnerSupport: persistedResult } } });
-    return NextResponse.json({ ...result, ...(partnerCapacity ? { partnerCapacity } : {}), fingerprint });
+    await db.case.update({ where: { id }, data: { calculationVersion: result.engineVersion, metadata: { ...(typeof c.metadata === 'object' && c.metadata ? c.metadata as object : {}), partnerInput: calculationInput }, result: { ...(typeof c.result === 'object' && c.result ? c.result as object : {}), partnerSupport: persistedResult } } });
+    return NextResponse.json({ ...result, ...(partnerCapacity ? { partnerCapacity: persistedResult.partnerCapacity } : {}), fingerprint });
   } catch (e: any) {
     return new NextResponse(e?.message || 'Partneralimentatie berekening mislukt.', { status: 400 });
   }
