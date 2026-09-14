@@ -20,8 +20,7 @@ export type ExportWarning = {
   possibleImpact: string;
 };
 
-const DIRECT_IDENTIFIER_KEYS = /(^|_)(id|uuid|ip|email|phone|telephone|mobile|address|street|postcode|postal|hostname|url|token|secret|password|session)(_|$)/i;
-const FREE_TEXT_KEYS = /(^|_)(name|description|notes?|comment|memo|text|message|label|company|employer)(_|$)/i;
+const DIRECT_IDENTIFIER_KEYS = /(^|_)(id|uuid|ip|email|phone|telephone|mobile|address|street|postcode|postal|hostname|url|token|secret|password|session)(_|$)|(?:id|uuid|ipaddress|email|phone|telephone|mobile|address|street|postcode|postal|hostname|url|token|secret|password|session)$/i;
 const PARENT_KEYS = /parent|ouder/i;
 const CHILD_KEYS = /child|kind/i;
 const PARTNER_KEYS = /partner/i;
@@ -56,7 +55,7 @@ function anonymizeValue(value: unknown, key: string, counters: { parent: number;
   if (typeof value === "string") {
     if (DIRECT_IDENTIFIER_KEYS.test(key)) return "[verwijderd]";
     if (PARENT_KEYS.test(key) || CHILD_KEYS.test(key) || PARTNER_KEYS.test(key)) return labelForKey(key, counters);
-    return FREE_TEXT_KEYS.test(key) ? scrubText(value) : scrubText(value);
+    return scrubText(value);
   }
   if (Array.isArray(value)) return value.map((item) => anonymizeValue(item, key, counters));
   if (typeof value === "object") {
