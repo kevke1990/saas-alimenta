@@ -62,12 +62,22 @@ export function applyIncomeFactMappings(data: any, mappings: FactMapping[]) {
 
 export function buildIncomeFactProvenance(facts: ApprovedIncomeFact[], mappings: FactMapping[]) {
   const mappedIds = new Set(mappings.map(m => m.factId));
+  const targetCounts = new Map<string, number>();
+  for (const mapping of mappings) {
+    const targetKey = `${mapping.parentIndex}:${mapping.target}`;
+    targetCounts.set(targetKey, (targetCounts.get(targetKey) || 0) + 1);
+  }
+  const conflictFactIds = mappings
+    .filter(mapping => (targetCounts.get(`${mapping.parentIndex}:${mapping.target}`) || 0) > 1)
+    .map(mapping => mapping.factId);
+
   return {
     source: "APPROVED_INCOME_FACTS",
     generatedAt: new Date().toISOString(),
     approvedFactIds: facts.map(f => f.id),
     appliedFactIds: mappings.map(m => m.factId),
     ignoredFactIds: facts.filter(f => !mappedIds.has(f.id)).map(f => f.id),
+    conflictFactIds: [...new Set(conflictFactIds)],
     mappings,
   };
 }
