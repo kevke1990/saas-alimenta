@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyApprovedIncomeFactsWithConflictResolution } from "@/lib/income-fact-application";
+import { applyApprovedIncomeFactsWithConflictResolution } from "./income-fact-application";
 
 describe("applyApprovedIncomeFactsWithConflictResolution", () => {
   const facts = [
