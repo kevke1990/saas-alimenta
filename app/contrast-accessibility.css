@@ -14,17 +14,18 @@
 body { color: var(--ink); background: var(--bg); }
 .page-subtitle, .panel-sub, .field-help, .field-error, .muted, .stat-meta,
 .summary-line, .summary-sticky p, .label, .breadcrumbs, .user-chip small { color: var(--muted); }
-.panel, .stat-card, .summary-sticky, .form-card, .review-card { border-color: var(--line); }
+.panel, .stat-card, .summary-sticky, .form-card, .review-card, .partner-result { border-color: var(--line); }
 .input, .select, input.input, select.input, textarea.input {
   color: #172033;
   background: #fff;
   border: 1px solid #8b99ad;
 }
 .input::placeholder, textarea::placeholder { color: #66758a; opacity: 1; }
-.input:focus, .select:focus { border-color: #1749c6; box-shadow: 0 0 0 3px #dbe6ff; }
+.input:focus, .select:focus { border-color: #1749c6; box-shadow: 0 0 0 3px #dbe6ff; outline: 2px solid transparent; }
 .label { color: #34445c; }
-.btn { background: #1749c6; }
+.btn { background: #1749c6; color: #fff; }
 .btn.secondary { color: #20304a; background: #fff; border-color: #8b99ad; }
+.btn.danger { color: #8d1727; background: #fff0f2; border-color: #e4a3ad; }
 .notice { color: #513500; background: #fff6dc; border-color: #d9b866; }
 .notice.error { color: #8d1727; background: #fff0f2; border-color: #e4a3ad; }
 .notice.success { color: #0d5b39; background: #e9f7ef; border-color: #9bd2b4; }
@@ -34,3 +35,8 @@ body { color: var(--ink); background: var(--bg); }
 .side-link:hover, .side-link.active { color: #172033; background: #e8eef8; }
 .wizard-steps button { color: #52627a; }
 .wizard-steps button.active { color: #172033; }
+.obligation-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto auto; gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.partner-result { padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; }
+.explanation-list p { margin: 8px 0; color: var(--muted); }
+.summary-line small { display: block; margin-top: 4px; color: var(--muted); font-size: 0.85rem; }
+@media (max-width: 760px) { .obligation-row { grid-template-columns: 1fr; } }
