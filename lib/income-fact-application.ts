@@ -4,12 +4,12 @@ import {
   mapApprovedIncomeFacts,
   type ApprovedIncomeFact,
   type FactMapping,
-} from "@/lib/income-fact-provenance";
+} from "./income-fact-provenance";
 import {
   buildIncomeFactConflictAudit,
   resolveIncomeFactMappings,
   type IncomeFactConflictDecision,
-} from "@/lib/income-fact-conflicts";
+} from "./income-fact-conflicts";
 
 export type IncomeFactApplicationResult = {
   calculationInput: any;
