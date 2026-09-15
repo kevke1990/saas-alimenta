@@ -46,7 +46,7 @@ export function buildTremaCaseAudit(
     };
   } catch (error) {
     const message = messageOf(error);
-    const incomplete = /ontbreekt|moet groter zijn|uitsluitend peiljaar|geldige/i.test(message);
+    const incomplete = /ontbreek|moet groter zijn|uitsluitend peiljaar|geldige/i.test(message);
     return {
       engine: "trema-2026",
       rollout,
