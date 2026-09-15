@@ -20,6 +20,8 @@ describe("compareLegacyWithTrema", () => {
 
     expect(result.status).toBe("MATCH");
     expect(result.comparable).toBe(true);
+    expect(result.comparedMetricCount).toBe(4);
+    expect(result.missingMetricKeys).toEqual([]);
     expect(result.warnings).toEqual([]);
     expect(result.metrics.every((metric) => metric.differenceMonthly === 0)).toBe(true);
   });
@@ -32,13 +34,20 @@ describe("compareLegacyWithTrema", () => {
 
     expect(result.status).toBe("DIFFERENCE");
     expect(result.comparable).toBe(true);
+    expect(result.comparedMetricCount).toBe(1);
+    expect(result.missingMetricKeys).toEqual([
+      "maximumContributionMonthly",
+      "payerCapacityMonthly",
+      "recipientCapacityMonthly",
+    ]);
     expect(result.metrics[0]).toMatchObject({
       key: "payableMonthly",
       legacyMonthly: 250,
       tremaMonthly: 275,
       differenceMonthly: 25,
     });
-    expect(result.warnings[0]).toContain("legacy-uitkomst blijft leidend");
+    expect(result.warnings).toContain("Niet alle vergelijkingsvelden zijn beschikbaar; 3 veld(en) konden niet worden vergeleken.");
+    expect(result.warnings).toContain("Er is een afwijking tussen de legacy-uitkomst en de Trema-audituitkomst. De legacy-uitkomst blijft leidend.");
   });
 
   it("returns NOT_COMPARABLE when no shared numeric monthly value exists", () => {
@@ -49,6 +58,13 @@ describe("compareLegacyWithTrema", () => {
 
     expect(result.status).toBe("NOT_COMPARABLE");
     expect(result.comparable).toBe(false);
+    expect(result.comparedMetricCount).toBe(0);
+    expect(result.missingMetricKeys).toEqual([
+      "payableMonthly",
+      "maximumContributionMonthly",
+      "payerCapacityMonthly",
+      "recipientCapacityMonthly",
+    ]);
     expect(result.warnings[0]).toContain("geen gemeenschappelijk vergelijkbaar maandbedrag");
   });
 
@@ -59,6 +75,13 @@ describe("compareLegacyWithTrema", () => {
     );
 
     expect(result.status).toBe("MATCH");
+    expect(result.comparedMetricCount).toBe(1);
+    expect(result.missingMetricKeys).toEqual([
+      "maximumContributionMonthly",
+      "payerCapacityMonthly",
+      "recipientCapacityMonthly",
+    ]);
+    expect(result.warnings).toContain("Niet alle vergelijkingsvelden zijn beschikbaar; 3 veld(en) konden niet worden vergeleken.");
     expect(result.metrics.find((metric) => metric.key === "payableMonthly"))
       .toMatchObject({ legacyMonthly: 250, tremaMonthly: 250, differenceMonthly: 0 });
   });
