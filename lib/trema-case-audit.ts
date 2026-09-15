@@ -3,10 +3,10 @@
  * The audit layer is deliberately non-blocking: incomplete legacy wizard data
  * is reported as INPUT_INCOMPLETE instead of breaking case creation.
  */
-import { adaptAlimentaForm, type AlimentaFormPayload } from "@/lib/alimentatie-engine-adapter";
-import { calculateTrema2026 } from "@/lib/alimentatie-engine-trema-2026";
-import { compareLegacyWithTrema, type TremaComparison } from "@/lib/trema-comparison";
-import { getTremaRolloutDecision } from "@/lib/trema-rollout";
+import { adaptAlimentaForm, type AlimentaFormPayload } from "./alimentatie-engine-adapter";
+import { calculateTrema2026 } from "./alimentatie-engine-trema-2026";
+import { compareLegacyWithTrema, type TremaComparison } from "./trema-comparison";
+import { getTremaRolloutDecision } from "./trema-rollout";
 
 export type TremaCaseAuditStatus = "READY" | "INPUT_INCOMPLETE" | "ERROR";
 
