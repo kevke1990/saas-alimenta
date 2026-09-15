@@ -17,6 +17,8 @@ export type TremaComparisonMetric = {
 export type TremaComparison = {
   status: TremaComparisonStatus;
   comparable: boolean;
+  comparedMetricCount: number;
+  missingMetricKeys: string[];
   metrics: TremaComparisonMetric[];
   warnings: string[];
 };
@@ -61,21 +63,31 @@ export function compareLegacyWithTrema(
     };
   });
 
-  const comparable = metrics.some(
+  const comparableMetrics = metrics.filter(
     (metric) => metric.legacyMonthly !== null && metric.tremaMonthly !== null,
   );
+  const comparable = comparableMetrics.length > 0;
+  const missingMetricKeys = metrics
+    .filter((metric) => metric.legacyMonthly === null || metric.tremaMonthly === null)
+    .map((metric) => metric.key);
 
   if (!comparable) {
     warnings.push("De legacy- en Trema-uitkomst bevatten geen gemeenschappelijk vergelijkbaar maandbedrag.");
-    return { status: "NOT_COMPARABLE", comparable: false, metrics, warnings };
+    return {
+      status: "NOT_COMPARABLE",
+      comparable: false,
+      comparedMetricCount: 0,
+      missingMetricKeys,
+      metrics,
+      warnings,
+    };
   }
 
-  const status = metrics.every(
-    (metric) =>
-      metric.legacyMonthly === null ||
-      metric.tremaMonthly === null ||
-      metric.differenceMonthly === 0,
-  )
+  if (missingMetricKeys.length > 0) {
+    warnings.push(`Niet alle vergelijkingsvelden zijn beschikbaar; ${missingMetricKeys.length} veld(en) konden niet worden vergeleken.`);
+  }
+
+  const status = comparableMetrics.every((metric) => metric.differenceMonthly === 0)
     ? "MATCH"
     : "DIFFERENCE";
 
@@ -83,5 +95,12 @@ export function compareLegacyWithTrema(
     warnings.push("Er is een afwijking tussen de legacy-uitkomst en de Trema-audituitkomst. De legacy-uitkomst blijft leidend.");
   }
 
-  return { status, comparable: true, metrics, warnings };
+  return {
+    status,
+    comparable: true,
+    comparedMetricCount: comparableMetrics.length,
+    missingMetricKeys,
+    metrics,
+    warnings,
+  };
 }
