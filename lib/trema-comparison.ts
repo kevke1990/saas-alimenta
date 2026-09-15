@@ -30,6 +30,8 @@ const MONTHLY_KEYS = [
   "recipientCapacityMonthly",
 ] as const;
 
+const CURRENCY_PRECISION = 100;
+
 function readFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -38,9 +40,15 @@ function readRecord(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" ? value as Record<string, unknown> : {};
 }
 
+function roundCurrency(value: number): number {
+  return Math.round((value + Number.EPSILON) * CURRENCY_PRECISION) / CURRENCY_PRECISION;
+}
+
 /**
  * Compare known monthly result fields without making assumptions about the
- * legacy calculator's complete result shape.
+ * legacy calculator's complete result shape. Differences are rounded to cents
+ * before the comparison status is determined, matching the application's
+ * currency precision and avoiding floating-point artefacts.
  */
 export function compareLegacyWithTrema(
   legacyResult: unknown,
@@ -58,7 +66,7 @@ export function compareLegacyWithTrema(
       tremaMonthly,
       differenceMonthly:
         legacyMonthly !== null && tremaMonthly !== null
-          ? Math.round((tremaMonthly - legacyMonthly + Number.EPSILON) * 100) / 100
+          ? roundCurrency(tremaMonthly - legacyMonthly)
           : null,
     };
   });
