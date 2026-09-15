@@ -27,6 +27,33 @@ describe("Trema 2026 engine", () => {
     expect(result.sources.length).toBeGreaterThan(0);
   });
 
+  it("uses an explicitly supplied official payer table value", () => {
+    const result = calculateTrema2026({
+      referenceYear: 2026,
+      need: { ownShareMonthly: 1000 },
+      payer: {
+        id: "A",
+        capacity: {
+          income: { monthlyNbi: 4000, referenceYear: 2026 },
+          household: "single",
+          capacityMethod: "official-table",
+          officialCapacityMonthly: 625,
+          correctedAssistanceNormMonthly: 1365,
+        },
+      },
+      recipient: {
+        id: "B",
+        capacity: {
+          income: { monthlyNbi: 2500, referenceYear: 2026 },
+          household: "single",
+          correctedAssistanceNormMonthly: 1365,
+        },
+      },
+    });
+    expect(result.payerCapacityMonthly).toBe(625);
+    expect(result.maximumContributionMonthly).toBe(625);
+  });
+
   it("adapts legacy payer/recipient payloads", () => {
     const input = adaptAlimentaForm({ need: { ownShareMonthly: "500,00" }, payer: { monthlyNbi: "3000", correctedAssistanceNormMonthly: 1365 }, recipient: { monthlyNbi: 2200, correctedAssistanceNormMonthly: 1365 } });
     expect(input.referenceYear).toBe(2026);
