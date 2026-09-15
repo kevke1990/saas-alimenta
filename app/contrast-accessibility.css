@@ -16,10 +16,9 @@
 html, body { color: var(--ink); background: var(--bg); }
 body { text-rendering: optimizeLegibility; }
 
-/* Shared application shell */
 .sidebar, .topbar, .public-nav, .wizard-actions, .summary-sticky,
-.panel, .stat-card, .form-card, .review-card, .price-card, .auth-card,
-.partner-result, .obligation-row { border-color: var(--line); }
+.panel, .stat-card, .form-card, .review-card, .price-card,
+.auth-card, .partner-result, .obligation-row { border-color: var(--line); }
 .sidebar, .topbar, .public-nav, .wizard-actions, .summary-sticky,
 .panel, .stat-card, .form-card, .review-card, .price-card { background: #fff; }
 
@@ -27,35 +26,24 @@ body { text-rendering: optimizeLegibility; }
 .summary-line, .summary-sticky p, .breadcrumbs, .user-chip small,
 .explanation-list p, .workspace-copy small, .help-card span,
 .form-card-head span { color: var(--muted); }
-
 .page-title, .panel-title, .big-title, .stat-value, .price,
 .auth-card h2, .auth-side h1, .public-hero h1 { color: var(--ink); }
-
-.label, .stat-label, .nav-label, .table th, .summary-caption {
-  color: #34445c;
-}
-
+.label, .stat-label, .nav-label, .table th, .summary-caption { color: #34445c; }
 .table th { border-color: var(--line); }
 .table td { color: var(--ink); border-color: #dce3ec; }
 .table-link { color: #102c68; }
 
-/* Forms: readable text, visible boundaries and clear focus states. */
 .input, .select, input.input, select.input, textarea.input {
-  color: #172033;
-  background: #fff;
-  border: 1px solid #8b99ad;
-  caret-color: #172033;
+  color: #172033; background: #fff; border: 1px solid #8b99ad; caret-color: #172033;
 }
 .input::placeholder, textarea::placeholder { color: #52627a; opacity: 1; }
 .input:disabled, .select:disabled { color: #52627a; background: #edf1f6; opacity: 1; }
 .input:focus, .select:focus, input:focus-visible, textarea:focus-visible,
 select:focus-visible, button:focus-visible, a:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: 2px solid var(--focus); outline-offset: 2px;
 }
 .input:focus, .select:focus { border-color: var(--focus); box-shadow: 0 0 0 3px #dbe6ff; }
 
-/* Buttons and navigation */
 .btn { background: #1749c6; color: #fff; }
 .btn:hover { background: #123b9f; }
 .btn.secondary { color: #20304a; background: #fff; border-color: #8b99ad; }
@@ -69,7 +57,6 @@ select:focus-visible, button:focus-visible, a:focus-visible {
 .wizard-steps button.active { color: #172033; background: #fff; }
 .wizard-steps button.done { color: #11623f; }
 
-/* Statuses and notices retain semantic meaning without low-contrast text. */
 .notice { color: #513500; background: #fff6dc; border-color: #d9b866; }
 .notice.error { color: #8d1727; background: #fff0f2; border-color: #e4a3ad; }
 .notice.success { color: #0d5b39; background: #e9f7ef; border-color: #9bd2b4; }
@@ -78,7 +65,6 @@ select:focus-visible, button:focus-visible, a:focus-visible {
 .status.gray { color: #40516a; background: #e5eaf1; }
 .field-error { color: #a51d2d; }
 
-/* Public pricing and authentication pages use the same visual language. */
 .public-hero p, .auth-side p, .auth-card > p { color: var(--muted); }
 .public-brand, .brand-lockup strong { color: var(--ink); }
 .public-brand a, .public-nav a { color: #203d87; }
@@ -86,24 +72,64 @@ select:focus-visible, button:focus-visible, a:focus-visible {
 .auth-side p { color: #d3dbea; }
 .auth-card { color: var(--ink); }
 
-/* Calculation workspace and wizard surfaces must not look like a separate app. */
 .wizard-layout, .result-overview, .review-grid { color: var(--ink); }
 .wizard-main, .wizard-section { background: #fff; }
 .wizard-section { border-color: var(--line); }
 .form-card, .review-card, .partner-result, .obligation-row { background: #f8fafc; }
 .summary-line b, .review-card b { color: var(--ink); }
 .summary-progress, .progress { background: #dfe6ef; }
-
-/* Ensure inherited text inside common containers remains readable. */
 .panel *, .stat-card *, .form-card *, .review-card *, .price-card *,
 .summary-sticky *, .wizard-section *, .wizard-actions *, .topbar * {
   text-decoration-thickness: .08em;
 }
 
+/* Phase 4: prevent desktop layouts from forcing horizontal page overflow. */
+.app-shell, .main-area, .content, .page-head, .wizard-layout, .wizard-main,
+.result-overview, .review-grid, .price-grid, .form-grid, .stats-grid { min-width: 0; }
+.content { width: 100%; max-width: 100%; box-sizing: border-box; }
+.page-head { gap: 16px; align-items: flex-start; }
+.page-head .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.table-wrap { width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table { min-width: 720px; }
+.panel { min-width: 0; }
+.btn, button, input, select, textarea { max-width: 100%; }
+
+@media (max-width: 1024px) {
+  .sidebar { width: 232px; }
+  .content { padding-left: 20px; padding-right: 20px; }
+  .wizard-layout { grid-template-columns: minmax(0, 1fr); }
+  .summary-sticky { position: static; }
+  .review-grid, .result-overview { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 760px) {
-  .panel { overflow-x: auto; }
+  .app-shell { display: block; }
+  .sidebar { width: 100%; max-width: 100%; position: static; }
+  .main-area { width: 100%; min-width: 0; }
+  .content { padding: 16px; }
+  .page-head { flex-direction: column; }
+  .page-head .actions, .page-head .actions .btn { width: 100%; }
+  .page-head .actions .btn { text-align: center; }
+  .panel { padding: 16px; overflow: visible; }
+  .panel-head { gap: 10px; flex-wrap: wrap; }
+  .stats-grid, .price-grid, .form-grid { grid-template-columns: minmax(0, 1fr); }
   .wizard-section { padding: 22px 18px; }
-  .wizard-actions { padding: 16px 18px; }
+  .wizard-actions { padding: 16px 18px; flex-wrap: wrap; }
+  .wizard-actions .btn { flex: 1 1 150px; }
+  .filters { align-items: stretch !important; }
+  .filters > label, .filters > .btn { flex: 1 1 100% !important; width: 100%; }
+  .auth-page { grid-template-columns: minmax(0, 1fr); }
+  .auth-side { display: none; }
+  .public-nav { flex-wrap: wrap; gap: 12px; }
+  .public-hero { padding: 28px 18px; }
+  .price-card { min-width: 0; }
+}
+
+@media (max-width: 420px) {
+  .content { padding: 12px; }
+  .panel { padding: 12px; }
+  .page-title { font-size: 1.65rem; }
+  .btn { min-height: 42px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
