@@ -1,7 +1,7 @@
-/* Professional high-contrast overrides. Keep surfaces calm while making text and controls readable. */
+/* SaaS-Alimenta UI/UX foundation: accessible contrast and consistent application surfaces. */
 :root {
   --ink: #172033;
-  --muted: #4f5d73;
+  --muted: #40516a;
   --line: #c7d0dc;
   --bg: #f4f7fb;
   --panel: #ffffff;
@@ -10,33 +10,102 @@
   --green: #11623f;
   --amber: #805000;
   --red: #a51d2d;
+  --focus: #1749c6;
 }
-body { color: var(--ink); background: var(--bg); }
-.page-subtitle, .panel-sub, .field-help, .field-error, .muted, .stat-meta,
-.summary-line, .summary-sticky p, .label, .breadcrumbs, .user-chip small { color: var(--muted); }
-.panel, .stat-card, .summary-sticky, .form-card, .review-card, .partner-result { border-color: var(--line); }
+
+html, body { color: var(--ink); background: var(--bg); }
+body { text-rendering: optimizeLegibility; }
+
+/* Shared application shell */
+.sidebar, .topbar, .public-nav, .wizard-actions, .summary-sticky,
+.panel, .stat-card, .form-card, .review-card, .price-card, .auth-card,
+.partner-result, .obligation-row { border-color: var(--line); }
+.sidebar, .topbar, .public-nav, .wizard-actions, .summary-sticky,
+.panel, .stat-card, .form-card, .review-card, .price-card { background: #fff; }
+
+.page-subtitle, .panel-sub, .field-help, .muted, .stat-meta,
+.summary-line, .summary-sticky p, .breadcrumbs, .user-chip small,
+.explanation-list p, .workspace-copy small, .help-card span,
+.form-card-head span { color: var(--muted); }
+
+.page-title, .panel-title, .big-title, .stat-value, .price,
+.auth-card h2, .auth-side h1, .public-hero h1 { color: var(--ink); }
+
+.label, .stat-label, .nav-label, .table th, .summary-caption {
+  color: #34445c;
+}
+
+.table th { border-color: var(--line); }
+.table td { color: var(--ink); border-color: #dce3ec; }
+.table-link { color: #102c68; }
+
+/* Forms: readable text, visible boundaries and clear focus states. */
 .input, .select, input.input, select.input, textarea.input {
   color: #172033;
   background: #fff;
   border: 1px solid #8b99ad;
+  caret-color: #172033;
 }
-.input::placeholder, textarea::placeholder { color: #66758a; opacity: 1; }
-.input:focus, .select:focus { border-color: #1749c6; box-shadow: 0 0 0 3px #dbe6ff; outline: 2px solid transparent; }
-.label { color: #34445c; }
+.input::placeholder, textarea::placeholder { color: #52627a; opacity: 1; }
+.input:disabled, .select:disabled { color: #52627a; background: #edf1f6; opacity: 1; }
+.input:focus, .select:focus, input:focus-visible, textarea:focus-visible,
+select:focus-visible, button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.input:focus, .select:focus { border-color: var(--focus); box-shadow: 0 0 0 3px #dbe6ff; }
+
+/* Buttons and navigation */
 .btn { background: #1749c6; color: #fff; }
+.btn:hover { background: #123b9f; }
 .btn.secondary { color: #20304a; background: #fff; border-color: #8b99ad; }
-.btn.danger { color: #8d1727; background: #fff0f2; border-color: #e4a3ad; }
+.btn.secondary:hover { background: #edf2f9; }
+.btn.ghost { color: #30425e; }
+.btn:disabled { color: #52627a; background: #dce3ec; border-color: #c7d0dc; opacity: 1; }
+.side-link { color: #40516a; }
+.side-link:hover, .side-link.active { color: #172033; background: #e8eef8; }
+.wizard-steps { background: #edf1f6; border-color: var(--line); }
+.wizard-steps button { color: #52627a; }
+.wizard-steps button.active { color: #172033; background: #fff; }
+.wizard-steps button.done { color: #11623f; }
+
+/* Statuses and notices retain semantic meaning without low-contrast text. */
 .notice { color: #513500; background: #fff6dc; border-color: #d9b866; }
 .notice.error { color: #8d1727; background: #fff0f2; border-color: #e4a3ad; }
 .notice.success { color: #0d5b39; background: #e9f7ef; border-color: #9bd2b4; }
-.table th { color: #4f5d73; border-color: var(--line); }
-.table td { border-color: #dce3ec; }
-.side-link { color: #40516a; }
-.side-link:hover, .side-link.active { color: #172033; background: #e8eef8; }
-.wizard-steps button { color: #52627a; }
-.wizard-steps button.active { color: #172033; }
-.obligation-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto auto; gap: 12px; align-items: end; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
-.partner-result { padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; }
-.explanation-list p { margin: 8px 0; color: var(--muted); }
-.summary-line small { display: block; margin-top: 4px; color: var(--muted); font-size: 0.85rem; }
-@media (max-width: 760px) { .obligation-row { grid-template-columns: 1fr; } }
+.status.green { color: #0d5b39; background: #dff3e8; }
+.status.amber { color: #704400; background: #ffedc2; }
+.status.gray { color: #40516a; background: #e5eaf1; }
+.field-error { color: #a51d2d; }
+
+/* Public pricing and authentication pages use the same visual language. */
+.public-hero p, .auth-side p, .auth-card > p { color: var(--muted); }
+.public-brand, .brand-lockup strong { color: var(--ink); }
+.public-brand a, .public-nav a { color: #203d87; }
+.price-card .muted, .price-card small { color: var(--muted); }
+.auth-side p { color: #d3dbea; }
+.auth-card { color: var(--ink); }
+
+/* Calculation workspace and wizard surfaces must not look like a separate app. */
+.wizard-layout, .result-overview, .review-grid { color: var(--ink); }
+.wizard-main, .wizard-section { background: #fff; }
+.wizard-section { border-color: var(--line); }
+.form-card, .review-card, .partner-result, .obligation-row { background: #f8fafc; }
+.summary-line b, .review-card b { color: var(--ink); }
+.summary-progress, .progress { background: #dfe6ef; }
+
+/* Ensure inherited text inside common containers remains readable. */
+.panel *, .stat-card *, .form-card *, .review-card *, .price-card *,
+.summary-sticky *, .wizard-section *, .wizard-actions *, .topbar * {
+  text-decoration-thickness: .08em;
+}
+
+@media (max-width: 760px) {
+  .panel { overflow-x: auto; }
+  .wizard-section { padding: 22px 18px; }
+  .wizard-actions { padding: 16px 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
