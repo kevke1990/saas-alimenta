@@ -6,6 +6,7 @@
 import { adaptAlimentaForm, type AlimentaFormPayload } from "./alimentatie-engine-adapter";
 import { calculateTrema2026 } from "./alimentatie-engine-trema-2026";
 import { compareLegacyWithTrema, type TremaComparison } from "./trema-comparison";
+import { normalizeLegacyResultForTrema } from "./trema-legacy-normalizer";
 import { getTremaRolloutDecision } from "./trema-rollout";
 
 export type TremaCaseAuditStatus = "READY" | "INPUT_INCOMPLETE" | "ERROR";
@@ -32,7 +33,8 @@ export function buildTremaCaseAudit(
   try {
     const input = adaptAlimentaForm(payload as AlimentaFormPayload);
     const result = calculateTrema2026(input);
-    const comparison = legacyResult === null ? null : compareLegacyWithTrema(legacyResult, result);
+    const normalizedLegacy = normalizeLegacyResultForTrema(legacyResult);
+    const comparison = normalizedLegacy === null ? null : compareLegacyWithTrema(normalizedLegacy, result);
     return {
       engine: "trema-2026",
       rollout,
