@@ -156,7 +156,10 @@ function calculateCapacity(parent: ParentCalculationInput, warnings: string[], s
   }
 
   steps.inputs = { nbi, kgb, incomeForChildSupport, norm, housing, other, priority, correction, room, capacityMethod: c.capacityMethod ?? "published-formula" };
-  steps.resultMonthly = room;
+  steps.resultMonthly = capacity;
+  steps.note = c.capacityMethod === "official-table"
+    ? "Resultaat is de expliciet aangeleverde officiële draagkracht uit de toepasselijke Trema 2026-tabel."
+    : "Resultaat is de berekende draagkracht volgens de gepubliceerde formule-route; controleer of de officiële tabel van toepassing is.";
   return { capacity, room, incomeForChildSupport, norm, housing, other, priority, correction };
 }
 
