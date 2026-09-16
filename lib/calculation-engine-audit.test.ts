@@ -18,10 +18,9 @@ describe("Alimenta calculation-engine audit regressions", () => {
     expect(r.parentResults[1].capacity).toBe(464);
     // 15% is applied to the table-based eigen aandeel of the child(ren),
     // then deducted from the payer's own share after the draagkrachtvergelijking.
-    expect(r.transfers[0].careDiscount).toBe(0);
-    expect(r.transfers[0].payment).toBe(0);
     expect(r.transfers[0].payerIndex).toBe(1);
     expect(r.transfers[0].careDiscount).toBe(102);
+    expect(r.transfers[0].payment).toBe(173);
   });
 
   it("does not calculate care discount as 15% of the paying parent's own share", () => {
