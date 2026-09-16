@@ -1,5 +1,11 @@
 export const NORM_VERSION = "2026.1";
 export type NormYear = 2024 | 2025 | 2026;
+export type WsfPeriod = {
+  from: string;
+  to: string;
+  mbo: { home: number; away: number; tuition: number };
+  hbo: { home: number; away: number; tuition: number };
+};
 export type NormSet = {
   year: NormYear;
   version: string;
@@ -10,6 +16,7 @@ export type NormSet = {
   needTable: Record<number, number[]>;
   capacity: { underAow: { minimumNbi: number; formulaThreshold: number; necessary: number; housingPct: number; low: [number, number][] }; aow: { minimumNbi: number; formulaThreshold: number; necessary: number; housingPct: number; low: [number, number][] } };
   careDiscount: { minDays: number; maxDays: number; pct: number }[];
+  wsfPeriods: WsfPeriod[];
 };
 
 const NEED_TABLE_2024: Record<number, number[]> = { 1:[150,190,230,310,395,475,555,635,720,800,880], 2:[225,305,380,515,655,790,925,1060,1200,1335,1470], 3:[245,310,380,535,690,845,1000,1155,1310,1465,1620], 4:[280,360,450,635,820,1005,1190,1375,1560,1745,1930] };
@@ -23,12 +30,26 @@ const CAPACITY_2024 = { underAow:{low:[[1815,51],[1865,77],[1915,96],[1965,109],
 const CAPACITY_2025 = { underAow:{low:[[1875,53],[1925,79],[1975,98],[2025,110],[2075,117],[2125,124]] as [number,number][],minimumNbi:1875,formulaThreshold:2125,necessary:1310,housingPct:0.30}, aow:{low:[[2100,50],[2150,50],[2200,72],[2250,88],[2300,102]] as [number,number][],minimumNbi:2100,formulaThreshold:2300,necessary:1465,housingPct:0.30} };
 const CAPACITY_2026 = { underAow:{low:[[1950,50],[2000,77],[2050,96],[2100,109],[2150,116]] as [number,number][],minimumNbi:1950,formulaThreshold:2200,necessary:1365,housingPct:0.30}, aow:{low:[[2180,51],[2230,77],[2280,97],[2330,109],[2380,116]] as [number,number][],minimumNbi:2180,formulaThreshold:2430,necessary:1525,housingPct:0.30} };
 
+const WSF_PERIODS_2024: WsfPeriod[] = [
+  {from:"2024-01-01",to:"2024-07-31",mbo:{home:612.65,away:1029.55,tuition:113.08},hbo:{home:1217.96,away:1217.96,tuition:192.83}},
+  {from:"2024-08-01",to:"2024-12-31",mbo:{home:513.18,away:765.78,tuition:217.72},hbo:{home:1053.66,away:1053.66,tuition:210.83}},
+];
+const WSF_PERIODS_2025: WsfPeriod[] = [
+  {from:"2025-01-01",to:"2025-07-31",mbo:{home:636.38,away:898.48,tuition:118.25},hbo:{home:906.11,away:1094.12,tuition:210.83}},
+  {from:"2025-08-01",to:"2025-12-31",mbo:{home:636.18,away:898.48,tuition:121.50},hbo:{home:906.11,away:1094.12,tuition:216.75}},
+];
+const WSF_PERIODS_2026: WsfPeriod[] = [
+  {from:"2026-01-01",to:"2026-08-31",mbo:{home:657.49,away:928.58,tuition:121.50},hbo:{home:936.46,away:1130.77,tuition:216.75}},
+  {from:"2026-09-01",to:"2026-12-31",mbo:{home:657.49,away:928.58,tuition:125.92},hbo:{home:936.46,away:1130.77,tuition:224.50}},
+];
+
 export const NORM_SETS: Record<NormYear, NormSet> = {
-  2024:{year:2024,version:"2024.1",effectiveFrom:"2024-01-01",source:"Rechtspraak / Expertgroep Alimentatienormen",sourceVersion:"Rapport Alimentatienormen januari 2024",needIncomePoints:NEED_POINTS_2024,needTable:NEED_TABLE_2024,capacity:CAPACITY_2024,careDiscount:CARE_DISCOUNT_RULES},
-  2025:{year:2025,version:"2025.1",effectiveFrom:"2025-01-01",source:"Rechtspraak / Expertgroep Alimentatienormen",sourceVersion:"Rapport Alimentatienormen januari 2025",needIncomePoints:NEED_POINTS_2025,needTable:NEED_TABLE_2025,capacity:CAPACITY_2025,careDiscount:CARE_DISCOUNT_RULES},
-  2026:{year:2026,version:"2026.1",effectiveFrom:"2026-01-01",source:"Rechtspraak / Expertgroep Alimentatienormen",sourceVersion:"Rapport Alimentatienormen januari 2026",needIncomePoints:NEED_POINTS_2026,needTable:NEED_TABLE_2026,capacity:CAPACITY_2026,careDiscount:CARE_DISCOUNT_RULES},
+  2024:{year:2024,version:"2024.1",effectiveFrom:"2024-01-01",source:"Rechtspraak / Expertgroep Alimentatienormen",sourceVersion:"Rapport Alimentatienormen januari 2024",needIncomePoints:NEED_POINTS_2024,needTable:NEED_TABLE_2024,capacity:CAPACITY_2024,careDiscount:CARE_DISCOUNT_RULES,wsfPeriods:WSF_PERIODS_2024},
+  2025:{year:2025,version:"2025.1",effectiveFrom:"2025-01-01",source:"Rechtspraak / Expertgroep Alimentatienormen",sourceVersion:"Rapport Alimentatienormen januari 2025",needIncomePoints:NEED_POINTS_2025,needTable:NEED_TABLE_2025,capacity:CAPACITY_2025,careDiscount:CARE_DISCOUNT_RULES,wsfPeriods:WSF_PERIODS_2025},
+  2026:{year:2026,version:"2026.1",effectiveFrom:"2026-01-01",source:"Rechtspraak / Expertgroep Alimentatienormen",sourceVersion:"Rapport Alimentatienormen januari 2026",needIncomePoints:NEED_POINTS_2026,needTable:NEED_TABLE_2026,capacity:CAPACITY_2026,careDiscount:CARE_DISCOUNT_RULES,wsfPeriods:WSF_PERIODS_2026},
 };
 export function getNormSet(year:number):NormSet { if(!(year in NORM_SETS)) throw new Error(`Geen ondersteunde NormSet voor ${year}.`); return NORM_SETS[year as NormYear]; }
+export function getWsfPeriod(normSet: NormSet, calculationDate: string): WsfPeriod { const period = normSet.wsfPeriods.find(p => calculationDate >= p.from && calculationDate <= p.to); if (!period) throw new Error(`Geen WSF-norm beschikbaar voor ${calculationDate} binnen NormSet ${normSet.year}.`); return period; }
 
 // Backward-compatible exports used by the existing 2026 engine.
 export const NEED_TABLE = NEED_TABLE_2026;
