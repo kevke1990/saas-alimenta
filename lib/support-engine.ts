@@ -1,4 +1,5 @@
 import { CAPACITY } from './norms';
+import type { NormSet } from './norms';
 
 export type SupportType = 'CHILD_SUPPORT' | 'PARTNER_SUPPORT';
 export type SupportCapacityInput = {
@@ -28,7 +29,8 @@ export type SupportCapacityResult = {
   capacityAdjustment: number;
   capacityPercentage: number;
   capacity: number;
-  method: 'TABLE_2026' | 'FORMULA_70' | 'FORMULA_60' | 'FORMULA_45' | 'BIJSTAND_ZERO';
+  method: 'TABLE' | 'FORMULA_70' | 'FORMULA_60' | 'FORMULA_45' | 'BIJSTAND_ZERO';
+  normYear: number;
   notes: string[];
 };
 
@@ -36,8 +38,8 @@ const num = (v: unknown) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) :
 const signed = (v: unknown) => Number.isFinite(Number(v)) ? Number(v) : 0;
 const round = (v: number) => Math.round(Math.max(0, v) + 1e-9);
 
-function tableCapacity(nbi: number, aow = false) {
-  const cfg = aow ? CAPACITY.aow : CAPACITY.underAow;
+function tableCapacity(nbi: number, aow = false, normSet = { capacity: CAPACITY } as NormSet) {
+  const cfg = aow ? normSet.capacity.aow : normSet.capacity.underAow;
   if (nbi < cfg.minimumNbi) return null;
   for (let i = 0; i < cfg.low.length; i += 1) {
     const [threshold, value] = cfg.low[i];
@@ -49,14 +51,15 @@ function tableCapacity(nbi: number, aow = false) {
 
 export function calculateSupportCapacity(
   input: SupportCapacityInput,
-  options: { supportType: SupportType; includeKgb?: boolean; percentage: number; formulaThreshold: number },
+  options: { supportType: SupportType; includeKgb?: boolean; percentage: number; formulaThreshold: number; normSet?: NormSet },
 ): SupportCapacityResult {
+  const normSet = options.normSet ?? ({ year: 2026, capacity: CAPACITY } as NormSet);
   const nbi = num(input.nbi);
   const includeKgb = options.includeKgb ?? false;
   const kgbIncluded = includeKgb ? num(input.kgb) : 0;
   const effectiveNBI = nbi + kgbIncluded;
   const aow = !!input.aow;
-  const cfg = aow ? CAPACITY.aow : CAPACITY.underAow;
+  const cfg = aow ? normSet.capacity.aow : normSet.capacity.underAow;
   const housingBudget = effectiveNBI * cfg.housingPct;
   const actualHousing = num(input.housingCosts);
   const housingDifference = Math.max(0, actualHousing - housingBudget);
@@ -76,22 +79,19 @@ export function calculateSupportCapacity(
       supportType: options.supportType, nbi, kgbIncluded, effectiveNBI, housingBudget,
       actualHousing, housingDifference, necessaryLivingCosts: cfg.necessary,
       otherNecessaryCosts: special, maintenanceCosts, capacityAdjustment: adjustment,
-      capacityPercentage, capacity: 0, method: 'BIJSTAND_ZERO', notes,
+      capacityPercentage, capacity: 0, method: 'BIJSTAND_ZERO', normYear: normSet.year, notes,
     };
   }
 
-  // The official 2026 table is used below the final threshold. If there are
-  // extra necessary costs, the report prescribes the formula for that income
-  // segment instead of the fixed table amount.
   const useFormula = effectiveNBI >= options.formulaThreshold || special > 0 || maintenanceCosts > 0 || adjustment !== 0;
-  const table = tableCapacity(effectiveNBI, aow);
+  const table = tableCapacity(effectiveNBI, aow, normSet);
   const lowIncomeMinimum = childCount >= 2 ? 50 : 25;
   const base = useFormula
     ? capacityPercentage * Math.max(0, effectiveNBI - housingBudget - cfg.necessary - special - maintenanceCosts)
     : (table ?? lowIncomeMinimum);
 
   if (!useFormula && effectiveNBI < cfg.minimumNbi) {
-    notes.push(`Minimumdraagkracht 2026 toegepast: €${lowIncomeMinimum} per maand bij ${childCount === 1 ? 'één kind' : 'twee of meer kinderen'}.`);
+    notes.push(`Minimumdraagkracht ${normSet.year} toegepast: €${lowIncomeMinimum} per maand bij ${childCount === 1 ? 'één kind' : 'twee of meer kinderen'}.`);
   }
   if (options.supportType === 'PARTNER_SUPPORT') {
     notes.push('Partneralimentatie gebruikt uitsluitend NBI; KGB is niet als inkomen toegevoegd.');
@@ -119,26 +119,32 @@ export function calculateSupportCapacity(
     capacityAdjustment: adjustment,
     capacityPercentage,
     capacity: round(base + adjustment),
-    method: useFormula ? method : 'TABLE_2026',
+    method: useFormula ? method : 'TABLE',
+    normYear: normSet.year,
     notes,
   };
 }
 
-export function calculateChildSupportCapacity(input: SupportCapacityInput) {
+export function calculateChildSupportCapacity(input: SupportCapacityInput, normSet?: NormSet) {
+  const activeNorms = normSet ?? ({ year: 2026, capacity: CAPACITY } as NormSet);
   const aow = !!input.aow;
   return calculateSupportCapacity(input, {
     supportType: 'CHILD_SUPPORT',
     includeKgb: true,
     percentage: 0.70,
-    formulaThreshold: aow ? CAPACITY.aow.formulaThreshold : CAPACITY.underAow.formulaThreshold,
+    formulaThreshold: aow ? activeNorms.capacity.aow.formulaThreshold : activeNorms.capacity.underAow.formulaThreshold,
+    normSet: activeNorms,
   });
 }
 
-export function calculatePartnerSupportCapacity(input: SupportCapacityInput) {
+export function calculatePartnerSupportCapacity(input: SupportCapacityInput, normSet?: NormSet) {
+  const activeNorms = normSet ?? ({ year: 2026, capacity: CAPACITY } as NormSet);
+  const aow = !!input.aow;
   return calculateSupportCapacity(input, {
     supportType: 'PARTNER_SUPPORT',
     includeKgb: false,
     percentage: 0.60,
-    formulaThreshold: 2200,
+    formulaThreshold: aow ? activeNorms.capacity.aow.formulaThreshold : activeNorms.capacity.underAow.formulaThreshold,
+    normSet: activeNorms,
   });
 }
