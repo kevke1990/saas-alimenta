@@ -83,7 +83,9 @@ export function calculateSupportCapacity(
     };
   }
 
-  const useFormula = effectiveNBI >= options.formulaThreshold || special > 0 || maintenanceCosts > 0 || adjustment !== 0;
+  // A professional capacity correction adjusts the selected normative result;
+  // it must not silently switch a low-income table calculation to the formula route.
+  const useFormula = effectiveNBI >= options.formulaThreshold || special > 0 || maintenanceCosts > 0;
   const table = tableCapacity(effectiveNBI, aow, normSet);
   const lowIncomeMinimum = childCount >= 2 ? 50 : 25;
   const base = useFormula
