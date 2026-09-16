@@ -55,13 +55,32 @@ describe("Alimenta Pro calculation engine 1.3.0", () => {
     expect(r.transfers[0].payment).toBeGreaterThanOrEqual(0);
   });
 
-  it("uses WSF as the basis for a young adult", () => {
-    const r = calculate({
+  it("uses the selected norm set and period for a young adult", () => {
+    const r2024 = calculate({
+      normYear: 2024,
+      calculationDate: "2024-09-15",
       parents: [{ nbi: 3000 }, { nbi: 2500 }],
       children: [{ age: 18, residence: "A", studentType: "MBO", livesAtHome: true }],
     });
-    expect(r.childResults[0].isYoungAdult).toBe(true);
-    expect(r.childResults[0].needSource).toBe("WSF_2026");
+    const r2026 = calculate({
+      normYear: 2026,
+      calculationDate: "2026-09-16",
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 18, residence: "A", studentType: "MBO", livesAtHome: true }],
+    });
+    expect(r2024.childResults[0].isYoungAdult).toBe(true);
+    expect(r2024.childResults[0].needSource).toBe("WSF_2024");
+    expect(r2024.childResults[0].need).toBe(731);
+    expect(r2026.childResults[0].needSource).toBe("WSF_2026");
+    expect(r2026.childResults[0].need).toBe(783);
+    expect(r2024.childResults[0].need).not.toBe(r2026.childResults[0].need);
+  });
+
+  it("requires a calculation date for young-adult WSF calculations", () => {
+    expect(() => calculate({
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 18, residence: "A", studentType: "MBO", livesAtHome: true }],
+    })).toThrow("reken-/ingangsdatum verplicht");
   });
 });
 
