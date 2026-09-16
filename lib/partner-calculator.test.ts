@@ -2,104 +2,70 @@ import { describe, expect, it } from "vitest";
 import { calculatePartnerSupport } from "./partner-calculator";
 import { getCumulativeIndexationFactor } from "./indexation";
 
-describe("2026 partner-support engine", () => {
+describe("partner-support engine", () => {
   it("applies the 60% Hofnorm after the child-cost share", () => {
-    const r = calculatePartnerSupport({
-      marriageNBGI: 5548,
-      childShareDuringMarriage: 808,
-      payer: { nbi: 4156 },
-      recipientCurrentNBI: 1763,
-    });
+    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763 });
+    expect(r.normVersion).toBe("2026.1");
     expect(r.hofNormBase).toBe(4740);
     expect(r.grossNeedBeforeOwnIncome).toBe(2844);
     expect(r.additionalNeed).toBe(1081);
     expect(r.netPartnerSupport).toBe(927);
   });
 
+  it("uses the requested historical NormSet for payer capacity", () => {
+    const r2025 = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, normYear: 2025 });
+    const r2026 = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, normYear: 2026 });
+    expect(r2025.normYear).toBe(2025);
+    expect(r2025.normVersion).toBe("2025.1");
+    expect(r2025.warnings.some(w => w.includes("2025.1"))).toBe(true);
+    expect(r2025.payerCapacityBeforeChildren).not.toBe(r2026.payerCapacityBeforeChildren);
+  });
+
+  it("keeps historical norm selection separate from statutory indexation year", () => {
+    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, normYear: 2025, indexationYear: 2026 });
+    expect(r.normVersion).toBe("2025.1");
+    expect(r.indexedNetPartnerSupport).toBeGreaterThan(r.netPartnerSupport);
+  });
+
   it("applies legal indexation when an explicit indexation year is supplied", () => {
-    const r = calculatePartnerSupport({
-      marriageNBGI: 5548,
-      childShareDuringMarriage: 808,
-      payer: { nbi: 4156 },
-      recipientCurrentNBI: 1763,
-      indexationYear: 2026,
-    });
+    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, indexationYear: 2026 });
     expect(r.netPartnerSupport).toBe(927);
     expect(r.indexedNetPartnerSupport).toBe(970);
     expect(r.warnings.some(w => w.includes("2026"))).toBe(true);
   });
 
   it("allows older legal indexation years for historical calculations", () => {
-    const r = calculatePartnerSupport({
-      marriageNBGI: 5548,
-      childShareDuringMarriage: 808,
-      payer: { nbi: 4156 },
-      recipientCurrentNBI: 1763,
-      indexationYear: 2025,
-    });
+    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, indexationYear: 2025 });
     expect(r.indexedNetPartnerSupport).toBe(987);
   });
 
   it("compounds statutory indexation from a source year through the target year", () => {
     const factor = getCumulativeIndexationFactor(2024, 2026);
-    // The amount is already valid in 2024, so only 2025 and 2026 apply.
     expect(factor).toBeCloseTo(1.065 * 1.046, 12);
-
-    const r = calculatePartnerSupport({
-      marriageNBGI: 5548,
-      childShareDuringMarriage: 808,
-      payer: { nbi: 4156 },
-      recipientCurrentNBI: 1763,
-      indexationFromYear: 2024,
-      indexationYear: 2026,
-    });
+    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, indexationFromYear: 2024, indexationYear: 2026 });
     expect(r.indexedNetPartnerSupport).toBe(1033);
     expect(r.warnings.some(w => w.includes("2024") && w.includes("2026"))).toBe(true);
   });
 
   it("rejects a source year without a target year", () => {
-    expect(() => calculatePartnerSupport({
-      marriageNBGI: 5000,
-      payer: { nbi: 4000 },
-      recipientCurrentNBI: 1000,
-      indexationFromYear: 2024,
-    })).toThrow("bronjaar");
+    expect(() => calculatePartnerSupport({ marriageNBGI: 5000, payer: { nbi: 4000 }, recipientCurrentNBI: 1000, indexationFromYear: 2024 })).toThrow("bronjaar");
   });
 
   it("gives child support priority before partner support", () => {
-    const r = calculatePartnerSupport({
-      marriageNBGI: 6000,
-      childShareDuringMarriage: 1000,
-      payer: { nbi: 4000 },
-      recipientCurrentNBI: 1000,
-      payerChildSupportShare: 700,
-    });
+    const r = calculatePartnerSupport({ marriageNBGI: 6000, childShareDuringMarriage: 1000, payer: { nbi: 4000 }, recipientCurrentNBI: 1000, payerChildSupportShare: 700 });
     expect(r.payerRemainingCapacity).toBeLessThan(r.payerCapacityBeforeChildren);
     expect(r.netPartnerSupport).toBe(r.payerRemainingCapacity);
   });
 
   it("supports the optional 45% family route explicitly", () => {
-    const r = calculatePartnerSupport({
-      marriageNBGI: 5000,
-      payer: { nbi: 4000, childCount: 1, isCareParent: true },
-      recipientCurrentNBI: 0,
-      payerCapacityPercentage: 0.45,
-    });
+    const r = calculatePartnerSupport({ marriageNBGI: 5000, payer: { nbi: 4000, childCount: 1, isCareParent: true }, recipientCurrentNBI: 0, payerCapacityPercentage: 0.45 });
     expect(r.capacityMethod).toBe("FORMULA_45");
     expect(r.warnings.some(w => w.includes("45%-gezinsroute"))).toBe(true);
   });
 
   it("does not count KGB as partner-support income", () => {
-    const withKgb = calculatePartnerSupport({
-      marriageNBGI: 5000,
-      payer: { nbi: 4000, kgb: 500 },
-      recipientCurrentNBI: 1000,
-    });
-    const withoutKgb = calculatePartnerSupport({
-      marriageNBGI: 5000,
-      payer: { nbi: 4000 },
-      recipientCurrentNBI: 1000,
-    });
+    const withKgb = calculatePartnerSupport({ marriageNBGI: 5000, payer: { nbi: 4000, kgb: 500 }, recipientCurrentNBI: 1000 });
+    const withoutKgb = calculatePartnerSupport({ marriageNBGI: 5000, payer: { nbi: 4000 }, recipientCurrentNBI: 1000 });
     expect(withKgb.payerCapacityBeforeChildren).toBe(withoutKgb.payerCapacityBeforeChildren);
   });
 });
