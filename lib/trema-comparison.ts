@@ -1,8 +1,8 @@
 /**
  * Read-only comparison helpers for the legacy result and the Trema 2026 audit result.
  *
- * The legacy result remains authoritative. This module only normalises comparable
- * monthly amounts and reports differences; it never selects a production result.
+ * The legacy result remains authoritative. This module only compares values that
+ * have the same meaning in both engines; it never selects a production result.
  */
 
 export type TremaComparisonStatus = "MATCH" | "DIFFERENCE" | "NOT_COMPARABLE";
@@ -12,6 +12,8 @@ export type TremaComparisonMetric = {
   legacyMonthly: number | null;
   tremaMonthly: number | null;
   differenceMonthly: number | null;
+  comparable: boolean;
+  note?: string;
 };
 
 export type TremaComparison = {
@@ -23,11 +25,17 @@ export type TremaComparison = {
   warnings: string[];
 };
 
-const MONTHLY_KEYS = [
-  "payableMonthly",
-  "maximumContributionMonthly",
-  "payerCapacityMonthly",
-  "recipientCapacityMonthly",
+/**
+ * Only the final monthly amount is an apples-to-apples production comparison.
+ * Trema's maximum contribution is payer-limited, while the legacy engine's
+ * totalCapacity is a joint capacity; those values must not be compared as if
+ * they represented the same quantity.
+ */
+const METRICS = [
+  {
+    key: "payableMonthly",
+    note: "Eindbedrag per maand; dit is de primaire vergelijkingsmaatstaf.",
+  },
 ] as const;
 
 const CURRENCY_PRECISION = 100;
@@ -44,12 +52,6 @@ function roundCurrency(value: number): number {
   return Math.round((value + Number.EPSILON) * CURRENCY_PRECISION) / CURRENCY_PRECISION;
 }
 
-/**
- * Compare known monthly result fields without making assumptions about the
- * legacy calculator's complete result shape. Differences are rounded to cents
- * before the comparison status is determined, matching the application's
- * currency precision and avoiding floating-point artefacts.
- */
 export function compareLegacyWithTrema(
   legacyResult: unknown,
   tremaResult: unknown,
@@ -57,7 +59,7 @@ export function compareLegacyWithTrema(
   const legacy = readRecord(legacyResult);
   const trema = readRecord(tremaResult);
   const warnings: string[] = [];
-  const metrics = MONTHLY_KEYS.map((key) => {
+  const metrics = METRICS.map(({ key, note }) => {
     const legacyMonthly = readFiniteNumber(legacy[key]);
     const tremaMonthly = readFiniteNumber(trema[key]);
     return {
@@ -68,19 +70,18 @@ export function compareLegacyWithTrema(
         legacyMonthly !== null && tremaMonthly !== null
           ? roundCurrency(tremaMonthly - legacyMonthly)
           : null,
+      comparable: legacyMonthly !== null && tremaMonthly !== null,
+      note,
     };
   });
 
-  const comparableMetrics = metrics.filter(
-    (metric) => metric.legacyMonthly !== null && metric.tremaMonthly !== null,
-  );
-  const comparable = comparableMetrics.length > 0;
+  const comparableMetrics = metrics.filter((metric) => metric.comparable);
   const missingMetricKeys = metrics
-    .filter((metric) => metric.legacyMonthly === null || metric.tremaMonthly === null)
+    .filter((metric) => !metric.comparable)
     .map((metric) => metric.key);
 
-  if (!comparable) {
-    warnings.push("De legacy- en Trema-uitkomst bevatten geen gemeenschappelijk vergelijkbaar maandbedrag.");
+  if (comparableMetrics.length === 0) {
+    warnings.push("Het legacy- en Trema-resultaat bevatten geen gemeenschappelijk vergelijkbaar maandbedrag.");
     return {
       status: "NOT_COMPARABLE",
       comparable: false,
@@ -91,16 +92,12 @@ export function compareLegacyWithTrema(
     };
   }
 
-  if (missingMetricKeys.length > 0) {
-    warnings.push(`Niet alle vergelijkingsvelden zijn beschikbaar; ${missingMetricKeys.length} veld(en) konden niet worden vergeleken.`);
-  }
-
   const status = comparableMetrics.every((metric) => metric.differenceMonthly === 0)
     ? "MATCH"
     : "DIFFERENCE";
 
   if (status === "DIFFERENCE") {
-    warnings.push("Er is een afwijking tussen de legacy-uitkomst en de Trema-audituitkomst. De legacy-uitkomst blijft leidend.");
+    warnings.push("Het eindbedrag wijkt af tussen de legacy-berekening en de Trema-audit. De legacy-uitkomst blijft leidend.");
   }
 
   return {
