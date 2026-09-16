@@ -16,8 +16,6 @@ describe("Alimenta calculation-engine audit regressions", () => {
     expect(r.totalNeed).toBe(680);
     expect(r.parentResults[0].capacity).toBe(686);
     expect(r.parentResults[1].capacity).toBe(464);
-    // The 2026 report defines the percentage over the table-based eigen
-    // aandeel of the parents in the children's costs, excluding extra costs.
     expect(r.transfers[0].payerIndex).toBe(1);
     expect(r.transfers[0].careDiscount).toBe(102);
     expect(r.transfers[0].payment).toBe(172);
@@ -35,5 +33,28 @@ describe("Alimenta calculation-engine audit regressions", () => {
     expect(getNormSet(2024).needTable[1][0]).toBe(150);
     expect(getNormSet(2025).needTable[1][0]).toBe(200);
     expect(getNormSet(2026).needTable[1][0]).toBe(200);
+  });
+
+  it("uses the selected norm year for both need and capacity", () => {
+    const input = {
+      historicalNBGI: 3000,
+      parents: [
+        { nbi: 2000, careDaysPerWeek: 0 },
+        { nbi: 1000, careDaysPerWeek: 3 },
+      ],
+      children: [{ age: 10, residence: "A" as const }],
+    };
+
+    const r2024 = calculate({ ...input, normYear: 2024 });
+    const r2026 = calculate({ ...input, normYear: 2026 });
+
+    expect(r2024.normYear).toBe(2024);
+    expect(r2026.normYear).toBe(2026);
+    expect(r2024.normVersion).toBe("2024.1");
+    expect(r2026.normVersion).toBe("2026.1");
+    expect(r2024.parentResults.every(p => p.capacityNormYear === 2024)).toBe(true);
+    expect(r2026.parentResults.every(p => p.capacityNormYear === 2026)).toBe(true);
+    expect(r2024.totalNeed).not.toBe(r2026.totalNeed);
+    expect(r2024.totalCapacity).not.toBe(r2026.totalCapacity);
   });
 });
