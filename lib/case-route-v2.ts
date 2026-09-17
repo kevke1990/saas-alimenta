@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { calculatePartnerSupport } from "@/lib/partner-engine";
 import { caseCreateSchema } from "@/lib/case-validation";
 import { buildCombinedAudit } from "@/lib/combined-audit";
+import { resolveChildCostShare } from "@/lib/combined-case-support";
 import { calculationLockMessage, isCaseLockedForCalculation } from "@/lib/case-lock";
 import { applyIncomeFactMappings, buildIncomeFactProvenance, mapApprovedIncomeFacts } from "@/lib/income-fact-provenance";
 import { runCalculationEngineV2 } from "@/lib/calculation-pipeline-v2";
@@ -78,10 +79,9 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
       const recipient = body.data.parents[recipientIndex];
       const payerNbi = Number(childResult.incomeResults?.[payerIndex]?.nbiMonthly ?? payer.nbi) || 0;
       const recipientNbi = Number(childResult.incomeResults?.[recipientIndex]?.nbiMonthly ?? recipient.nbi) || 0;
-      const calculatedShare = childCostShares[payerIndex] || 0;
-      const manualShare = Number(ps.payerChildSupportShare);
-      partnerChildCostShare = Number.isFinite(manualShare) && manualShare >= 0 ? manualShare : calculatedShare;
-      partnerChildCostShareSource = Number.isFinite(manualShare) && manualShare >= 0 ? "MANUAL_OVERRIDE" : "CHILD_CALCULATION";
+      const share = resolveChildCostShare(childResult, payerIndex, ps.payerChildSupportShare);
+      partnerChildCostShare = share.childCostShare;
+      partnerChildCostShareSource = share.source;
       partnerSupport = calculatePartnerSupport({ historicalNBGI: Number(ps.historicalNBGI || body.data.historicalNBGI || 0), historicalChildCosts: Number(ps.historicalChildCosts || childResult.totalNeed || 0), currentChildSupport: partnerChildCostShare, currentRecipientNBI: recipientNbi, currentPayerNBI: payerNbi, payerTaxableIncomeAnnual: Number(ps.payerTaxableIncomeAnnual || payerNbi * 12), payerAow: !!payer.aow, payerIsFamily: !!payer.newPartner?.present && !(payer.newPartner.selfSupporting ?? true), payerHousingCosts: Number(payer.housing?.monthlyCosts || payer.housingCosts || 0), payerMortgageInterestTaxBenefitMonthly: Number(ps.payerMortgageInterestTaxBenefitMonthly || payer.housing?.mortgageInterestTaxBenefitMonthly || 0), payerMortgagePrincipalMonthly: Number(payer.housing?.mortgagePrincipalMonthly || 0), payerOtherNecessaryCosts: Number(payer.specialNecessaryCosts || 0), payerOtherMaintenance: Number(payer.otherMaintenance || 0), payerOtherMaintenanceObligations: Number(ps.payerOtherMaintenanceObligations || 0), payerPensionProvisionMonthly: Number(ps.payerPensionProvisionMonthly || 0), payerCapacityAdjustment: Number(payer.capacityAdjustment || 0), recipientVerdiencapaciteit: Number(ps.recipientVerdiencapaciteit || 0), recipientOtherIncomeMonthly: Number(ps.recipientOtherIncomeMonthly || 0), recipientAssetsIncomeMonthly: Number(ps.recipientAssetsIncomeMonthly || 0), payerOwnHome: payer.housing?.type === "OWNED", incomeComparisonEnabled: !!ps.incomeComparisonEnabled, durationException: ps.durationException || "NONE", useHofnorm: ps.useHofnorm !== false, concreteNeedNet: Number(ps.concreteNeedNet || 0), effectiveDate: body.meta?.effectiveDate });
     }
 
@@ -103,7 +103,7 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
     const updated = await db.$transaction(async tx => {
       const c = await tx.case.update({ where: { id }, data: { name: body.name, data: calculationInput, result: productionResult, status: "CALCULATED", reviewStatus: "INCOMPLETE", reviewedAt: null, approvedAt: null, approvedByUserId: null, calculationVersion: calculation.fingerprint.normVersion, metadata: (body.meta ?? existing.metadata ?? {}) as any } });
       const persisted = await persistCaseCalculationV2({ tx, caseId: id, userId: u.id, calculationInput, productionResult, normVersion: calculation.fingerprint.normVersion, provenance });
-      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, inputHash: persisted.fingerprint.inputHash, resultHash: persisted.fingerprint.resultHash, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: persisted.calculationId, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: CALCULATION_ENGINE_V2, contractVersion: CALCULATION_CONTRACT_VERSION, normVersion: persisted.fingerprint.normVersion, approvedFactIds: requestedFactIds, incomeFactProvenance: factProvenance, partnerChildCostShare: partnerChildCostShare, partnerChildCostShareSource: partnerChildCostShareSource } } });
+      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, inputHash: persisted.fingerprint.inputHash, resultHash: persisted.fingerprint.resultHash, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: persisted.calculationId, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: CALCULATION_ENGINE_V2, contractVersion: CALCULATION_CONTRACT_VERSION, normVersion: persisted.fingerprint.normVersion, approvedFactIds: requestedFactIds, incomeFactProvenance: factProvenance, partnerChildCostShare, partnerChildCostShareSource } } });
       return { c, persisted };
     });
     return NextResponse.json({ ...updated.c, calculation: updated.persisted, appliedIncomeFacts: requestedFactIds.length, incomeFactProvenance: factProvenance });
