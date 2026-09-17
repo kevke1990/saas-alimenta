@@ -83,9 +83,14 @@ export function calculateSupportCapacity(
     };
   }
 
-  // A professional capacity correction adjusts the selected normative result;
-  // it must not silently switch a low-income table calculation to the formula route.
-  const useFormula = effectiveNBI >= options.formulaThreshold || special > 0 || maintenanceCosts > 0;
+  // Kinderalimentatie uses the low-income table until its formula threshold.
+  // Partneralimentatie is different: the Expertgroep uses 60% of the
+  // draagkrachtruimte, including at lower NBI levels. A partner calculation
+  // must therefore never silently fall back to the child-support table.
+  const useFormula = options.supportType === 'PARTNER_SUPPORT'
+    || effectiveNBI >= options.formulaThreshold
+    || special > 0
+    || maintenanceCosts > 0;
   const table = tableCapacity(effectiveNBI, aow, normSet);
   const lowIncomeMinimum = childCount >= 2 ? 50 : 25;
   const base = useFormula
@@ -97,7 +102,7 @@ export function calculateSupportCapacity(
   }
   if (options.supportType === 'PARTNER_SUPPORT') {
     notes.push('Partneralimentatie gebruikt uitsluitend NBI; KGB is niet als inkomen toegevoegd.');
-    notes.push('Kindgerelateerde onderhoudsverplichtingen worden na de basisdraagkracht afzonderlijk in mindering gebracht.');
+    notes.push('Partnerdraagkracht wordt berekend met het 60%-draagkrachtpercentage over de draagkrachtruimte; de kinderalimentatie wordt daarna afzonderlijk in mindering gebracht.');
     if (capacityPercentage === 0.45) notes.push('45%-gezinsroute toegepast omdat de onderhoudsplichtige een gezin onderhoudt en de nieuwe partner niet als volledig zelfredzaam is aangemerkt.');
   } else if (includeKgb) {
     notes.push('KGB is uitsluitend binnen de kinderalimentatie-draagkracht meegenomen.');
