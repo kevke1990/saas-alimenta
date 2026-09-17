@@ -7,39 +7,33 @@ describe('Partneralimentatie engine 1.2.0', () => {
     expect(r.need.hofnormNet).toBe(3110);
     expect(r.need.additionalNeedNet).toBe(2007);
   });
-
   it('keeps KGB out of partner NBI by using the partner capacity engine', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 6000, historicalChildCosts: 1000, currentChildSupport: 861, currentRecipientNBI: 1000, currentPayerNBI: 4000 });
     expect(r.capacity.base).toBe(861);
   });
-
   it('subtracts child support before partner capacity', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 6000, historicalChildCosts: 1000, currentChildSupport: 861, currentRecipientNBI: 1000, currentPayerNBI: 4000 });
     expect(r.capacity.remainingNet).toBe(0);
     expect(r.result.monthlyNet).toBe(0);
   });
-
   it('grosses up a positive net partner amount', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 8000, historicalChildCosts: 0, currentRecipientNBI: 1000, currentPayerNBI: 6000, payerTaxableIncomeAnnual: 72000 });
     expect(r.result.monthlyGross).toBeGreaterThanOrEqual(r.result.monthlyNet);
   });
-
   it('can apply income comparison as a limiting check', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 10000, historicalChildCosts: 0, currentRecipientNBI: 2500, currentPayerNBI: 3000, incomeComparisonEnabled: true });
     expect(r.incomeComparison.applied).toBe(true);
     expect(r.result.limitedBy).toBe('INCOME_COMPARISON');
   });
-
   it('selects the requested historical NormSet for partner capacity and result provenance', () => {
     const current = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 1000, currentPayerNBI: 4000, normYear: 2026 });
     const historical = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 1000, currentPayerNBI: 4000, normYear: 2025 });
     expect(current.normVersion).toBe('2026.1');
     expect(historical.normVersion).toBe('2025.1');
-    expect(historical.capacity.normYear).toBeUndefined();
+    expect(historical.capacity.normYear).toBe(2025);
     expect(historical.capacity.base).not.toBe(current.capacity.base);
     expect(historical.warnings.some(w => w.includes('historische NormSet 2025'))).toBe(true);
   });
-
   it('uses the NormSet year as the default indexation rate when no explicit rate is supplied', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 1000, currentPayerNBI: 4000, normYear: 2025, historicalDate: '2025-01-01', effectiveDate: '2026-01-01' });
     expect(r.result.indexationPct).toBe(0.065);
