@@ -9,7 +9,6 @@ export type CombinedSupportInput = {
   partner: Omit<PartnerSupportInput, "payer" | "recipientCurrentNBI" | "payerChildSupportShare"> & {
     payerIndex: 0 | 1;
     recipientIndex?: 0 | 1;
-    /** Explicit professional override; otherwise the child engine's cost share is used. */
     payerChildSupportShare?: number;
   };
 };
@@ -29,30 +28,20 @@ export type CombinedSupportResult = {
   };
 };
 
-/**
- * Runs child support first and feeds the payer's calculated share in the
- * children's costs into partner support. A supplied share remains available
- * as an explicit professional override for legacy/custom calculations.
- *
- * The fingerprint covers the complete combined result, so the integrated
- * calculation can be persisted as one reproducible snapshot.
- */
 export function calculateCombinedSupport(input: CombinedSupportInput): CombinedSupportResult {
   const childSupport = calculate(input.child);
   const payerIndex = input.partner.payerIndex;
   const recipientIndex = input.partner.recipientIndex ?? (payerIndex === 0 ? 1 : 0);
-
   const payerParent = input.child.parents[payerIndex];
   const recipientParent = input.child.parents[recipientIndex];
   if (!payerParent || !recipientParent) throw new Error("Ongeldige ouderindex voor partneralimentatie.");
 
-  const calculatedChildCostShare = Number(childSupport.parentResults[payerIndex]?.allocatedNeed ?? 0);
+  const calculatedChildCostShare = Number(childSupport.parentResults.find(p => Number(p.parentIndex) === payerIndex)?.allocatedNeed ?? 0);
   const manualOverride = input.partner.payerChildSupportShare;
   const hasManualOverride = manualOverride !== undefined;
   const childCostShare = hasManualOverride ? Math.max(0, Number(manualOverride) || 0) : calculatedChildCostShare;
-
-  const payerNBI = Number(childSupport.parentResults[payerIndex]?.nbi ?? payerParent.nbi);
-  const recipientNBI = Number(childSupport.parentResults[recipientIndex]?.nbi ?? recipientParent.nbi);
+  const payerNBI = Number(childSupport.parentResults.find(p => Number(p.parentIndex) === payerIndex)?.nbi ?? payerParent.nbi);
+  const recipientNBI = Number(childSupport.parentResults.find(p => Number(p.parentIndex) === recipientIndex)?.nbi ?? recipientParent.nbi);
 
   const partnerSupport = calculatePartnerSupport({
     ...input.partner,
@@ -71,10 +60,12 @@ export function calculateCombinedSupport(input: CombinedSupportInput): CombinedS
       recipientIndex,
       childCostShare: Math.round(childCostShare),
       childCostShareSource: hasManualOverride ? "MANUAL_OVERRIDE" as const : "CHILD_CALCULATION" as const,
-      childSupportPaymentTotal: Math.round(childSupport.parentResults[payerIndex]?.paymentTotal ?? 0),
+      childSupportPaymentTotal: Math.round(childSupport.parentResults.find(p => Number(p.parentIndex) === payerIndex)?.paymentTotal ?? 0),
     },
   };
 
-  const fingerprint = fingerprintCalculation(input, resultWithoutFingerprint, partnerSupport.normVersion);
+  const snapshotInput = JSON.parse(JSON.stringify(input));
+  const snapshotResult = JSON.parse(JSON.stringify(resultWithoutFingerprint));
+  const fingerprint = fingerprintCalculation(snapshotInput, snapshotResult, partnerSupport.normVersion);
   return { ...resultWithoutFingerprint, fingerprint };
 }
