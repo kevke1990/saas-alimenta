@@ -15,7 +15,7 @@ export function resolveChildCostShare(
   payerIndex: 0 | 1,
   manualOverride?: unknown,
 ): ChildCostShareResolution {
-  const parent = childResult.parentResults?.[payerIndex];
+  const parent = childResult.parentResults?.find(candidate => Number(candidate.parentIndex) === payerIndex);
   const calculated = Number(parent?.allocatedNeed ?? 0);
   const override = Number(manualOverride);
   const hasOverride = manualOverride !== undefined && Number.isFinite(override) && override >= 0;
