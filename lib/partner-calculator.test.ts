@@ -47,7 +47,7 @@ describe("partner-support engine", () => {
   });
 
   it("allows older legal indexation years for historical calculations", () => {
-    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1000, indexationYear: 2025 });
+    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, indexationYear: 2025 });
     expect(r.indexedNetPartnerSupport).toBe(987);
   });
 
