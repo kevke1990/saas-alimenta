@@ -2,7 +2,7 @@
 
 ## Current architecture
 
-The repository has one central production calculation path in `lib/calculator.ts`, shared capacity logic in `lib/support-engine.ts`, income normalization in `lib/income-engine.ts`, partner support logic in `lib/partner-calculator.ts`, and versioned norm data in `lib/norms.ts`. The Prisma schema already contains `Calculation`, `ProfessionalOverride`, `NormVersion`, case review status and JSON result/input snapshots.
+The repository has one central production calculation path in `lib/calculator.ts`, shared capacity logic in `lib/support-engine.ts`, income normalization in `lib/income-engine.ts`, partner support logic in `lib/partner-engine.ts` / `lib/partner-calculator.ts`, and versioned norm data in `lib/norms.ts`. The Prisma schema already contains `Calculation`, `ProfessionalOverride`, `NormVersion`, case review status and JSON result/input snapshots.
 
 The UI/PDF/API must remain consumers of the calculation result; they must not independently calculate alimentatie values.
 
@@ -23,23 +23,42 @@ Therefore the semantic flow is:
 
 Regression tests protect this distinction and the insufficient-capacity handling.
 
+## Integrated child + partner calculation
+
+The production case PATCH/recalculation route now distinguishes two different child-support amounts:
+
+- `childSupportByParent`: the actual transfer/payment amount after the child-support calculation, including the effect of care discount;
+- `childCostShareByParent`: the parent's allocated share in the children's costs before treating the transfer as the payment amount.
+
+For partneralimentatie, the second value is the relevant priority amount. The 2026 Expertgroep states that child support has priority and that, after the child-support draagkrachtvergelijking, the parent's share in the costs of the children is deducted from the partner-support capacity. The case route therefore no longer feeds the final transfer/payment amount into the partner calculation.
+
+The resolver in `lib/combined-case-support.ts` makes this distinction explicit and records whether the value came from the child calculation or from an explicit professional override. The integrated case result persists both the cost share and the payment amounts, so reports can explain the difference instead of conflating them.
+
 ## Capacity and NormSets
 
-The production child-support path now resolves `normYear` (default 2026) through `getNormSet()` and passes the selected NormSet into the shared capacity engine. Child need tables, WSF periods, care-discount calculations and parent capacity therefore use the selected historical year rather than silently falling back to 2026.
+The production child-support path resolves `normYear` (default 2026) through `getNormSet()` and passes the selected NormSet into the shared capacity engine. Child need tables, WSF periods, care-discount calculations and parent capacity therefore use the selected historical year rather than silently falling back to 2026.
 
-For NBI above the applicable 2026 table threshold, the child-support formula is:
+For NBI above the applicable 2026 child-support formula threshold, the formula is:
 
 `70% × [NBI − (0.30 × NBI + €1,365)]`
 
 The lower-income ranges use the official fixed table amounts. Actual housing above the 30% budget must not be silently deducted merely because it was entered.
 
-Partner support was also moved to NormSet selection in engine version 2.1.0. Historical partner calculations expose both `normYear` and `normVersion`, while statutory indexation remains a separate input/output concern.
+The shared partner-capacity engine uses the partner route separately from the child-support table and applies the 60% partner-support percentage over the draagkrachtruimte. KGB is not added to partner-support NBI. The current rich `partner-engine.ts` production route remains a 2026-norm implementation and must be versioned explicitly before historical partner calculations are exposed as production functionality.
 
 ## Norm versioning
 
 `lib/norms.ts` exposes a `NORM_SETS` registry for 2024, 2025 and 2026 containing source metadata, need tables, capacity thresholds and care-discount rules. Existing 2026 exports remain backward compatible for older callers.
 
-The production child and partner engines now select these NormSets dynamically. Regression coverage includes historical minor-child calculations, historical parent capacity, historical WSF calculations and separation of historical NormSet selection from statutory indexation.
+The production child engine selects these NormSets dynamically. The standalone `partner-calculator.ts` also supports historical NormSets; the richer `partner-engine.ts` still has a fixed 2026 norm version and is therefore an explicit remaining integration item.
+
+Regression coverage includes historical minor-child calculations, historical parent capacity, historical WSF calculations, integrated child-cost-share priority, professional override provenance and separation of historical NormSet selection from statutory indexation.
+
+## Snapshot and auditability
+
+Combined support calculations expose an immutable fingerprint containing the calculation contract, norm version, input hash and result hash. The case persistence path stores the integrated result in the same recalculation transaction as the case update and audit log.
+
+The persisted combined result intentionally keeps both the child-cost share used for partner priority and the actual child-support payment. This is required for reproducibility and professional explanation of a combined calculation.
 
 ## Known remaining audit items
 
@@ -47,7 +66,8 @@ The production child and partner engines now select these NormSets dynamically. 
 - `historicalNBGI` remains a scalar override. A complete historical period object should eventually capture the relevant historical NBGI, KGB treatment, calculation/ingangsdatum and provenance together.
 - calculation rounding is mostly whole-euro rounding in the engine; a centralized documented intermediate/final rounding policy is still required.
 - immutable snapshots exist in the Prisma model conceptually, but the full normalized-input/intermediate-result snapshot contract must be enforced at persistence time.
-- partneralimentatie and combined child/partner capacity still need a full end-to-end audit against the 2024/2025/2026 reports, including the exact treatment of recipient resources, earning capacity, and the Hofnorm route.
+- `partner-engine.ts` needs the same explicit 2024/2025/2026 NormSet selection already present in the child engine before historical partner calculations are treated as production-ready.
+- the partneralimentatie engine still needs a full end-to-end audit against chapter 3.3 and chapter 4.4 of the 2026 report, including recipient resources, earning capacity, the Hofnorm route, income comparison, brutering and duration.
 - actual-housing professional overrides need a complete typed override path and report/audit presentation.
 
 These items should be completed against the corresponding official report section and regression cases rather than guessed or silently implemented as legal rules.
