@@ -31,4 +31,15 @@ describe("integrated child cost share", () => {
   it("handles a missing allocated share deterministically", () => {
     expect(resolveChildCostShare({ parentResults: [{}] }, 0).childCostShare).toBe(0);
   });
+
+  it("maps the share by parentIndex even when result order is reversed", () => {
+    const reversed = {
+      parentResults: [
+        { parentIndex: 1, allocatedNeed: 146 },
+        { parentIndex: 0, allocatedNeed: 734 },
+      ],
+    };
+    expect(resolveChildCostShare(reversed, 0).childCostShare).toBe(734);
+    expect(resolveChildCostShare(reversed, 1).childCostShare).toBe(146);
+  });
 });
