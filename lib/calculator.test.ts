@@ -42,6 +42,41 @@ describe("Alimenta Pro calculation engine 1.3.0", () => {
     expect(r.childResults[0].need + r.childResults[1].need).toBe(1145);
   });
 
+  it("uses the selected historical NormSet for minor need and parent capacity", () => {
+    const r2024 = calculate({
+      normYear: 2024,
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+    });
+    const r2026 = calculate({
+      normYear: 2026,
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+    });
+
+    expect(r2024.normVersion).toBe("2024.1");
+    expect(r2024.childResults[0].needSource).toBe("NEED_TABLE_2024");
+    expect(r2024.totalNeed).not.toBe(r2026.totalNeed);
+    expect(r2024.parentResults[0].capacityNormYear).toBe(2024);
+    expect(r2024.parentResults[1].capacityNormYear).toBe(2024);
+    expect(r2024.parentResults[0].capacity).not.toBe(r2026.parentResults[0].capacity);
+  });
+
+  it("keeps statutory indexation independent from the historical calculation NormSet", () => {
+    const r = calculate({
+      normYear: 2024,
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+      indexation: 0.046,
+    });
+
+    expect(r.normVersion).toBe("2024.1");
+    expect(r.indexation).toBe(0.046);
+  });
+
   it("supports a 50/50 calculation as a net transfer", () => {
     const r = calculate({
       historicalNBGI: 5000,
