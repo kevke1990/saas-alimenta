@@ -44,7 +44,7 @@ describe("combined child + partner support engine", () => {
 
     expect(r.childSupport.capacitySufficient).toBe(false);
     expect(r.integration.childCostShare).toBe(r.childSupport.parentResults[1].allocatedNeed);
-    expect(r.integration.childCostShare).not.toBe(r.integration.childSupportPaymentTotal);
+    expect(r.integration.childSupportPaymentTotal).toBeLessThanOrEqual(r.integration.childCostShare);
     expect(r.partnerSupport.payerRemainingCapacity).toBe(0);
     expect(r.partnerSupport.netPartnerSupport).toBe(0);
   });
