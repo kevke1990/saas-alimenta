@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculatePartnerSupport } from './partner-engine';
 
-describe('Partneralimentatie engine 1.1.1', () => {
+describe('Partneralimentatie engine 1.2.0', () => {
   it('calculates hofnorm from historical NBGI minus child costs', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 6063, historicalChildCosts: 880, currentRecipientNBI: 1103, currentPayerNBI: 5000 });
     expect(r.need.hofnormNet).toBe(3110);
@@ -29,9 +29,24 @@ describe('Partneralimentatie engine 1.1.1', () => {
     expect(r.incomeComparison.applied).toBe(true);
     expect(r.result.limitedBy).toBe('INCOME_COMPARISON');
   });
+
+  it('selects the requested historical NormSet for partner capacity and result provenance', () => {
+    const current = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 1000, currentPayerNBI: 4000, normYear: 2026 });
+    const historical = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 1000, currentPayerNBI: 4000, normYear: 2025 });
+    expect(current.normVersion).toBe('2026.1');
+    expect(historical.normVersion).toBe('2025.1');
+    expect(historical.capacity.normYear).toBeUndefined();
+    expect(historical.capacity.base).not.toBe(current.capacity.base);
+    expect(historical.warnings.some(w => w.includes('historische NormSet 2025'))).toBe(true);
+  });
+
+  it('uses the NormSet year as the default indexation rate when no explicit rate is supplied', () => {
+    const r = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 1000, currentPayerNBI: 4000, normYear: 2025, historicalDate: '2025-01-01', effectiveDate: '2026-01-01' });
+    expect(r.result.indexationPct).toBe(0.065);
+  });
 });
 
-describe('Complexe PAL 1.1.1', () => {
+describe('Complexe PAL 1.2.0', () => {
   it('averages multi-year business profit instead of using one exceptional year', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 0, currentPayerNBI: 7000, payerBusinessProfitYears: [12000, 24000, 18000] });
     expect(r.incomeAnalysis.payerBusinessAverageMonthly).toBe(1500);
