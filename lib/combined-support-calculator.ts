@@ -28,6 +28,24 @@ export type CombinedSupportResult = {
   };
 };
 
+/** Normalize a calculation snapshot so insignificant floating-point noise can
+ * never change the identity of an otherwise identical calculation. */
+function normalizeSnapshot(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeSnapshot);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, child]) => child !== undefined)
+        .map(([key, child]) => [key, normalizeSnapshot(child)])
+    );
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return null;
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+  }
+  return value;
+}
+
 export function calculateCombinedSupport(input: CombinedSupportInput): CombinedSupportResult {
   const childSupport = calculate(input.child);
   const payerIndex = input.partner.payerIndex;
@@ -64,8 +82,8 @@ export function calculateCombinedSupport(input: CombinedSupportInput): CombinedS
     },
   };
 
-  const snapshotInput = JSON.parse(JSON.stringify(input));
-  const snapshotResult = JSON.parse(JSON.stringify(resultWithoutFingerprint));
+  const snapshotInput = normalizeSnapshot(input);
+  const snapshotResult = normalizeSnapshot(resultWithoutFingerprint);
   const fingerprint = fingerprintCalculation(snapshotInput, snapshotResult, partnerSupport.normVersion);
   return { ...resultWithoutFingerprint, fingerprint };
 }
