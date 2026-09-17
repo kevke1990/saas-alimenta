@@ -83,10 +83,6 @@ export function calculateSupportCapacity(
     };
   }
 
-  // Kinderalimentatie uses the low-income table until its formula threshold.
-  // Partneralimentatie is different: the Expertgroep uses 60% of the
-  // draagkrachtruimte, including at lower NBI levels. A partner calculation
-  // must therefore never silently fall back to the child-support table.
   const useFormula = options.supportType === 'PARTNER_SUPPORT'
     || effectiveNBI >= options.formulaThreshold
     || special > 0
