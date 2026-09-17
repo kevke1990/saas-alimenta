@@ -12,6 +12,18 @@ describe("partner-support engine", () => {
     expect(r.netPartnerSupport).toBe(927);
   });
 
+  it("uses the 60% partner formula below the child-support table threshold", () => {
+    const r = calculatePartnerSupport({
+      marriageNBGI: 5000,
+      payer: { nbi: 2000 },
+      recipientCurrentNBI: 0,
+    });
+
+    // 60% × [2000 - (30% × 2000 + 1365)] = 21.
+    expect(r.payerCapacityBeforeChildren).toBe(21);
+    expect(r.capacityMethod).toBe("FORMULA_60");
+  });
+
   it("uses the requested historical NormSet for payer capacity", () => {
     const r2025 = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, normYear: 2025 });
     const r2026 = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, normYear: 2026 });
@@ -35,7 +47,7 @@ describe("partner-support engine", () => {
   });
 
   it("allows older legal indexation years for historical calculations", () => {
-    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, indexationYear: 2025 });
+    const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1000, indexationYear: 2025 });
     expect(r.indexedNetPartnerSupport).toBe(987);
   });
 
