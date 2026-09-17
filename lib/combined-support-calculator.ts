@@ -1,5 +1,6 @@
 import { calculate, type CaseInput } from "./calculator";
 import { calculatePartnerSupport, type PartnerSupportInput, type PartnerSupportResult } from "./partner-calculator";
+import { CALCULATION_CONTRACT_VERSION, fingerprintCalculation, type CalculationFingerprint } from "./calculation-engine-v2";
 
 export const COMBINED_SUPPORT_ENGINE_VERSION = "1.0.0";
 
@@ -15,6 +16,8 @@ export type CombinedSupportInput = {
 
 export type CombinedSupportResult = {
   engineVersion: string;
+  contractVersion: string;
+  fingerprint: CalculationFingerprint;
   childSupport: ReturnType<typeof calculate>;
   partnerSupport: PartnerSupportResult;
   integration: {
@@ -30,6 +33,9 @@ export type CombinedSupportResult = {
  * Runs child support first and feeds the payer's calculated share in the
  * children's costs into partner support. A supplied share remains available
  * as an explicit professional override for legacy/custom calculations.
+ *
+ * The fingerprint covers the complete combined result, so the integrated
+ * calculation can be persisted as one reproducible snapshot.
  */
 export function calculateCombinedSupport(input: CombinedSupportInput): CombinedSupportResult {
   const childSupport = calculate(input.child);
@@ -55,16 +61,20 @@ export function calculateCombinedSupport(input: CombinedSupportInput): CombinedS
     payerChildSupportShare: childCostShare,
   });
 
-  return {
+  const resultWithoutFingerprint = {
     engineVersion: COMBINED_SUPPORT_ENGINE_VERSION,
+    contractVersion: CALCULATION_CONTRACT_VERSION,
     childSupport,
     partnerSupport,
     integration: {
       payerIndex,
       recipientIndex,
       childCostShare: Math.round(childCostShare),
-      childCostShareSource: hasManualOverride ? "MANUAL_OVERRIDE" : "CHILD_CALCULATION",
+      childCostShareSource: hasManualOverride ? "MANUAL_OVERRIDE" as const : "CHILD_CALCULATION" as const,
       childSupportPaymentTotal: Math.round(childSupport.parentResults[payerIndex]?.paymentTotal ?? 0),
     },
   };
+
+  const fingerprint = fingerprintCalculation(input, resultWithoutFingerprint, partnerSupport.normVersion);
+  return { ...resultWithoutFingerprint, fingerprint };
 }
