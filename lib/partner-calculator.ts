@@ -123,7 +123,7 @@ export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupp
     hofNormBase: routeResult.need.availableForPartners,
     grossNeedBeforeOwnIncome: routeResult.need.indexedNet,
     recipientCurrentNBI: round(input.recipientCurrentNBI),
-    recipientEarningCapacity: round(input.recipientEarningCapacity),
+    recipientEarningCapacity: round(num(input.recipientEarningCapacity)),
     recipientResources: round(recipientResources),
     additionalNeed: routeResult.need.additionalNeedNet,
     payerCapacityBeforeChildren: routeResult.capacity.base,
