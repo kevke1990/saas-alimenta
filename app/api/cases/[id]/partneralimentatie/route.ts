@@ -4,6 +4,7 @@ import { db } from '@/lib/db';
 import { calculatePartnerSupport } from '@/lib/partner-engine';
 import { calculatePartnerCapacity } from '@/lib/partner-capacity';
 import { calculationFingerprint } from '@/lib/calculation-snapshot';
+import { resolveChildCostShare } from '@/lib/combined-case-support';
 
 function partnerAnalysis(body: Record<string, any>) {
   const hasPartnerInput = body.partnerCapacityMode || body.partnerNetMonthlyIncome !== undefined || Array.isArray(body.partnerCareObligations);
@@ -19,37 +20,98 @@ function partnerAnalysis(body: Record<string, any>) {
   });
 }
 
+function latestChildCostShare(
+  calculations: Array<{ result: unknown }>,
+  payerIndex: 0 | 1,
+  manualOverride: unknown,
+) {
+  const latest = calculations.find(x => {
+    const result = x.result as any;
+    return result && typeof result === 'object' && result.type !== 'PARTNER_SUPPORT';
+  });
+  if (!latest) return null;
+
+  const result = latest.result as any;
+  const childResult = result?.combined?.childCostShareByParent
+    ? {
+        parentResults: [0, 1].map(parentIndex => ({
+          parentIndex,
+          allocatedNeed: Number(result.combined.childCostShareByParent[parentIndex] ?? 0),
+        })),
+      }
+    : result;
+
+  return resolveChildCostShare(childResult, payerIndex, manualOverride);
+}
+
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: user.id }, include: { calculations: { orderBy: { createdAt: 'desc' }, take: 10 } } });
+  const c = await db.case.findFirst({
+    where: { id, userId: user.id },
+    include: { calculations: { orderBy: { createdAt: 'desc' }, take: 10 } },
+  });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
+
   const ka = c.calculations.find(x => x.result && typeof x.result === 'object' && (x.result as any).type !== 'PARTNER_SUPPORT');
   const rr: any = ka?.result || {};
-  const suggestedChildSupport = Array.isArray(rr.transfers) ? rr.transfers.reduce((s: number, t: any) => s + Number(t.payment || 0), 0) : 0;
-  return NextResponse.json({ suggestedChildSupport, latestCalculation: ka ? { id: ka.id, engineVersion: ka.engineVersion, createdAt: ka.createdAt } : null });
+  const suggestedChildSupport = rr.combined?.childSupportByParent
+    ? rr.combined.childSupportByParent.reduce((s: number, value: unknown) => s + Number(value || 0), 0)
+    : Array.isArray(rr.transfers)
+      ? rr.transfers.reduce((s: number, t: any) => s + Number(t.payment || 0), 0)
+      : 0;
+  const childCostShareByParent = rr.combined?.childCostShareByParent ?? null;
+
+  return NextResponse.json({
+    suggestedChildSupport,
+    childCostShareByParent,
+    latestCalculation: ka ? { id: ka.id, engineVersion: ka.engineVersion, createdAt: ka.createdAt } : null,
+  });
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: user.id } });
+  const c = await db.case.findFirst({
+    where: { id, userId: user.id },
+    include: { calculations: { orderBy: { createdAt: 'desc' }, take: 10 } },
+  });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
+
   try {
     const body = await req.json();
     const partnerCapacity = partnerAnalysis(body);
     const uncoveredPartnerCare = partnerCapacity?.careObligationsMonthly
       ? Math.max(0, partnerCapacity.careObligationsMonthly - partnerCapacity.allocatedCapacityMonthly)
       : 0;
+
+    const payerIndexValue = Number(body.payerIndex);
+    const payerIndex: 0 | 1 | null = payerIndexValue === 0 || payerIndexValue === 1 ? payerIndexValue : null;
+    const manualChildSupport = body.currentChildSupport;
+    const resolvedChildCostShare = payerIndex === null
+      ? null
+      : latestChildCostShare(c.calculations, payerIndex, manualChildSupport);
+
     const calculationInput = {
       ...body,
+      ...(resolvedChildCostShare
+        ? {
+            currentChildSupport: resolvedChildCostShare.childCostShare,
+            childCostShareSource: resolvedChildCostShare.source,
+          }
+        : {}),
       payerOtherMaintenanceObligations: Number(body.payerOtherMaintenanceObligations || 0) + uncoveredPartnerCare,
     };
+
     const result = calculatePartnerSupport(calculationInput);
     const persistedResult = {
       type: 'PARTNER_SUPPORT',
       fingerprint: calculationFingerprint(calculationInput, result.engineVersion, result.normVersion),
       ...result,
+      ...(resolvedChildCostShare ? {
+        childCostShare: resolvedChildCostShare.childCostShare,
+        childCostShareSource: resolvedChildCostShare.source,
+      } : {}),
       ...(partnerCapacity ? {
         partnerCapacity: {
           ...partnerCapacity,
@@ -64,15 +126,41 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       } : {}),
     };
     const fingerprint = persistedResult.fingerprint;
-    await db.calculation.create({ data: {
-      caseId: id,
-      engineVersion: result.engineVersion,
-      normVersion: result.normVersion,
-      inputSnapshot: calculationInput,
-      result: persistedResult,
-    }});
-    await db.case.update({ where: { id }, data: { calculationVersion: result.engineVersion, metadata: { ...(typeof c.metadata === 'object' && c.metadata ? c.metadata as object : {}), partnerInput: calculationInput }, result: { ...(typeof c.result === 'object' && c.result ? c.result as object : {}), partnerSupport: persistedResult } } });
-    return NextResponse.json({ ...result, ...(partnerCapacity ? { partnerCapacity: persistedResult.partnerCapacity } : {}), fingerprint });
+
+    await db.calculation.create({
+      data: {
+        caseId: id,
+        engineVersion: result.engineVersion,
+        normVersion: result.normVersion,
+        inputSnapshot: calculationInput,
+        result: persistedResult,
+      },
+    });
+
+    await db.case.update({
+      where: { id },
+      data: {
+        calculationVersion: result.engineVersion,
+        metadata: {
+          ...(typeof c.metadata === 'object' && c.metadata ? c.metadata as object : {}),
+          partnerInput: calculationInput,
+        },
+        result: {
+          ...(typeof c.result === 'object' && c.result ? c.result as object : {}),
+          partnerSupport: persistedResult,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      ...result,
+      ...(resolvedChildCostShare ? {
+        childCostShare: resolvedChildCostShare.childCostShare,
+        childCostShareSource: resolvedChildCostShare.source,
+      } : {}),
+      ...(partnerCapacity ? { partnerCapacity: persistedResult.partnerCapacity } : {}),
+      fingerprint,
+    });
   } catch (e: any) {
     return new NextResponse(e?.message || 'Partneralimentatie berekening mislukt.', { status: 400 });
   }
