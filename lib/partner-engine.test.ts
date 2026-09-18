@@ -62,3 +62,27 @@ describe('Complexe PAL 1.2.0', () => {
     expect(r.incomeAnalysis.assetsIncomePayer).toBe(500);
   });
 });
+
+
+describe("PAL historical regression fixtures 2024/2025/2026", () => {
+  const base = {
+    historicalNBGI: 5548,
+    historicalChildCosts: 808,
+    currentRecipientNBI: 1763,
+    currentPayerNBI: 4156,
+    currentChildSupport: 808,
+  };
+
+  it.each([
+    [2024, "2024.1", 984, 176],
+    [2025, "2025.1", 960, 152],
+    [2026, "2026.1", 927, 119],
+  ] as const)("locks the historical PAL capacity fixture for %s", (year, version, capacity, remaining) => {
+    const r = calculatePartnerSupport({ ...base, normYear: year });
+    expect(r.normVersion).toBe(version);
+    expect(r.capacity.base).toBe(capacity);
+    expect(r.capacity.childSupportShare).toBe(808);
+    expect(r.capacity.remainingNet).toBe(remaining);
+    expect(r.result.monthlyNet).toBe(remaining);
+  });
+});
