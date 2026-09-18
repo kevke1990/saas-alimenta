@@ -12,6 +12,21 @@ describe("partner-support engine", () => {
     expect(r.netPartnerSupport).toBe(927);
   });
 
+  it("adds substantiated earning capacity to current NBI when determining remaining need", () => {
+    const r = calculatePartnerSupport({
+      marriageNBGI: 5548,
+      childShareDuringMarriage: 808,
+      payer: { nbi: 4156 },
+      recipientCurrentNBI: 1763,
+      recipientEarningCapacity: 500,
+    });
+
+    // 2844 hofnorm behoefte - 1763 current NBI - 500 earning capacity = 581.
+    expect(r.recipientResources).toBe(2263);
+    expect(r.additionalNeed).toBe(581);
+    expect(r.netPartnerSupport).toBe(581);
+  });
+
   it("uses the 60% partner formula below the child-support table threshold", () => {
     const r = calculatePartnerSupport({
       marriageNBGI: 5000,
