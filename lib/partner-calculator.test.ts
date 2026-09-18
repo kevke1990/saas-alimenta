@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculatePartnerSupport } from "./partner-calculator";
 import { getCumulativeIndexationFactor } from "./indexation";
 
-describe("partner-support engine", () => {
+describe("partner-support engine 2.2.0", () => {
   it("applies the 60% Hofnorm after the child-cost share", () => {
     const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763 });
     expect(r.normVersion).toBe("2026.1");
