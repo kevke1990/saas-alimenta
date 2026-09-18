@@ -2,7 +2,7 @@ import { calculatePartnerSupportCapacity, type SupportCapacityInput } from "./su
 import { getIndexationFactor, getNormSet, type NormYear } from "./norms";
 import { getCumulativeIndexationFactor } from "./indexation";
 
-export const PARTNER_ENGINE_VERSION = "2.1.0";
+export const PARTNER_ENGINE_VERSION = "2.2.0";
 
 export type PartnerSupportInput = {
   marriageNBGI: number;
