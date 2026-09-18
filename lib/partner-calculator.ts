@@ -13,13 +13,9 @@ export type PartnerSupportInput = {
   payerChildSupportShare?: number;
   payerOtherPartnerSupport?: number;
   payerCapacityPercentage?: 0.6 | 0.45;
-  /** Norm year used for the complete partner-support calculation. */
   normYear?: NormYear;
-  /** Explicit manual factor for legacy/custom agreements. */
   indexationFactor?: number;
-  /** Single legal indexation year; applies that year's statutory factor. */
   indexationYear?: number;
-  /** Source year when a historical amount is compounded through indexationYear. */
   indexationFromYear?: number;
 };
 
@@ -49,7 +45,6 @@ export type PartnerSupportResult = {
 const num = (v: unknown) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
 const round = (v: number) => Math.round(Math.max(0, v) + 1e-9);
 
-/** Partner-alimony calculation using the selected historical NormSet. */
 export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupportResult {
   if (!Number.isFinite(input.marriageNBGI) || input.marriageNBGI < 0) throw new Error("NBGI tijdens huwelijk is ongeldig.");
   if (!Number.isFinite(input.recipientCurrentNBI) || input.recipientCurrentNBI < 0) throw new Error("Huidig NBI van de onderhoudsgerechtigde is ongeldig.");
@@ -62,8 +57,13 @@ export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupp
   const childShare = num(input.childShareDuringMarriage);
   const hofNormBase = Math.max(0, marriageNBGI - childShare);
   const grossNeed = round(hofNormBase * 0.60);
+  const recipientCurrentNBI = num(input.recipientCurrentNBI);
   const recipientCapacity = num(input.recipientEarningCapacity);
-  const resources = Math.max(num(input.recipientCurrentNBI), recipientCapacity);
+  // The 2026 report treats earning capacity as additional capacity to earn,
+  // not as an alternative to current income. See §3.3 and the worked example
+  // in chapter 5. The resources available to meet need are therefore current
+  // NBI plus any substantiated earning capacity.
+  const resources = recipientCurrentNBI + recipientCapacity;
   const additionalNeed = Math.max(0, grossNeed - resources);
 
   const payerCapacity = calculatePartnerSupportCapacity({
@@ -87,7 +87,7 @@ export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupp
   if (normYear !== 2026) warnings.push(`Historische NormSet ${normSet.version} toegepast op de partneralimentatie-berekening.`);
   if (input.indexationFromYear !== undefined && input.indexationYear !== undefined && input.indexationFactor === undefined) warnings.push(`Wettelijke indexering samengesteld van ${input.indexationFromYear} naar ${input.indexationYear} toegepast.`);
   else if (input.indexationYear !== undefined && input.indexationFactor === undefined) warnings.push(`Wettelijke indexering voor ${input.indexationYear} toegepast.`);
-  if (recipientCapacity > 0) warnings.push("Verdiencapaciteit van de onderhoudsgerechtigde is als mogelijke eigen bron meegenomen; onderbouwing blijft vereist.");
+  if (recipientCapacity > 0) warnings.push("Verdiencapaciteit van de onderhoudsgerechtigde is als aanvullende bron op het huidige NBI meegenomen; onderbouwing blijft vereist.");
   if (input.payerCapacityPercentage === 0.45) warnings.push("45%-gezinsroute toegepast. Deze route is niet automatisch; de concrete gezinssituatie moet worden onderbouwd.");
   if (additionalNeed === 0) warnings.push("Geen aanvullende behoefte na aftrek van het huidige inkomen/verdiencapaciteit.");
   if (remaining < additionalNeed) warnings.push("De draagkracht van de onderhoudsplichtige beperkt de bijdrage tot onder de aanvullende behoefte.");
@@ -100,7 +100,7 @@ export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupp
     childShareDuringMarriage: round(childShare),
     hofNormBase: round(hofNormBase),
     grossNeedBeforeOwnIncome: grossNeed,
-    recipientCurrentNBI: round(input.recipientCurrentNBI),
+    recipientCurrentNBI: round(recipientCurrentNBI),
     recipientEarningCapacity: round(recipientCapacity),
     recipientResources: round(resources),
     additionalNeed: round(additionalNeed),
