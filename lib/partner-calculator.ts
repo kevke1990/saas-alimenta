@@ -99,6 +99,18 @@ export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupp
 
   const factor = indexationFactor(input);
   const indexed = round(routeResult.result.monthlyNet * factor);
+  const warnings = [...routeResult.warnings];
+  if (normYear !== 2026 && !warnings.some(w => w.includes(normYear.toString()))) {
+    warnings.push(`Historische NormSet ${normYear} toegepast op de partneralimentatie-berekening.`);
+  }
+  if (input.indexationFromYear !== undefined && input.indexationYear !== undefined && input.indexationFactor === undefined) {
+    warnings.push(`Wettelijke indexering samengesteld van ${input.indexationFromYear} naar ${input.indexationYear} toegepast.`);
+  } else if (input.indexationYear !== undefined && input.indexationFactor === undefined) {
+    warnings.push(`Wettelijke indexering voor ${input.indexationYear} toegepast.`);
+  }
+  if (input.payerCapacityPercentage === 0.45 && !warnings.some(w => w.includes("45%-gezinsroute"))) {
+    warnings.push("45%-gezinsroute toegepast. Deze route is niet automatisch; de concrete gezinssituatie moet worden onderbouwd.");
+  }
   const recipientResources = routeResult.need.ownIncome + routeResult.need.earningCapacity;
   const capacityMethod = input.payerCapacityPercentage === 0.45 ? "FORMULA_45" : "FORMULA_60";
 
@@ -122,6 +134,6 @@ export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupp
     netPartnerSupport: routeResult.result.monthlyNet,
     indexedNetPartnerSupport: indexed,
     capacityMethod,
-    warnings: routeResult.warnings,
+    warnings,
   };
 }
