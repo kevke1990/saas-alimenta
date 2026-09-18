@@ -100,8 +100,8 @@ export function calculatePartnerSupport(input: PartnerSupportInput): PartnerSupp
   const factor = indexationFactor(input);
   const indexed = round(routeResult.result.monthlyNet * factor);
   const warnings = [...routeResult.warnings];
-  if (normYear !== 2026 && !warnings.some(w => w.includes(normYear.toString()))) {
-    warnings.push(`Historische NormSet ${normYear} toegepast op de partneralimentatie-berekening.`);
+  if (normYear !== 2026 && !warnings.some(w => w.includes(routeResult.normVersion))) {
+    warnings.push(`Historische NormSet ${normYear} (${routeResult.normVersion}) toegepast op de partneralimentatie-berekening.`);
   }
   if (input.indexationFromYear !== undefined && input.indexationYear !== undefined && input.indexationFactor === undefined) {
     warnings.push(`Wettelijke indexering samengesteld van ${input.indexationFromYear} naar ${input.indexationYear} toegepast.`);
