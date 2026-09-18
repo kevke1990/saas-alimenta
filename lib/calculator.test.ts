@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculate, capacity, careDiscount } from "./calculator";
 import { calculateChildSupportCapacity, calculatePartnerSupportCapacity } from "./support-engine";
 
-describe("Alimenta Pro calculation engine 1.2.0", () => {
+describe("Alimenta Pro calculation engine 1.3.0", () => {
   it("uses the official 2026 capacity formula above the threshold", () => {
     expect(capacity({ nbi: 5000 })).toBe(1495);
   });
@@ -24,7 +24,7 @@ describe("Alimenta Pro calculation engine 1.2.0", () => {
       children: [{ age: 10, residence: "A" }],
     });
 
-    expect(r.engineVersion).toBe("1.2.0");
+    expect(r.engineVersion).toBe("1.3.0");
     expect(r.normVersion).toBe("2026.1");
     expect(r.totalNeed).toBe(680);
     expect(r.transfers[0].payerIndex).toBe(1);
@@ -42,6 +42,41 @@ describe("Alimenta Pro calculation engine 1.2.0", () => {
     expect(r.childResults[0].need + r.childResults[1].need).toBe(1145);
   });
 
+  it("uses the selected historical NormSet for minor need and parent capacity", () => {
+    const r2024 = calculate({
+      normYear: 2024,
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+    });
+    const r2026 = calculate({
+      normYear: 2026,
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+    });
+
+    expect(r2024.normVersion).toBe("2024.1");
+    expect(r2024.childResults[0].needSource).toBe("NEED_TABLE_2024");
+    expect(r2024.totalNeed).not.toBe(r2026.totalNeed);
+    expect(r2024.parentResults[0].capacityNormYear).toBe(2024);
+    expect(r2024.parentResults[1].capacityNormYear).toBe(2024);
+    expect(r2024.parentResults[0].capacity).not.toBe(r2026.parentResults[0].capacity);
+  });
+
+  it("keeps statutory indexation independent from the historical calculation NormSet", () => {
+    const r = calculate({
+      normYear: 2024,
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+      indexation: 0.046,
+    });
+
+    expect(r.normVersion).toBe("2024.1");
+    expect(r.indexation).toBe(0.046);
+  });
+
   it("supports a 50/50 calculation as a net transfer", () => {
     const r = calculate({
       historicalNBGI: 5000,
@@ -55,13 +90,32 @@ describe("Alimenta Pro calculation engine 1.2.0", () => {
     expect(r.transfers[0].payment).toBeGreaterThanOrEqual(0);
   });
 
-  it("uses WSF as the basis for a young adult", () => {
-    const r = calculate({
+  it("uses the selected norm set and period for a young adult", () => {
+    const r2024 = calculate({
+      normYear: 2024,
+      calculationDate: "2024-09-15",
       parents: [{ nbi: 3000 }, { nbi: 2500 }],
       children: [{ age: 18, residence: "A", studentType: "MBO", livesAtHome: true }],
     });
-    expect(r.childResults[0].isYoungAdult).toBe(true);
-    expect(r.childResults[0].needSource).toBe("WSF_2026");
+    const r2026 = calculate({
+      normYear: 2026,
+      calculationDate: "2026-09-16",
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 18, residence: "A", studentType: "MBO", livesAtHome: true }],
+    });
+    expect(r2024.childResults[0].isYoungAdult).toBe(true);
+    expect(r2024.childResults[0].needSource).toBe("WSF_2024");
+    expect(r2024.childResults[0].need).toBe(731);
+    expect(r2026.childResults[0].needSource).toBe("WSF_2026");
+    expect(r2026.childResults[0].need).toBe(783);
+    expect(r2024.childResults[0].need).not.toBe(r2026.childResults[0].need);
+  });
+
+  it("requires a calculation date for young-adult WSF calculations", () => {
+    expect(() => calculate({
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 18, residence: "A", studentType: "MBO", livesAtHome: true }],
+    })).toThrow("reken-/ingangsdatum verplicht");
   });
 });
 
