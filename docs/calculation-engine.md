@@ -66,8 +66,9 @@ The persisted combined result intentionally keeps both the child-cost share used
 - `historicalNBGI` remains a scalar override. A complete historical period object should eventually capture the relevant historical NBGI, KGB treatment, calculation/ingangsdatum and provenance together.
 - calculation rounding is mostly whole-euro rounding in the engine; a centralized documented intermediate/final rounding policy is still required.
 - immutable snapshots exist in the Prisma model conceptually, but the full normalized-input/intermediate-result snapshot contract must be enforced at persistence time.
-- `partner-engine.ts` needs the same explicit 2024/2025/2026 NormSet selection already present in the child engine before historical partner calculations are treated as production-ready.
-- the partneralimentatie engine still needs a full end-to-end audit against chapter 3.3 and chapter 4.4 of the 2026 report, including recipient resources, earning capacity, the Hofnorm route, income comparison, brutering and duration.
+- `partner-engine.ts` now resolves an explicit 2024/2025/2026 NormSet for its capacity calculation; historical PAL support still requires a full audit of fiscal/brutering inputs and historical fiscal tables before it should be treated as production-ready.
+- the partneralimentatie engine still needs a full end-to-end audit against chapter 3.3 and chapter 4.4 of the 2026 report, including recipient resources, earning capacity, the Hofnorm route, income comparison, brutering and duration. The standalone `partner-calculator.ts` now treats substantiated earning capacity as additional resources on top of current NBI, matching the 2026 worked example.
 - actual-housing professional overrides need a complete typed override path and report/audit presentation.
+- the standalone `/partneralimentatie` API now resolves the persisted child-cost share from the latest child calculation when a payer index is supplied; explicit `currentChildSupport` remains a traceable manual override.
 
 These items should be completed against the corresponding official report section and regression cases rather than guessed or silently implemented as legal rules.
