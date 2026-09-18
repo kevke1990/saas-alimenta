@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 import { calculatePartnerSupport } from '@/lib/partner-engine';
 import { calculatePartnerCapacity } from '@/lib/partner-capacity';
 import { calculationFingerprint } from '@/lib/calculation-snapshot';
-import { resolveChildCostShare } from '@/lib/combined-case-support';
+import { resolveChildCostShareFromCaseResult } from '@/lib/combined-case-support';
 
 function partnerAnalysis(body: Record<string, any>) {
   const hasPartnerInput = body.partnerCapacityMode || body.partnerNetMonthlyIncome !== undefined || Array.isArray(body.partnerCareObligations);
@@ -31,17 +31,7 @@ function latestChildCostShare(
   });
   if (!latest) return null;
 
-  const result = latest.result as any;
-  const childResult = result?.combined?.childCostShareByParent
-    ? {
-        parentResults: [0, 1].map(parentIndex => ({
-          parentIndex,
-          allocatedNeed: Number(result.combined.childCostShareByParent[parentIndex] ?? 0),
-        })),
-      }
-    : result;
-
-  return resolveChildCostShare(childResult, payerIndex, manualOverride);
+  return resolveChildCostShareFromCaseResult(latest.result, payerIndex, manualOverride);
 }
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
