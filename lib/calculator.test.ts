@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { calculate, capacity, careDiscount, childNeed } from "./calculator";\nimport { getNormYearForDate } from "./norms";
+import { calculate, capacity, careDiscount, childNeed } from "./calculator";
+import { getNormYearForDate } from "./norms";
 import { roundMoney, roundWholeEuro } from "./calculation-engine-v2";
 import { calculateChildSupportCapacity, calculatePartnerSupportCapacity } from "./support-engine";
 
