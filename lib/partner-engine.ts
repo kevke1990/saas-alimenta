@@ -2,7 +2,7 @@ import { calculatePartnerSupportCapacity } from './support-engine';
 import { getNormSet, getIndexationFactor } from './norms';
 import type { NormYear } from './norms';
 
-export const PARTNER_ENGINE_VERSION = '1.2.0';
+export const PARTNER_ENGINE_VERSION = '1.3.0';
 export const PARTNER_NORM_VERSION = '2026.1';
 export const PAL_INDEXATION_2026 = 0.046;
 
