@@ -32,6 +32,12 @@ export function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/** Final alimentatie outputs use whole euros; intermediate monetary values may retain cents. */
+export function roundWholeEuro(value: number) {
+  if (!Number.isFinite(value)) throw new Error("Geldbedrag is ongeldig.");
+  return Math.round(value + Number.EPSILON);
+}
+
 export type CalculationFingerprint = {
   engineVersion: string;
   contractVersion: string;
