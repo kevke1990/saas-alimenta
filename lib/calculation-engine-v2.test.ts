@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CALCULATION_CONTRACT_VERSION, CALCULATION_ENGINE_V2, canonicalJson, fingerprintCalculation, roundMoney, sha256 } from "./calculation-engine-v2";
+import { CALCULATION_CONTRACT_VERSION, CALCULATION_ENGINE_V2, canonicalJson, createCalculationSnapshot, fingerprintCalculation, roundMoney, sha256 } from "./calculation-engine-v2";
 
 describe("calculation engine v2 contract", () => {
   it("canonicalizes object key order before hashing", () => {
@@ -22,5 +22,19 @@ describe("calculation engine v2 contract", () => {
     expect(roundMoney(12.345)).toBe(12.35);
     expect(roundMoney(12.344)).toBe(12.34);
     expect(() => roundMoney(Number.NaN)).toThrow();
+  });
+});
+
+
+describe("calculation snapshot contract", () => {
+  it("requires object-shaped normalized input and production result", () => {
+    const snapshot = createCalculationSnapshot({ parents: [] }, { total: 0 }, "2026.1");
+    expect(snapshot.engineVersion).toBe(CALCULATION_ENGINE_V2);
+    expect(snapshot.contractVersion).toBe(CALCULATION_CONTRACT_VERSION);
+    expect(snapshot.normVersion).toBe("2026.1");
+    expect(snapshot.input.parents).toEqual([]);
+    expect(() => createCalculationSnapshot([], { total: 0 }, "2026.1")).toThrow("input-object");
+    expect(() => createCalculationSnapshot({ parents: [] }, [], "2026.1")).toThrow("result-object");
+    expect(() => createCalculationSnapshot({ parents: [] }, { total: 0 }, "")).toThrow("normversie");
   });
 });
