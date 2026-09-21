@@ -97,8 +97,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const result = calculatePartnerSupport(calculationInput);
     const persistedResult = {
       type: 'PARTNER_SUPPORT',
-      fingerprint: calculationFingerprint(calculationInput, result.engineVersion, result.normVersion),
-      ...result,
+            ...result,
       ...(resolvedChildCostShare ? {
         childCostShare: resolvedChildCostShare.childCostShare,
         childCostShareSource: resolvedChildCostShare.source,
