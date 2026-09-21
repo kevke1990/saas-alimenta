@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { calculate } from "@/lib/calculator";
 import { calculatePartnerSupport } from "@/lib/partner-engine";
 import { caseCreateSchema } from "@/lib/case-validation";
-import { calculationFingerprint } from "@/lib/calculation-snapshot";
+import { persistCaseCalculationV2 } from "@/lib/case-calculation-v2";
+import type { ProvenanceInput } from "@/lib/calculation-provenance";
 import { buildCombinedAudit } from "@/lib/combined-audit";
 import { calculationLockMessage } from "@/lib/case-lock";
 import { canRestoreCalculation, restoredReviewStatus } from "@/lib/restore-policy";
@@ -59,16 +60,46 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     const priorityAudit = buildCombinedAudit({ childSupportByParent: childPayments, partnerPayerIndex: partnerPayer, partnerMonthlyNet: partnerNet, partnerMonthlyGross: partnerGross, partnerCapacityRemainingNet: Number(partnerSupport?.capacity?.remainingNet || 0) });
     const combined = { childSupportTotal, childSupportByParent: childPayments, partnerSupport: partnerSupport ? { payerIndex: partnerPayer, recipientIndex: partnerPayer === null ? null : partnerPayer === 0 ? 1 : 0, monthlyNet: partnerNet, monthlyGross: partnerGross } : null, combinedPaymentByParent, totalMonthlyPayments, primaryPayerIndex, priorityAudit, explanation: [{ label: "Totale kinderalimentatie", value: childSupportTotal }, { label: "Partneralimentatie netto", value: partnerNet }, { label: "Partneralimentatie bruto / betaling", value: partnerGross }, { label: "Totale maandelijkse betalingen", value: totalMonthlyPayments }] };
     const productionResult = { ...childResult, combined, partnerSupport, family: existing.result && (existing.result as any).family, identity: existing.result && (existing.result as any).identity };
-    const fingerprint = calculationFingerprint(body.data, childResult.engineVersion, childResult.normVersion);
     const reviewStatus = restoredReviewStatus();
-
+    const provenance: ProvenanceInput[] = [
+      { sourceType: "CASE", sourceId: id, label: existing.name },
+      { sourceType: "CALCULATION", sourceId: snapshot.id, label: "Hersteld uit historische berekening" },
+    ];
     const updated = await db.$transaction(async (tx) => {
-      const c = await tx.case.update({ where: { id }, data: { data: body.data, result: { ...productionResult, calculationFingerprint: fingerprint }, status: "CALCULATED", reviewStatus, reviewedAt: null, approvedAt: null, approvedByUserId: null, calculationVersion: childResult.normVersion, metadata: (body.meta ?? existing.metadata ?? {}) as any } });
-      const calculation = await tx.calculation.create({ data: { caseId: id, engineVersion: childResult.engineVersion, normVersion: childResult.normVersion, inputSnapshot: body.data, result: { ...productionResult, calculationFingerprint: fingerprint } } });
-      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RESTORED", metadata: { caseId: id, restoredFromCalculationId: snapshot.id, newCalculationId: calculation.id, restoredFingerprint: fingerprint, previousReviewStatus: existing.reviewStatus, newReviewStatus: reviewStatus, engineVersion: childResult.engineVersion, normVersion: childResult.normVersion } } });
-      return c;
+      const productionSnapshot = { ...productionResult, restoredFromCalculationId: snapshot.id };
+      const persisted = await persistCaseCalculationV2({
+        tx,
+        caseId: id,
+        userId: u.id,
+        calculationInput: body.data,
+        productionResult: productionSnapshot,
+        normVersion: childResult.normVersion,
+        provenance,
+      });
+      const c = await tx.case.update({ where: { id }, data: {
+        data: body.data,
+        result: productionSnapshot,
+        status: "CALCULATED",
+        reviewStatus,
+        reviewedAt: null,
+        approvedAt: null,
+        approvedByUserId: null,
+        calculationVersion: childResult.normVersion,
+        metadata: (body.meta ?? existing.metadata ?? {}) as any,
+      } });
+      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RESTORED", metadata: {
+        caseId: id,
+        restoredFromCalculationId: snapshot.id,
+        newCalculationId: persisted.calculationId,
+        restoredFingerprint: persisted.fingerprint,
+        previousReviewStatus: existing.reviewStatus,
+        newReviewStatus: reviewStatus,
+        engineVersion: childResult.engineVersion,
+        normVersion: childResult.normVersion,
+      } } });
+      return { c, persisted };
     });
-    return NextResponse.json({ ok: true, case: updated, restoredFromCalculationId: snapshot.id });
+    return NextResponse.json({ ok: true, case: updated.c, restoredFromCalculationId: snapshot.id, calculation: updated.persisted });
   } catch (e: any) {
     return new NextResponse(e?.message || "Herstellen van berekening mislukt", { status: 400 });
   }
