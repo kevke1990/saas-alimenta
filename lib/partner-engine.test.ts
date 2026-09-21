@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calculatePartnerSupport } from './partner-engine';
 
-describe('Partneralimentatie engine 1.2.0', () => {
+describe('Partneralimentatie engine 1.3.0', () => {
   it('calculates hofnorm from historical NBGI minus child costs', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 6063, historicalChildCosts: 880, currentRecipientNBI: 1103, currentPayerNBI: 5000 });
     expect(r.need.hofnormNet).toBe(3110);
@@ -40,7 +40,7 @@ describe('Partneralimentatie engine 1.2.0', () => {
   });
 });
 
-describe('Complexe PAL 1.2.0', () => {
+describe('Complexe PAL 1.3.0', () => {
   it('averages multi-year business profit instead of using one exceptional year', () => {
     const r = calculatePartnerSupport({ historicalNBGI: 9000, historicalChildCosts: 0, currentRecipientNBI: 0, currentPayerNBI: 7000, payerBusinessProfitYears: [12000, 24000, 18000] });
     expect(r.incomeAnalysis.payerBusinessAverageMonthly).toBe(1500);
@@ -63,6 +63,28 @@ describe('Complexe PAL 1.2.0', () => {
   });
 });
 
+
+describe("PAL Buijs progressive-band regression", () => {
+  it.each([
+    [2024, 19044],
+    [2025, 18697],
+    [2026, 19006],
+  ] as const)("applies the published progressive model for %s at high taxable income", (year, expectedGrossAnnual) => {
+    const r = calculatePartnerSupport({
+      historicalNBGI: 20000,
+      historicalChildCosts: 0,
+      currentRecipientNBI: 0,
+      currentPayerNBI: 10000,
+      payerTaxableIncomeAnnual: 90000,
+      currentChildSupport: 0,
+      useHofnorm: false,
+      concreteNeedNet: 1000,
+      normYear: year,
+    });
+    expect(r.result.monthlyNet).toBe(1000);
+    expect(r.result.monthlyGross * 12).toBe(expectedGrossAnnual);
+  });
+});
 
 describe("PAL historical regression fixtures 2024/2025/2026", () => {
   const base = {
