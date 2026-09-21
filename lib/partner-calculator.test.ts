@@ -48,6 +48,23 @@ describe("partner-support engine 2.2.0", () => {
     expect(r2025.payerCapacityBeforeChildren).not.toBe(r2026.payerCapacityBeforeChildren);
   });
 
+
+  it("regresses payer capacity and remaining PAL capacity across 2024-2026 NormSets", () => {
+    const base = { marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763 };
+    const r2024 = calculatePartnerSupport({ ...base, normYear: 2024 });
+    const r2025 = calculatePartnerSupport({ ...base, normYear: 2025 });
+    const r2026 = calculatePartnerSupport({ ...base, normYear: 2026 });
+    expect(r2024.normVersion).toBe("2024.1");
+    expect(r2025.normVersion).toBe("2025.1");
+    expect(r2026.normVersion).toBe("2026.1");
+    expect(r2024.payerCapacityBeforeChildren).toBe(984);
+    expect(r2025.payerCapacityBeforeChildren).toBe(987);
+    expect(r2026.payerCapacityBeforeChildren).toBe(987);
+    expect(r2024.netPartnerSupport).toBe(176);
+    expect(r2025.netPartnerSupport).toBe(179);
+    expect(r2026.netPartnerSupport).toBe(179);
+  });
+
   it("keeps historical norm selection separate from statutory indexation year", () => {
     const r = calculatePartnerSupport({ marriageNBGI: 5548, childShareDuringMarriage: 808, payer: { nbi: 4156 }, recipientCurrentNBI: 1763, normYear: 2025, indexationYear: 2026 });
     expect(r.normVersion).toBe("2025.1");
