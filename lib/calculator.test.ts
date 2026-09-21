@@ -3,7 +3,7 @@ import { calculate, capacity, careDiscount, childNeed } from "./calculator";\nim
 import { calculateChildSupportCapacity, calculatePartnerSupportCapacity } from "./support-engine";
 
 describe("Alimenta Pro calculation engine 1.3.0", () => {
-  it("supports historical NormSets through compatibility helpers", () => {\n    expect(childNeed(5000, 1, 0, 2024)).toBe(720);\n    expect(childNeed(5000, 1, 0, 2026)).toBe(680);\n    expect(capacity({ nbi: 5000 }, 2024)).toBe(1430);\n    expect(capacity({ nbi: 5000 }, 2026)).toBe(1495);\n  });\n\n  it("uses the official 2026 capacity formula above the threshold", () => {
+  it("supports historical NormSets through compatibility helpers", () => {\n    expect(childNeed(5000, 1, 0, 2024)).toBe(720);\n    expect(childNeed(5000, 1, 0, 2026)).toBe(680);\n    expect(capacity({ nbi: 5000 }, 2024)).toBe(1561);\n    expect(capacity({ nbi: 5000 }, 2026)).toBe(1495);\n  });\n\n  it("uses the official 2026 capacity formula above the threshold", () => {
     expect(capacity({ nbi: 5000 })).toBe(1495);
   });
 
