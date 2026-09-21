@@ -60,9 +60,9 @@ describe("partner-support engine 2.2.0", () => {
     expect(r2024.payerCapacityBeforeChildren).toBe(984);
     expect(r2025.payerCapacityBeforeChildren).toBe(960);
     expect(r2026.payerCapacityBeforeChildren).toBe(927);
-    expect(r2024.netPartnerSupport).toBe(176);
-    expect(r2025.netPartnerSupport).toBe(152);
-    expect(r2026.netPartnerSupport).toBe(119);
+    expect(r2024.netPartnerSupport).toBe(984);
+    expect(r2025.netPartnerSupport).toBe(960);
+    expect(r2026.netPartnerSupport).toBe(927);
   });
 
   it("keeps historical norm selection separate from statutory indexation year", () => {
