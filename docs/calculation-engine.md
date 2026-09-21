@@ -56,6 +56,9 @@ Regression coverage includes historical minor-child calculations, historical par
 
 ## Snapshot and auditability
 
+The persistence layer now enforces a calculation snapshot contract before a `Calculation` row is written: normalized input and production result must be JSON-serializable objects and carry the norm, engine and contract versions. The database keeps the input and result snapshots separately for compatibility, while the contract validation prevents malformed snapshots from entering the audit trail.
+
+
 Combined support calculations expose an immutable fingerprint containing the calculation contract, norm version, input hash and result hash. The case persistence path stores the integrated result in the same recalculation transaction as the case update and audit log.
 
 The persisted combined result intentionally keeps both the child-cost share used for partner priority and the actual child-support payment. This is required for reproducibility and professional explanation of a combined calculation.
