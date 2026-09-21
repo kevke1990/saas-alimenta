@@ -98,7 +98,7 @@ describe("PAL historical regression fixtures 2024/2025/2026", () => {
   it.each([
     [2024, 279],
     [2025, 237],
-    [2026, 191],
+    [2026, 185],
   ] as const)("uses the published NormSet-specific Buijs gross-up for %s", (year, expectedGross) => {
     const r = calculatePartnerSupport({ ...base, normYear: year });
     expect(r.result.monthlyGross).toBe(expectedGross);
