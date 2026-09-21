@@ -73,7 +73,7 @@ describe("PAL historical regression fixtures 2024/2025/2026", () => {
     currentChildSupport: 808,
   };
 
-  it.each([
+  it.each([\n    [2024, 280],\n    [2025, 237],\n    [2026, 185],\n  ] as const)("uses the published NormSet-specific Buijs gross-up for %s", (year, expectedGross) => {\n    const r = calculatePartnerSupport({ ...base, normYear: year });\n    expect(r.result.monthlyGross).toBe(expectedGross);\n    expect(r.capacity.method).toContain(`BUIJS_${year}`);\n  });\n\n  it.each([
     [2024, "2024.1", 984, 176],
     [2025, "2025.1", 960, 152],
     [2026, "2026.1", 927, 119],
