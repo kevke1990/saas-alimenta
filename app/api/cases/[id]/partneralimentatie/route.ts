@@ -3,7 +3,8 @@ import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { calculatePartnerSupport } from '@/lib/partner-engine';
 import { calculatePartnerCapacity } from '@/lib/partner-capacity';
-import { calculationFingerprint } from '@/lib/calculation-snapshot';
+import { persistCaseCalculationV2 } from '@/lib/case-calculation-v2';
+import type { ProvenanceInput } from '@/lib/calculation-provenance';
 import { resolveChildCostShareFromCaseResult } from '@/lib/combined-case-support';
 
 function partnerAnalysis(body: Record<string, any>) {
@@ -115,32 +116,37 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
       } : {}),
     };
-    const fingerprint = persistedResult.fingerprint;
-
-    await db.calculation.create({
-      data: {
+    const provenance: ProvenanceInput[] = [
+      { sourceType: 'CASE', sourceId: id, label: c.name },
+    ];
+    const persisted = await db.$transaction(async tx => {
+      const snapshot = await persistCaseCalculationV2({
+        tx,
         caseId: id,
-        engineVersion: result.engineVersion,
+        userId: user.id,
+        calculationInput,
+        productionResult: persistedResult,
         normVersion: result.normVersion,
-        inputSnapshot: calculationInput,
-        result: persistedResult,
-      },
-    });
+        provenance,
+      });
 
-    await db.case.update({
-      where: { id },
-      data: {
-        calculationVersion: result.engineVersion,
-        metadata: {
-          ...(typeof c.metadata === 'object' && c.metadata ? c.metadata as object : {}),
-          partnerInput: calculationInput,
+      await tx.case.update({
+        where: { id },
+        data: {
+          calculationVersion: result.engineVersion,
+          metadata: {
+            ...(typeof c.metadata === 'object' && c.metadata ? c.metadata as object : {}),
+            partnerInput: calculationInput,
+          },
+          result: {
+            ...(typeof c.result === 'object' && c.result ? c.result as object : {}),
+            partnerSupport: persistedResult,
+          },
         },
-        result: {
-          ...(typeof c.result === 'object' && c.result ? c.result as object : {}),
-          partnerSupport: persistedResult,
-        },
-      },
+      });
+      return snapshot;
     });
+    const fingerprint = persisted.fingerprint;
 
     return NextResponse.json({
       ...result,
