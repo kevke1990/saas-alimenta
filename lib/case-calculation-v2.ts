@@ -12,7 +12,8 @@ export async function persistCaseCalculationV2(input: {
   normVersion: string;
   provenance?: ProvenanceInput[];
 }) {
-  const snapshot = createCalculationSnapshot(input.calculationInput, input.productionResult, input.normVersion);\n  const fingerprint = fingerprintCalculation(snapshot.input, snapshot.result, snapshot.normVersion);
+  const snapshot = createCalculationSnapshot(input.calculationInput, input.productionResult, input.normVersion);
+  const fingerprint = fingerprintCalculation(snapshot.input, snapshot.result, snapshot.normVersion);
   const calculationId = randomUUID();
   await input.tx.$executeRaw(Prisma.sql`
     INSERT INTO "Calculation" ("id","caseId","engineVersion","normVersion","inputSnapshot","result","createdAt","inputHash","resultHash","createdByUserId")
