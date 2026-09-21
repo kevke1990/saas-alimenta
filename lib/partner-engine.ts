@@ -28,13 +28,16 @@ export type PartnerSupportResult = {
   steps:Array<{step:number;title:string;value:number;formula:string}>; warnings:string[]; disclaimer:string;
 };
 const n=(v:unknown)=>Math.max(0,Number.isFinite(Number(v))?Number(v):0);const signed=(v:unknown)=>Number.isFinite(Number(v))?Number(v):0;const r=(v:number)=>Math.round(Math.max(0,v)+1e-9);const avg=(xs:number[])=>xs.length?xs.reduce((a,b)=>a+n(b),0)/xs.length:0;
-type BuijsModel = { threshold1: number; threshold2: number; rate: number; multiplierLow: number; multiplierMiddle: number; multiplierHigh: number; aowMultiplier: number; };
+type BuijsModel = {
+  threshold1: number;
+  threshold2: number;
+  rate: number;
+  multiplierLow: number;
+  multiplierMiddle: number;
+  multiplierHigh: number;
+  aowMultiplier: number;
+};
 
-/**
- * Buijs gross-up parameters from the Expertgroep Alimentatienormen appendices.
- * The calculation is progressive: the taxable Box-I income determines how much
- * of the annual net support can be grossed up in each tax band.
- */
 function buijsModel(normYear: NormYear): BuijsModel {
   if (normYear === 2024) return {
     threshold1: 38098,
@@ -65,6 +68,13 @@ function buijsModel(normYear: NormYear): BuijsModel {
   };
 }
 
+/**
+ * Buijs gross-up exactly follows the published Expertgroep step sequence:
+ * calculate annual net support (NA), determine the tax room (P) in the
+ * applicable Box-I band, gross-up that portion, then continue with the
+ * remainder in the next lower band. This is not a generic progressive-tax
+ * calculation.
+ */
 function grossUpBuijs(net:number,taxableAnnual:number,aow=false,normYear:NormYear=2026){
   const targetMonthly=n(net);
   if(!targetMonthly) return {gross:0,taxBenefit:0,method:'BUIJS_'+normYear+'_BOX_I'};
@@ -73,31 +83,30 @@ function grossUpBuijs(net:number,taxableAnnual:number,aow=false,normYear:NormYea
   const model=buijsModel(normYear);
 
   if(aow) {
+    const gross=target*model.aowMultiplier;
     return {
-      gross:r(target*model.aowMultiplier/12),
-      taxBenefit:r(target*(model.aowMultiplier-1)/12),
+      gross:r(gross/12),
+      taxBenefit:r((gross-target)/12),
       method:'BUIJS_'+normYear+'_AOW',
     };
   }
 
-  // Official Buijs order:
-  // 1) high band above threshold2,
-  // 2) middle band between threshold1 and threshold2,
-  // 3) low band below threshold1.
-  // P is the amount of net support that can be paid from the relevant
-  // income band after tax. Gross-up is applied only to the part in that band.
   let remaining=target;
   let gross=0;
 
-  const highCapacity=Math.max(0,income-model.threshold2)*model.rate;
-  const highNet=Math.min(remaining,highCapacity);
-  gross += highNet*model.multiplierHigh;
-  remaining -= highNet;
+  if(income > model.threshold2) {
+    const pHigh=Math.max(0,(income-model.threshold2)*model.rate);
+    const highNet=Math.min(remaining,pHigh);
+    gross += highNet*model.multiplierHigh;
+    remaining -= highNet;
+  }
 
-  const middleCapacity=Math.max(0,Math.min(income,model.threshold2)-model.threshold1)*model.rate;
-  const middleNet=Math.min(remaining,middleCapacity);
-  gross += middleNet*model.multiplierMiddle;
-  remaining -= middleNet;
+  if(remaining>0 && income > model.threshold1) {
+    const pMiddle=Math.max(0,(Math.min(income,model.threshold2)-model.threshold1)*model.rate);
+    const middleNet=Math.min(remaining,pMiddle);
+    gross += middleNet*model.multiplierMiddle;
+    remaining -= middleNet;
+  }
 
   if(remaining>0) gross += remaining*model.multiplierLow;
 
