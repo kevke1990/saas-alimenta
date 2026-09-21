@@ -1,4 +1,4 @@
-import { NORM_SETS, getNormSet, getWsfPeriod, NORM_VERSION } from "./norms";
+import { NORM_SETS, getNormSet, getNormYearForDate, getWsfPeriod, NORM_VERSION } from "./norms";
 import type { NormYear, NormSet } from "./norms";
 import { calculateIncome, type IncomeProfile, type IncomeResult } from "./income-engine";
 import { calculateChildSupportCapacity } from "./support-engine";
