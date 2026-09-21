@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { calculate, capacity, careDiscount } from "./calculator";
+import { calculate, capacity, careDiscount, childNeed } from "./calculator";\nimport { roundMoney, roundWholeEuro } from "./calculation-engine-v2";
 import { calculateChildSupportCapacity, calculatePartnerSupportCapacity } from "./support-engine";
 
 describe("Alimenta Pro calculation engine 1.3.0", () => {
-  it("uses the official 2026 capacity formula above the threshold", () => {
+  it("supports historical NormSets through compatibility helpers", () => {\n    expect(childNeed(5000, 1, 0, 2024)).toBe(720);\n    expect(childNeed(5000, 1, 0, 2026)).toBe(680);\n    expect(capacity({ nbi: 5000 }, 2024)).toBe(1430);\n    expect(capacity({ nbi: 5000 }, 2026)).toBe(1495);\n  });\n\n  it("uses the official 2026 capacity formula above the threshold", () => {
     expect(capacity({ nbi: 5000 })).toBe(1495);
   });
 
@@ -14,7 +14,7 @@ describe("Alimenta Pro calculation engine 1.3.0", () => {
     expect(careDiscount(1000, 3)).toBe(350);
   });
 
-  it("performs a full two-parent calculation with a resident parent", () => {
+  it("requires historical period metadata to confirm KGB treatment", () => {\n    expect(() => calculate({ historicalPeriod: { nbgi: 5000, kgbIncluded: false }, parents: [{ nbi: 3000 }, { nbi: 2500 }], children: [{ age: 10, residence: "A" }] })).toThrow("KGB");\n    const r = calculate({ historicalPeriod: { nbgi: 5000, kgbIncluded: true, calculationDate: "2024-06-01", effectiveDate: "2024-07-01", source: { type: "DOCUMENT", label: "Historische draagkrachtberekening" } }, normYear: 2024, parents: [{ nbi: 3000 }, { nbi: 2500 }], children: [{ age: 10, residence: "A" }] });\n    expect(r.historicalPeriod?.nbgi).toBe(5000);\n    expect(r.historicalPeriod?.source?.type).toBe("DOCUMENT");\n  });\n\n  it("performs a full two-parent calculation with a resident parent", () => {
     const r = calculate({
       historicalNBGI: 5000,
       parents: [
@@ -174,3 +174,4 @@ describe("Production 1.0 regression safeguards", () => {
     expect(r.transfers[0].careDiscount).toBe(0);
   });
 });
+\n\ndescribe("Central monetary rounding policy", () => {\n  it("keeps intermediate money at cents and final outputs at whole euros", () => {\n    expect(roundMoney(123.456)).toBe(123.46);\n    expect(roundWholeEuro(123.49)).toBe(123);\n    expect(roundWholeEuro(123.5)).toBe(124);\n  });\n});\n
