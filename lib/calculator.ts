@@ -8,7 +8,14 @@ export const ENGINE_VERSION = "1.3.0";
 type Residence = "A" | "B" | "50-50";
 export type Child = { age: number; specialCosts?: number; residence?: Residence; studentType?: "MBO" | "HBO" | "OTHER"; livesAtHome?: boolean; ownIncome?: number; studyGrant?: number };
 export type Parent = { nbi: number; kgb?: number; aow?: boolean; housingCosts?: number; specialNecessaryCosts?: number; otherMaintenance?: number; careDaysPerWeek?: number; receivesBijstand?: boolean; stepParentLiable?: boolean; capacityAdjustment?: number; income?: IncomeProfile };
-export type HistoricalCalculationPeriod = {\n  nbgi: number;\n  kgbIncluded: boolean;\n  calculationDate?: string;\n  effectiveDate?: string;\n  source?: { type: string; id?: string; label?: string };\n};\nexport type CaseInput = { historicalNBGI?: number; historicalPeriod?: HistoricalCalculationPeriod; parents: Parent[]; children: Child[]; actualKgbReceivingParent?: number; indexation?: number; normYear?: NormYear; calculationDate?: string };
+export type HistoricalCalculationPeriod = {
+  nbgi: number;
+  kgbIncluded: boolean;
+  calculationDate?: string;
+  effectiveDate?: string;
+  source?: { type: string; id?: string; label?: string };
+};
+export type CaseInput = { historicalNBGI?: number; historicalPeriod?: HistoricalCalculationPeriod; parents: Parent[]; children: Child[]; actualKgbReceivingParent?: number; indexation?: number; normYear?: NormYear; calculationDate?: string };
 
 const n = (v: number | undefined | null) => Math.max(0, Number.isFinite(v as number) ? Number(v) : 0);
 const round = (v: number) => Math.round(v);
@@ -29,7 +36,9 @@ export function calculate(input: CaseInput) {
   const normYear = input.normYear ?? 2026;
   const normSet = getNormSet(normYear);
   const childCount = input.children.length;
-  const historicalPeriod = input.historicalPeriod;\n  if (historicalPeriod && !historicalPeriod.kgbIncluded) throw new Error("Het historische NBGI-object moet aangeven dat het relevante KGB al in het NBGI is verwerkt.");\n  const suppliedNBGI = n(historicalPeriod?.nbgi ?? input.historicalNBGI);
+  const historicalPeriod = input.historicalPeriod;
+  if (historicalPeriod && !historicalPeriod.kgbIncluded) throw new Error("Het historische NBGI-object moet aangeven dat het relevante KGB al in het NBGI is verwerkt.");
+  const suppliedNBGI = n(historicalPeriod?.nbgi ?? input.historicalNBGI);
   const incomeResults: (IncomeResult | null)[] = input.parents.map(p => p.income ? calculateIncome(p.income) : null);
   const calculatedNBGI = round(input.parents.reduce((sum, p, i) => sum + (incomeResults[i]?.nbiIncludingKgbMonthly ?? (n(p.nbi) + n(p.kgb))), 0));
   const nbgi = suppliedNBGI > 0 ? suppliedNBGI : calculatedNBGI;
