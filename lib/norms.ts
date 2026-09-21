@@ -50,7 +50,7 @@ export const NORM_SETS: Record<NormYear, NormSet> = {
 };
 export function getNormYearForDate(date:string):NormYear {
   const parsed = new Date(date);
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) {
     throw new Error(`Ongeldige reken-/ingangsdatum: ${date}. Gebruik YYYY-MM-DD.`);
   }
   const year = parsed.getUTCFullYear();
