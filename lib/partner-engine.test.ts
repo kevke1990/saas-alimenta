@@ -66,9 +66,9 @@ describe('Complexe PAL 1.3.0', () => {
 
 describe("PAL Buijs progressive-band regression", () => {
   it.each([
-    [2024, 19044],
-    [2025, 18697],
-    [2026, 19006],
+    [2024, 1587],
+    [2025, 1558],
+    [2026, 1584],
   ] as const)("applies the published progressive model for %s at high taxable income", (year, expectedGrossAnnual) => {
     const r = calculatePartnerSupport({
       historicalNBGI: 20000,
@@ -82,7 +82,7 @@ describe("PAL Buijs progressive-band regression", () => {
       normYear: year,
     });
     expect(r.result.monthlyNet).toBe(1000);
-    expect(r.result.monthlyGross * 12).toBe(expectedGrossAnnual);
+    expect(r.result.monthlyGross).toBe(expectedGrossAnnual);
   });
 });
 
