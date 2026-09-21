@@ -63,7 +63,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     const reviewStatus = restoredReviewStatus();
     const provenance: ProvenanceInput[] = [
       { sourceType: "CASE", sourceId: id, label: existing.name },
-      { sourceType: "CALCULATION", sourceId: snapshot.id, label: "Hersteld uit historische berekening" },
+      { sourceType: "CASE", sourceId: snapshot.id, label: "Hersteld uit historische berekening" },
     ];
     const updated = await db.$transaction(async (tx) => {
       const productionSnapshot = { ...productionResult, restoredFromCalculationId: snapshot.id };
