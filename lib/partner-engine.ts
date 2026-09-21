@@ -28,32 +28,83 @@ export type PartnerSupportResult = {
   steps:Array<{step:number;title:string;value:number;formula:string}>; warnings:string[]; disclaimer:string;
 };
 const n=(v:unknown)=>Math.max(0,Number.isFinite(Number(v))?Number(v):0);const signed=(v:unknown)=>Number.isFinite(Number(v))?Number(v):0;const r=(v:number)=>Math.round(Math.max(0,v)+1e-9);const avg=(xs:number[])=>xs.length?xs.reduce((a,b)=>a+n(b),0)/xs.length:0;
-type BuijsModel = { threshold1: number; threshold2: number; rate1: number; rate2: number; rate3: number; multiplier1: number; multiplier2: number; aowMultiplier: number };
+type BuijsModel = { threshold1: number; threshold2: number; rate: number; multiplierLow: number; multiplierMiddle: number; multiplierHigh: number; aowMultiplier: number; };
 
+/**
+ * Buijs gross-up parameters from the Expertgroep Alimentatienormen appendices.
+ * The calculation is progressive: the taxable Box-I income determines how much
+ * of the annual net support can be grossed up in each tax band.
+ */
 function buijsModel(normYear: NormYear): BuijsModel {
-  if (normYear === 2024) return { threshold1: 38098, threshold2: 75518, rate1: 0.6303, rate2: 0.6303, rate3: 0.6303, multiplier1: 1.587, multiplier2: 1.587, aowMultiplier: 1.236 };
-  if (normYear === 2025) return { threshold1: 38441, threshold2: 76817, rate1: 0.6418, rate2: 0.6418, rate3: 0.6418, multiplier1: 1.5581, multiplier2: 1.5581, aowMultiplier: 1.218 };
-  return { threshold1: 38883, threshold2: 78426, rate1: 0.6244, rate2: 0.6244, rate3: 0.6244, multiplier1: 1.5564, multiplier2: 1.602, aowMultiplier: 1.217 };
+  if (normYear === 2024) return {
+    threshold1: 38098,
+    threshold2: 75518,
+    rate: 0.6303,
+    multiplierLow: 1.587,
+    multiplierMiddle: 1.587,
+    multiplierHigh: 1.587,
+    aowMultiplier: 1.236,
+  };
+  if (normYear === 2025) return {
+    threshold1: 38441,
+    threshold2: 76817,
+    rate: 0.6418,
+    multiplierLow: 1.5581,
+    multiplierMiddle: 1.5581,
+    multiplierHigh: 1.5581,
+    aowMultiplier: 1.218,
+  };
+  return {
+    threshold1: 38883,
+    threshold2: 78426,
+    rate: 0.6244,
+    multiplierLow: 1.5564,
+    multiplierMiddle: 1.5564,
+    multiplierHigh: 1.602,
+    aowMultiplier: 1.217,
+  };
 }
 
 function grossUpBuijs(net:number,taxableAnnual:number,aow=false,normYear:NormYear=2026){
-  const target=n(net); if(!target) return {gross:0,taxBenefit:0,method:'BUIJS_'+normYear+'_BOX_I'};
-  const income=n(taxableAnnual); const model=buijsModel(normYear);
-  if(aow) return {gross:r(target*model.aowMultiplier),taxBenefit:r(target*(model.aowMultiplier-1)),method:'BUIJS_'+normYear+'_AOW'};
-  if(normYear !== 2026) return {gross:r(target*model.multiplier1),taxBenefit:r(target*(model.multiplier1-1)),method:'BUIJS_'+normYear+'_BOX_I'};
-  const pAtSecondBand=Math.max(0,income-model.threshold1)*model.rate1;
-  if(income <= model.threshold1) return {gross:r(target*model.multiplier1),taxBenefit:r(target*(model.multiplier1-1)),method:'BUIJS_2026_BOX_I'};
-  if(income <= model.threshold2){
-    if(pAtSecondBand >= target) return {gross:r(target*model.multiplier2),taxBenefit:r(target*(model.multiplier2-1)),method:'BUIJS_2026_BOX_I'};
-    const remainder=target-pAtSecondBand; const gross=pAtSecondBand*model.multiplier2+remainder*model.multiplier1;
-    return {gross:r(gross),taxBenefit:r(gross-target),method:'BUIJS_2026_BOX_I'};
+  const target=n(net);
+  if(!target) return {gross:0,taxBenefit:0,method:'BUIJS_'+normYear+'_BOX_I'};
+  const income=n(taxableAnnual);
+  const model=buijsModel(normYear);
+
+  if(aow) {
+    return {
+      gross:r(target*model.aowMultiplier),
+      taxBenefit:r(target*(model.aowMultiplier-1)),
+      method:'BUIJS_'+normYear+'_AOW',
+    };
   }
-  const pAbove=Math.max(0,income-model.threshold2)*model.rate1;
-  if(pAbove >= target) return {gross:r(target*model.multiplier2),taxBenefit:r(target*(model.multiplier2-1)),method:'BUIJS_2026_BOX_I'};
-  const remainderAfterHigh=target-pAbove; const highBandRoom=Math.max(0,model.threshold2-model.threshold1)*model.rate1;
-  if(remainderAfterHigh <= highBandRoom){ const gross=pAbove*model.multiplier2+remainderAfterHigh*model.multiplier2; return {gross:r(gross),taxBenefit:r(gross-target),method:'BUIJS_2026_BOX_I'}; }
-  const lowerRemainder=remainderAfterHigh-highBandRoom; const gross=pAbove*model.multiplier2+highBandRoom*model.multiplier2+lowerRemainder*model.multiplier1;
-  return {gross:r(gross),taxBenefit:r(gross-target),method:'BUIJS_2026_BOX_I'};
+
+  // Official Buijs order:
+  // 1) high band above threshold2,
+  // 2) middle band between threshold1 and threshold2,
+  // 3) low band below threshold1.
+  // P is the amount of net support that can be paid from the relevant
+  // income band after tax. Gross-up is applied only to the part in that band.
+  let remaining=target;
+  let gross=0;
+
+  const highCapacity=Math.max(0,income-model.threshold2)*model.rate;
+  const highNet=Math.min(remaining,highCapacity);
+  gross += highNet*model.multiplierHigh;
+  remaining -= highNet;
+
+  const middleCapacity=Math.max(0,Math.min(income,model.threshold2)-model.threshold1)*model.rate;
+  const middleNet=Math.min(remaining,middleCapacity);
+  gross += middleNet*model.multiplierMiddle;
+  remaining -= middleNet;
+
+  if(remaining>0) gross += remaining*model.multiplierLow;
+
+  return {
+    gross:r(gross),
+    taxBenefit:r(gross-target),
+    method:'BUIJS_'+normYear+'_BOX_I',
+  };
 }
 function maxDuration(ex:DurationException='NONE'){if(ex==='AGREEMENT_OR_COURT')return{years:null,notes:['Duur is expliciet door partijen/rechter bepaald; controleer de beschikking/overeenkomst.']};if(ex==='CHILD_YOUNGER_THAN_12')return{years:12,notes:['Uitzonderingsroute geselecteerd: jongste kind jonger dan 12 jaar. Controleer de exacte wettelijke einddatum.']};if(ex==='LONG_MARRIAGE_PRE_1970')return{years:12,notes:['Overgangsroute geselecteerd. Controleer huwelijk-, geboorte- en einddatum.']};if(ex==='RECEIVER_BORN_1970_OR_EARLIER')return{years:10,notes:['Overgangsroute geselecteerd. Controleer de wettelijke voorwaarden.']};return{years:5,notes:['Hoofdregel: maximaal 5 jaar, behoudens wettelijke uitzonderingen.']};}
 function annualBusinessAverage(annual:number|undefined,years:number[]|undefined){const raw=years&&years.length?years:[annual||0];const values=raw.map(n);return values.length?avg(values):0;}
