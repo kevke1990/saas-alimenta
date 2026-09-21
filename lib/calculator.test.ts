@@ -1,7 +1,28 @@
 import { describe, expect, it } from "vitest";
-import { calculate, capacity, careDiscount, childNeed } from "./calculator";
+import { calculate, capacity, careDiscount, childNeed } from "./calculator";\nimport { getNormYearForDate } from "./norms";
 import { roundMoney, roundWholeEuro } from "./calculation-engine-v2";
 import { calculateChildSupportCapacity, calculatePartnerSupportCapacity } from "./support-engine";
+
+describe("Norm year resolution", () => {
+  it("derives the NormSet from the calculation date when no normYear is supplied", () => {
+    expect(getNormYearForDate("2024-06-01")).toBe(2024);
+    expect(getNormYearForDate("2025-12-31")).toBe(2025);
+    expect(getNormYearForDate("2026-09-21")).toBe(2026);
+    const r = calculate({
+      calculationDate: "2025-06-01",
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+    });
+    expect(r.normYear).toBe(2025);
+    expect(r.normVersion).toBe("2025.1");
+  });
+
+  it("rejects unsupported calculation years", () => {
+    expect(() => getNormYearForDate("2027-01-01")).toThrow("Geen ondersteunde NormSet");
+    expect(() => getNormYearForDate("2026/09/21")).toThrow("Ongeldige");
+  });
+});
 
 describe("Alimenta Pro calculation engine 1.3.0", () => {
   it("supports historical NormSets through compatibility helpers", () => {
