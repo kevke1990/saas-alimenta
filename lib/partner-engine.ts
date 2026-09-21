@@ -66,15 +66,16 @@ function buijsModel(normYear: NormYear): BuijsModel {
 }
 
 function grossUpBuijs(net:number,taxableAnnual:number,aow=false,normYear:NormYear=2026){
-  const target=n(net);
-  if(!target) return {gross:0,taxBenefit:0,method:'BUIJS_'+normYear+'_BOX_I'};
+  const targetMonthly=n(net);
+  if(!targetMonthly) return {gross:0,taxBenefit:0,method:'BUIJS_'+normYear+'_BOX_I'};
+  const target=targetMonthly*12;
   const income=n(taxableAnnual);
   const model=buijsModel(normYear);
 
   if(aow) {
     return {
-      gross:r(target*model.aowMultiplier),
-      taxBenefit:r(target*(model.aowMultiplier-1)),
+      gross:r(target*model.aowMultiplier/12),
+      taxBenefit:r(target*(model.aowMultiplier-1)/12),
       method:'BUIJS_'+normYear+'_AOW',
     };
   }
@@ -101,8 +102,8 @@ function grossUpBuijs(net:number,taxableAnnual:number,aow=false,normYear:NormYea
   if(remaining>0) gross += remaining*model.multiplierLow;
 
   return {
-    gross:r(gross),
-    taxBenefit:r(gross-target),
+    gross:r(gross/12),
+    taxBenefit:r((gross-target)/12),
     method:'BUIJS_'+normYear+'_BOX_I',
   };
 }
