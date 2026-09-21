@@ -60,11 +60,15 @@ Combined support calculations expose an immutable fingerprint containing the cal
 
 The persisted combined result intentionally keeps both the child-cost share used for partner priority and the actual child-support payment. This is required for reproducibility and professional explanation of a combined calculation.
 
-## Known remaining audit items
+## Historical inputs, compatibility and rounding
 
-- `calculator.ts` still exposes compatibility helper functions (`childNeed()` and `capacity()`) that intentionally default to 2026; the main `calculate()` path is NormSet-aware. These helpers should be migrated or explicitly deprecated once all callers are identified.
-- `historicalNBGI` remains a scalar override. A complete historical period object should eventually capture the relevant historical NBGI, KGB treatment, calculation/ingangsdatum and provenance together.
-- calculation rounding is mostly whole-euro rounding in the engine; a centralized documented intermediate/final rounding policy is still required.
+Historical calculations now use an explicit `historicalPeriod` object containing the historical NBGI, an explicit KGB-inclusion flag, optional calculation/effective dates and provenance metadata. The legacy `historicalNBGI` scalar remains supported for backward compatibility.
+
+The compatibility helpers `childNeed()` and `capacity()` accept an explicit `normYear` and resolve the corresponding `NormSet`; their default remains 2026 for legacy callers.
+
+Monetary rounding is centralized in `lib/calculation-engine-v2.ts`: `roundMoney()` is the intermediate cents policy and `roundWholeEuro()` is the final whole-euro policy. Fingerprints are calculated from the canonical unrounded JSON snapshots, so rounding policy changes remain auditable.
+
+## Known remaining audit items
 - immutable snapshots exist in the Prisma model conceptually, but the full normalized-input/intermediate-result snapshot contract must be enforced at persistence time.
 - `partner-engine.ts` now resolves an explicit 2024/2025/2026 NormSet for its capacity calculation; historical PAL support still requires a full audit of fiscal/brutering inputs and historical fiscal tables before it should be treated as production-ready.
 - the partneralimentatie engine still needs a full end-to-end audit against chapter 3.3 and chapter 4.4 of the 2026 report, including recipient resources, earning capacity, the Hofnorm route, income comparison, brutering and duration. The standalone `partner-calculator.ts` now treats substantiated earning capacity as additional resources on top of current NBI, matching the 2026 worked example.
