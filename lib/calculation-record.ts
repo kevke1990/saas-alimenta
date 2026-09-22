@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
-import { sha256 } from "@/lib/calculation-engine-v2";
+import { sha256 } from "./calculation-engine-v2";
 
 export type PersistCalculationRecordInput = {
   tx: Prisma.TransactionClient;
