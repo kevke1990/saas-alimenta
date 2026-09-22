@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 const { queryRaw } = vi.hoisted(() => ({ queryRaw: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: { $queryRaw: queryRaw } }));
 
-import { assertRoleChangeAllowed } from "@/lib/tenant";
-import { requireCaseTenantAccess, requireClientTenantAccess } from "@/lib/tenant-access";
+import { assertRoleChangeAllowed } from "./tenant";
+import { requireCaseTenantAccess, requireClientTenantAccess } from "./tenant-access";
 
 describe("authorization hardening", () => {
   it("blocks cross-tenant case access", async () => {
