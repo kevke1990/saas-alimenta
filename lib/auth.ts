@@ -55,7 +55,7 @@ export async function createSession(userId: string) {
 
 export async function destroySession() {
   const jar = await cookies();
-  const token = jar.get(sessionCookieName)?.value;
+  const token = jar.get(sessionCookieName())?.value;
   if (token) {
     try {
       const { payload } = await jwtVerify(token, secret, {
