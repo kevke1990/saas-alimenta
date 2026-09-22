@@ -37,7 +37,7 @@ export function normalizeControlMode(value: unknown): ControlMode {
 export async function getSessionContext() {
   try {
     const token = (await cookies()).get(sessionCookieName())?.value;
-    if (!token) return { sessionHash: null as string | null, userId: null as string | null, claimedMode: "NORMAL" as const;
+    if (!token) return { sessionHash: null as string | null, userId: null as string | null, claimedMode: "NORMAL" as const };
     const { payload } = await jwtVerify(token, getSecret(), {
       algorithms: ["HS256"],
       issuer: SESSION_ISSUER,
