@@ -1,4 +1,4 @@
-import { NextResponse } from "@/lib/../node_modules/next/server";
+import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { clientSchema } from "@/lib/validation";
