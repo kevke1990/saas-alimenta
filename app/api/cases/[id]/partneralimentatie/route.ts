@@ -67,8 +67,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const user = await requireUser();
   const tenant = await ensureTenant(user);
   const { id } = await params;
+  await requireCaseTenantAccess(user.id, id, "PROFESSIONAL");
   const c = await db.case.findFirst({
-    where: { id, userId: user.id },
+    where: { id, organizationId: tenant.id, deletedAt: null },
     include: { calculations: { orderBy: { createdAt: 'desc' }, take: 10 } },
   });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
