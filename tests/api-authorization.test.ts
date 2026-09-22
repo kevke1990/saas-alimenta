@@ -51,11 +51,15 @@ describe("API authorization matrix", () => {
     for (const route of v1Routes) expect(read(route)).toContain("authenticateApiToken");
   });
 
-  it("requires user ownership predicates on dynamic resource routes", () => {
+  it("requires tenant ownership or RBAC predicates on dynamic resource routes", () => {
     const resourceRoutes = routes.filter(route => /^(?:cases|clients|documents|income-facts)\/.*\[/.test(route));
     const missing = resourceRoutes.filter(route => {
       const source = read(route);
-      return !source.includes("userId") && !source.includes("requireAdmin") && !source.includes("requireRole");
+      return !source.includes("userId")
+        && !source.includes("requireAdmin")
+        && !source.includes("requireRole")
+        && !source.includes("requireCaseTenantAccess")
+        && !source.includes("requireClientTenantAccess");
     });
     expect(missing, `Dynamic resource routes without an ownership/RBAC predicate: ${missing.join(", ")}`).toEqual([]);
   });
