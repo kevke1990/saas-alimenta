@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { reviewCase } from "@/lib/case-review";
@@ -7,6 +8,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   try {
     const u = await requireUser();
     const { id } = await params;
+    await requireCaseTenantAccess(u.id, id, "READ_ONLY");
     const c = await db.case.findFirst({
       where: { id, userId: u.id },
       include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: "desc" } } },
