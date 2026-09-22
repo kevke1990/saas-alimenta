@@ -5,11 +5,16 @@ const { auditCreate, memberFindFirst } = vi.hoisted(() => ({
   memberFindFirst: vi.fn(),
 }));
 
-vi.mock("@/lib/db", () => ({
+vi.mock("./db", () => ({
   db: {
     auditLog: { create: auditCreate },
     organizationMember: { findFirst: memberFindFirst },
   },
+}));
+
+vi.mock("./tenant", () => ({
+  ensureTenant: vi.fn(),
+  TENANT_ROLES: ["OWNER", "ADMIN", "PROFESSIONAL", "READ_ONLY"],
 }));
 
 const { auditSecurity } = await import("./team-security");
