@@ -14,7 +14,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const { id } = await params;
   await requireCaseTenantAccess(user.id, id, "READ_ONLY");
   const record = await db.case.findFirst({
-    where: { id, userId: user.id },
+    where: { id, organizationId: (await requireCaseTenantAccess(user.id, id, "READ_ONLY")).organizationId },
     include: { client: true, calculations: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
   if (!record) return NextResponse.json({ error: "Dossier niet gevonden" }, { status: 404 });
