@@ -19,7 +19,7 @@ const modelWriteOperations = new Set([
 
 const rawWriteOperations = new Set(["$executeRaw", "$executeRawUnsafe"]);
 
-export const db = basePrisma.$extends({
+const extendedPrisma = basePrisma.$extends({
   query: {
     async $allOperations({ model, operation, args, query }: any) {
       const isWrite = model ? modelWriteOperations.has(operation) : rawWriteOperations.has(operation);
@@ -49,5 +49,7 @@ export const db = basePrisma.$extends({
     },
   },
 });
+
+export const db = extendedPrisma as unknown as PrismaClient;
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = basePrisma;
