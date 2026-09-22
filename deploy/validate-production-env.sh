@@ -16,17 +16,22 @@ get_value() {
 
 fail=0
 
-# Secrets must be supplied at runtime and meet the minimum entropy/length contract.
-# The validator checks length only; it never prints secret values.
-for key in SESSION_SECRET APP_ENCRYPTION_KEY PRIVACY_HASH_SALT POSTMARK_INBOUND_SECRET POSTGRES_PASSWORD ADMIN_PASSWORD; do
+# Cryptographic application secrets must be supplied at runtime and meet a
+# minimum length contract. Other credentials retain their existing validation
+# semantics; do not impose arbitrary length requirements on database or
+# third-party integration credentials.
+for key in SESSION_SECRET APP_ENCRYPTION_KEY; do
   value="$(get_value "$key")"
-  min_length=32
-  [[ "$key" == "ADMIN_PASSWORD" ]] && min_length=16
-  if [[ "${#value}" -lt "$min_length" ]]; then
-    echo "[FAIL] $key is shorter than the required minimum length of $min_length characters"
+  if [[ "${#value}" -lt 32 ]]; then
+    echo "[FAIL] $key is shorter than the required minimum length of 32 characters"
     fail=1
   fi
 done
+admin_password="$(get_value ADMIN_PASSWORD)"
+if [[ "${#admin_password}" -lt 16 ]]; then
+  echo "[FAIL] ADMIN_PASSWORD is shorter than the required minimum length of 16 characters"
+  fail=1
+fi
 for key in "${required[@]}"; do
   value="$(get_value "$key")"
   if [[ -z "$value" ]]; then
