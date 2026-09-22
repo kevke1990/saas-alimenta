@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { calculatePartnerSupport } from "@/lib/partner-engine";
 import { caseCreateSchema } from "@/lib/case-validation";
 import { buildCombinedAudit } from "@/lib/combined-audit";
+import { resolveChildCostShare } from "@/lib/combined-case-support";
 import { calculationLockMessage, isCaseLockedForCalculation } from "@/lib/case-lock";
 import { applyIncomeFactMappings, buildIncomeFactProvenance, mapApprovedIncomeFacts } from "@/lib/income-fact-provenance";
 import { runCalculationEngineV2 } from "@/lib/calculation-pipeline-v2";
@@ -61,8 +62,15 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
     const childResult: any = calculation.result;
     const childPayments = [0, 0];
     for (const t of childResult.transfers || []) childPayments[t.payerIndex] += Number(t.payment || 0);
+    const childCostShares = [0, 0];
+    for (const parent of childResult.parentResults || []) {
+      const index = Number(parent.parentIndex);
+      if (index === 0 || index === 1) childCostShares[index] = Number(parent.allocatedNeed || 0);
+    }
 
     let partnerSupport: any = null;
+    let partnerChildCostShare = 0;
+    let partnerChildCostShareSource: "CHILD_CALCULATION" | "MANUAL_OVERRIDE" | null = null;
     if (body.data.partnerSupport?.enabled) {
       const ps = body.data.partnerSupport;
       const payerIndex = ps.payerIndex;
@@ -71,7 +79,10 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
       const recipient = body.data.parents[recipientIndex];
       const payerNbi = Number(childResult.incomeResults?.[payerIndex]?.nbiMonthly ?? payer.nbi) || 0;
       const recipientNbi = Number(childResult.incomeResults?.[recipientIndex]?.nbiMonthly ?? recipient.nbi) || 0;
-      partnerSupport = calculatePartnerSupport({ historicalNBGI: Number(ps.historicalNBGI || body.data.historicalNBGI || 0), historicalChildCosts: Number(ps.historicalChildCosts || childResult.totalNeed || 0), currentChildSupport: childPayments[payerIndex], currentRecipientNBI: recipientNbi, currentPayerNBI: payerNbi, payerTaxableIncomeAnnual: Number(ps.payerTaxableIncomeAnnual || payerNbi * 12), payerAow: !!payer.aow, payerIsFamily: !!payer.newPartner?.present && !(payer.newPartner.selfSupporting ?? true), payerHousingCosts: Number(payer.housing?.monthlyCosts || payer.housingCosts || 0), payerMortgageInterestTaxBenefitMonthly: Number(ps.payerMortgageInterestTaxBenefitMonthly || payer.housing?.mortgageInterestTaxBenefitMonthly || 0), payerMortgagePrincipalMonthly: Number(payer.housing?.mortgagePrincipalMonthly || 0), payerOtherNecessaryCosts: Number(payer.specialNecessaryCosts || 0), payerOtherMaintenance: Number(payer.otherMaintenance || 0), payerOtherMaintenanceObligations: Number(ps.payerOtherMaintenanceObligations || 0), payerPensionProvisionMonthly: Number(ps.payerPensionProvisionMonthly || 0), payerCapacityAdjustment: Number(payer.capacityAdjustment || 0), recipientVerdiencapaciteit: Number(ps.recipientVerdiencapaciteit || 0), recipientOtherIncomeMonthly: Number(ps.recipientOtherIncomeMonthly || 0), recipientAssetsIncomeMonthly: Number(ps.recipientAssetsIncomeMonthly || 0), payerOwnHome: payer.housing?.type === "OWNED", incomeComparisonEnabled: !!ps.incomeComparisonEnabled, durationException: ps.durationException || "NONE", useHofnorm: ps.useHofnorm !== false, concreteNeedNet: Number(ps.concreteNeedNet || 0), effectiveDate: body.meta?.effectiveDate });
+      const share = resolveChildCostShare(childResult, payerIndex, ps.payerChildSupportShare);
+      partnerChildCostShare = share.childCostShare;
+      partnerChildCostShareSource = share.source;
+      partnerSupport = calculatePartnerSupport({ historicalNBGI: Number(ps.historicalNBGI || body.data.historicalNBGI || 0), historicalChildCosts: Number(ps.historicalChildCosts || childResult.totalNeed || 0), currentChildSupport: partnerChildCostShare, currentRecipientNBI: recipientNbi, currentPayerNBI: payerNbi, payerTaxableIncomeAnnual: Number(ps.payerTaxableIncomeAnnual || payerNbi * 12), payerAow: !!payer.aow, payerIsFamily: !!payer.newPartner?.present && !(payer.newPartner.selfSupporting ?? true), payerHousingCosts: Number(payer.housing?.monthlyCosts || payer.housingCosts || 0), payerMortgageInterestTaxBenefitMonthly: Number(ps.payerMortgageInterestTaxBenefitMonthly || payer.housing?.mortgageInterestTaxBenefitMonthly || 0), payerMortgagePrincipalMonthly: Number(payer.housing?.mortgagePrincipalMonthly || 0), payerOtherNecessaryCosts: Number(payer.specialNecessaryCosts || 0), payerOtherMaintenance: Number(payer.otherMaintenance || 0), payerOtherMaintenanceObligations: Number(ps.payerOtherMaintenanceObligations || 0), payerPensionProvisionMonthly: Number(ps.payerPensionProvisionMonthly || 0), payerCapacityAdjustment: Number(payer.capacityAdjustment || 0), recipientVerdiencapaciteit: Number(ps.recipientVerdiencapaciteit || 0), recipientOtherIncomeMonthly: Number(ps.recipientOtherIncomeMonthly || 0), recipientAssetsIncomeMonthly: Number(ps.recipientAssetsIncomeMonthly || 0), payerOwnHome: payer.housing?.type === "OWNED", incomeComparisonEnabled: !!ps.incomeComparisonEnabled, durationException: ps.durationException || "NONE", useHofnorm: ps.useHofnorm !== false, concreteNeedNet: Number(ps.concreteNeedNet || 0), effectiveDate: body.meta?.effectiveDate });
     }
 
     const childSupportTotal = childPayments.reduce((a, b) => a + b, 0);
@@ -84,7 +95,7 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
     const primaryPayerIndex = partnerPayer !== null ? partnerPayer : childPayments[0] >= childPayments[1] ? 0 : 1;
     const combinedAudit = buildCombinedAudit({ childSupportByParent: childPayments, partnerPayerIndex: partnerPayer, partnerMonthlyNet: partnerNet, partnerMonthlyGross: partnerGross, partnerCapacityRemainingNet: Number(partnerSupport?.capacity?.remainingNet || 0) });
     const oldResult: any = existing.result || {};
-    const productionResult = { ...childResult, combined: { childSupportTotal, childSupportByParent: childPayments, partnerSupport: partnerSupport ? { payerIndex: partnerPayer, recipientIndex: partnerPayer === null ? null : partnerPayer === 0 ? 1 : 0, monthlyNet: partnerNet, monthlyGross: partnerGross } : null, combinedPaymentByParent, totalMonthlyPayments, primaryPayerIndex, priorityAudit: combinedAudit, explanation: [{ label: "Totale kinderalimentatie", value: childSupportTotal }, { label: "Partneralimentatie netto", value: partnerNet }, { label: "Partneralimentatie bruto / betaling", value: partnerGross }, { label: "Totale maandelijkse betalingen", value: totalMonthlyPayments }] }, partnerSupport, family: oldResult.family, identity: oldResult.identity };
+    const productionResult = { ...childResult, combined: { childSupportTotal, childSupportByParent: childPayments, childCostShareByParent: childCostShares, partnerSupport: partnerSupport ? { payerIndex: partnerPayer, recipientIndex: partnerPayer === null ? null : partnerPayer === 0 ? 1 : 0, monthlyNet: partnerNet, monthlyGross: partnerGross, childCostShare: partnerChildCostShare, childCostShareSource: partnerChildCostShareSource } : null, combinedPaymentByParent, totalMonthlyPayments, primaryPayerIndex, priorityAudit: combinedAudit, explanation: [{ label: "Totale kinderalimentatie", value: childSupportTotal }, { label: "Eigen aandeel kinderkosten ouder", value: partnerChildCostShare }, { label: "Partneralimentatie netto", value: partnerNet }, { label: "Partneralimentatie bruto / betaling", value: partnerGross }, { label: "Totale maandelijkse betalingen", value: totalMonthlyPayments }] }, partnerSupport, family: oldResult.family, identity: oldResult.identity };
 
     const provenance: ProvenanceInput[] = [{ sourceType: "CASE", sourceId: id, label: existing.name }];
     if (Array.isArray(factProvenance)) for (const p of factProvenance) provenance.push({ sourceType: "INCOME_FACT", sourceId: p.incomeFactId ?? p.id, sourceHash: p.sourceHash, page: p.page, label: p.label, metadata: p });
@@ -92,7 +103,7 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
     const updated = await db.$transaction(async tx => {
       const c = await tx.case.update({ where: { id }, data: { name: body.name, data: calculationInput, result: productionResult, status: "CALCULATED", reviewStatus: "INCOMPLETE", reviewedAt: null, approvedAt: null, approvedByUserId: null, calculationVersion: calculation.fingerprint.normVersion, metadata: (body.meta ?? existing.metadata ?? {}) as any } });
       const persisted = await persistCaseCalculationV2({ tx, caseId: id, userId: u.id, calculationInput, productionResult, normVersion: calculation.fingerprint.normVersion, provenance });
-      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, inputHash: persisted.fingerprint.inputHash, resultHash: persisted.fingerprint.resultHash, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: persisted.calculationId, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: CALCULATION_ENGINE_V2, contractVersion: CALCULATION_CONTRACT_VERSION, normVersion: persisted.fingerprint.normVersion, approvedFactIds: requestedFactIds, incomeFactProvenance: factProvenance } } });
+      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, inputHash: persisted.fingerprint.inputHash, resultHash: persisted.fingerprint.resultHash, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: persisted.calculationId, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: CALCULATION_ENGINE_V2, contractVersion: CALCULATION_CONTRACT_VERSION, normVersion: persisted.fingerprint.normVersion, approvedFactIds: requestedFactIds, incomeFactProvenance: factProvenance, partnerChildCostShare, partnerChildCostShareSource } } });
       return { c, persisted };
     });
     return NextResponse.json({ ...updated.c, calculation: updated.persisted, appliedIncomeFacts: requestedFactIds.length, incomeFactProvenance: factProvenance });

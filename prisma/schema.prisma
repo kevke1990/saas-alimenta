@@ -87,6 +87,11 @@ model User {
   mailMessages         MailMessage[]
   incomeFacts          IncomeFact[]
   passkeys             Passkey[]
+  memberships          OrganizationMember[]
+  sentInvites          OrganizationInvite[]
+  authTokens           AuthToken[]
+  portalShares         ClientPortalShare[]
+  webhookDeliveries    WebhookDelivery[]
 }
 
 model Client {
@@ -108,6 +113,13 @@ model Client {
   personBGender   String?
   status          ClientStatus     @default(ACTIVE)
   notes           String?
+  organizationId  String?
+  organization    Organization?    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  customerNumber  String?
+  createdByUserId String?
+  updatedByUserId String?
+  archivedAt      DateTime?
+  deletedAt       DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   cases           Case[]
@@ -119,6 +131,8 @@ model Client {
 
   @@unique([userId, reference])
   @@index([userId, status])
+  @@index([organizationId, status])
+  @@index([organizationId, deletedAt])
 }
 
 model Case {
@@ -135,6 +149,13 @@ model Case {
   approvedByUserId   String?
   calculationVersion String                 @default("2026.1")
   normVersionId      String?
+  organizationId     String?
+  organization       Organization?          @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdByUserId    String?
+  updatedByUserId    String?
+  archivedAt         DateTime?
+  deletedAt          DateTime?
+  currentRevision    Int                    @default(0)
   data               Json
   metadata           Json?
   result             Json?
@@ -147,9 +168,12 @@ model Case {
   mailMessages       MailMessage[]
   incomeFacts        IncomeFact[]
   tasks              Task[]
+  portalShares       ClientPortalShare[]
 
   @@index([userId, updatedAt])
   @@index([clientId])
+  @@index([organizationId, updatedAt])
+  @@index([organizationId, deletedAt])
 }
 
 model ProfessionalOverride {
@@ -168,16 +192,30 @@ model ProfessionalOverride {
 }
 
 model Calculation {
-  id            String   @id @default(cuid())
-  caseId        String
-  case          Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  engineVersion String
-  normVersion   String
-  inputSnapshot Json
-  result        Json
-  createdAt     DateTime @default(now())
+  id              String                  @id @default(cuid())
+  caseId          String
+  case            Case                    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  engineVersion   String
+  normVersion     String
+  inputSnapshot   Json
+  result          Json
+  inputHash       String?
+  resultHash      String?
+  createdByUserId String?
+  organizationId  String?
+  organization    Organization?           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  revision        Int?
+  methodologyId   String?
+  normVersionId   String?
+  normVersionRef  NormVersion?            @relation(fields: [normVersionId], references: [id], onDelete: SetNull)
+  provenance      CalculationProvenance[]
+  createdAt       DateTime                @default(now())
 
   @@index([caseId, createdAt])
+  @@index([createdByUserId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([inputHash])
+  @@index([methodologyId])
 }
 
 model NormVersion {
@@ -189,7 +227,13 @@ model NormVersion {
   source        String
   data          Json
   isActive      Boolean   @default(false)
+  methodologyId String?
+  publishedAt   DateTime?
+  validationStatus String @default("PROVISIONAL")
+  calculations  Calculation[]
   createdAt     DateTime  @default(now())
+
+  @@index([methodologyId])
 }
 
 model UsageEvent {
@@ -274,14 +318,23 @@ model StripeEvent {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  metadata  Json?
-  createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
+  id             String        @id @default(cuid())
+  userId         String?
+  action         String
+  metadata       Json?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  entityType     String?
+  entityId       String?
+  actorRole      String?
+  requestId      String?
+  ipHash         String?
+  createdAt      DateTime      @default(now())
+  user           User?         @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([entityType, entityId, createdAt])
 }
 
 model Branding {
@@ -569,4 +622,158 @@ model CalculationScenario {
 
   @@index([caseId, createdAt])
   @@index([userId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Models below were created by earlier migrations but were missing from this
+// schema file (schema/migration drift). They are declared here exactly as the
+// database already defines them; no DDL change is implied.
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id           String                             @id @default(cuid())
+  name         String
+  slug         String                             @unique
+  createdAt    DateTime                           @default(now())
+  updatedAt    DateTime                           @updatedAt
+  members      OrganizationMember[]
+  invites      OrganizationInvite[]
+  clients      Client[]
+  cases        Case[]
+  calculations Calculation[]
+  auditLogs    AuditLog[]
+  numberSeq    OrganizationCustomerNumberSequence?
+}
+
+model OrganizationMember {
+  id             String       @id @default(cuid())
+  organizationId String
+  userId         String       @unique
+  role           String       @default("PROFESSIONAL")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, role])
+}
+
+model OrganizationInvite {
+  id              String       @id @default(cuid())
+  organizationId  String
+  invitedByUserId String
+  email           String
+  role            String       @default("PROFESSIONAL")
+  tokenHash       String       @unique
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy       User         @relation(fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, email])
+}
+
+model AppConfig {
+  id                      String   @id
+  mailProvider            String   @default("POSTMARK")
+  mailFromName            String?
+  mailFromEmail           String?
+  mailReplyTo             String?
+  mailApiKeyCipher        String?
+  mailWebhookSecretCipher String?
+  aiEnabled               Boolean  @default(false)
+  aiProvider              String   @default("OPENAI")
+  aiModel                 String?
+  aiBaseUrl               String?
+  aiApiKeyCipher          String?
+  aiSystemPrompt          String?
+  aiTemperature           Float?
+  aiMaxTokens             Int?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @default(now())
+}
+
+model AuthToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  type      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, expiresAt])
+  @@index([expiresAt])
+}
+
+model CalculationProvenance {
+  id            String      @id @default(cuid())
+  calculationId String
+  calculation   Calculation @relation(fields: [calculationId], references: [id], onDelete: Cascade)
+  sourceType    String
+  sourceId      String?
+  sourceHash    String?
+  page          Int?
+  label         String?
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+
+  @@index([calculationId])
+  @@index([sourceType, sourceId])
+}
+
+model ClientPortalShare {
+  id              String    @id @default(cuid())
+  caseId          String
+  createdByUserId String
+  tokenHash       String    @unique
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  lastAccessedAt  DateTime?
+  createdAt       DateTime  @default(now())
+  case            Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  createdBy       User      @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+
+  @@index([caseId, createdAt])
+  @@index([expiresAt])
+}
+
+model WebhookDelivery {
+  id             String    @id @default(cuid())
+  userId         String
+  subscriptionId String
+  eventId        String
+  eventType      String
+  payload        Json
+  signature      String
+  status         String    @default("PENDING")
+  attempt        Int       @default(0)
+  maxAttempts    Int       @default(5)
+  lastStatusCode Int?
+  lastError      String?
+  nextAttemptAt  DateTime?
+  deliveredAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([subscriptionId, eventId])
+  @@index([userId, status, nextAttemptAt])
+  @@index([subscriptionId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// STAP 4: tenant-scoped, concurrency-safe customer numbering.
+// Allocation happens through the SQL function allocate_customer_number(orgId),
+// which locks this row; the application never computes numbers itself.
+// ---------------------------------------------------------------------------
+
+model OrganizationCustomerNumberSequence {
+  organizationId String       @id
+  lastNumber     Int          @default(100000)
+  updatedAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 }

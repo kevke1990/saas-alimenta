@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
-import { CALCULATION_CONTRACT_VERSION, CALCULATION_ENGINE_V2, fingerprintCalculation } from "./calculation-engine-v2";
+import { CALCULATION_CONTRACT_VERSION, CALCULATION_ENGINE_V2, createCalculationSnapshot, fingerprintCalculation } from "./calculation-engine-v2";
 import type { ProvenanceInput } from "./calculation-provenance";
 
 export async function persistCaseCalculationV2(input: {
@@ -12,7 +12,8 @@ export async function persistCaseCalculationV2(input: {
   normVersion: string;
   provenance?: ProvenanceInput[];
 }) {
-  const fingerprint = fingerprintCalculation(input.calculationInput, input.productionResult, input.normVersion);
+  const snapshot = createCalculationSnapshot(input.calculationInput, input.productionResult, input.normVersion);
+  const fingerprint = fingerprintCalculation(snapshot.input, snapshot.result, snapshot.normVersion);
   const calculationId = randomUUID();
   await input.tx.$executeRaw(Prisma.sql`
     INSERT INTO "Calculation" ("id","caseId","engineVersion","normVersion","inputSnapshot","result","createdAt","inputHash","resultHash","createdByUserId")

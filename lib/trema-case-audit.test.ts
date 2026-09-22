@@ -24,10 +24,14 @@ describe("buildTremaCaseAudit", () => {
     expect(audit.rollout.legacyRemainsPrimary).toBe(true);
     expect(audit.rollout.tremaMayDetermineProductionResult).toBe(false);
     expect(audit.comparison).not.toBeNull();
-    expect(audit.comparison?.comparedMetricCount).toBe(4);
+    // Only metrics with identical semantics in both engines are compared.
+    // The current comparison contract deliberately exposes the final monthly
+    // payable amount; joint capacity and payer-limited contribution are not
+    // apples-to-apples metrics and must not be counted here.
+    expect(audit.comparison?.comparedMetricCount).toBe(1);
     expect(audit.comparison?.status).toBe("DIFFERENCE");
     expect(audit.warnings).toContain(
-      "Er is een afwijking tussen de legacy-uitkomst en de Trema-audituitkomst. De legacy-uitkomst blijft leidend.",
+      "Het eindbedrag wijkt af tussen de legacy-berekening en de Trema-audit. De legacy-uitkomst blijft leidend.",
     );
   });
 

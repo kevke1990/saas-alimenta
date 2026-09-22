@@ -32,6 +32,44 @@ export function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+/** Final alimentatie outputs use whole euros; intermediate monetary values may retain cents. */
+export function roundWholeEuro(value: number) {
+  if (!Number.isFinite(value)) throw new Error("Geldbedrag is ongeldig.");
+  return Math.round(value + Number.EPSILON);
+}
+
+export type CalculationSnapshotContract = {
+  input: Record<string, unknown>;
+  result: Record<string, unknown>;
+  normVersion: string;
+  engineVersion: string;
+  contractVersion: string;
+};
+
+export function createCalculationSnapshot(input: unknown, result: unknown, normVersion: string): CalculationSnapshotContract {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("Een berekeningssnapshot vereist een genormaliseerd input-object.");
+  }
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new Error("Een berekeningssnapshot vereist een production result-object.");
+  }
+  if (!normVersion?.trim()) {
+    throw new Error("Een normversie is verplicht voor een berekeningssnapshot.");
+  }
+  const inputJson = JSON.stringify(input);
+  const resultJson = JSON.stringify(result);
+  if (inputJson === undefined || resultJson === undefined) {
+    throw new Error("Berekeningssnapshot is niet JSON-serialiseerbaar.");
+  }
+  return {
+    input: input as Record<string, unknown>,
+    result: result as Record<string, unknown>,
+    normVersion,
+    engineVersion: CALCULATION_ENGINE_V2,
+    contractVersion: CALCULATION_CONTRACT_VERSION,
+  };
+}
+
 export type CalculationFingerprint = {
   engineVersion: string;
   contractVersion: string;
