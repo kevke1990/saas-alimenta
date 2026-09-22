@@ -22,6 +22,27 @@ export function createInviteSecret() {
   return { token, hash: createHash("sha256").update(token).digest("hex") };
 }
 
+/**
+ * Append a security audit event using only server-derived actor/tenant fields.
+ * The AuditLog table is append-only at the database boundary (Step 12).
+ */
 export async function auditSecurity(userId: string, action: string, metadata: Prisma.InputJsonValue = {}) {
-  await db.auditLog.create({ data: { userId, action, metadata } });
+  const membership = await db.organizationMember.findFirst({
+    where: { userId },
+    select: { organizationId: true, role: true },
+  });
+
+  if (!membership) {
+    throw new Error("AUDIT_ACTOR_TENANT_MISSING");
+  }
+
+  await db.auditLog.create({
+    data: {
+      userId,
+      action,
+      metadata,
+      organizationId: membership.organizationId,
+      actorRole: membership.role,
+    },
+  });
 }
