@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { reviewCase } from '@/lib/case-review';
@@ -10,6 +11,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const user = await requireUser();
     const { id } = await params;
+    await requireCaseTenantAccess(user.id, id, "PROFESSIONAL");
     const c = await db.case.findFirst({ where: { id, userId: user.id }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: 'desc' } } } });
     if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
     const body = req.headers.get('content-type')?.includes('application/json') ? await req.json() : Object.fromEntries((await req.formData()).entries());
