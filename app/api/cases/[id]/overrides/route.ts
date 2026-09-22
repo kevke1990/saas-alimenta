@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { requireUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { professionalAdjustmentFingerprint, validateOverride } from '@/lib/professional-override';
@@ -8,7 +9,7 @@ const ALLOWED_RESULT_FIELDS = new Set(['combined.childSupportTotal','combined.ch
 function readPath(root:any,path:string){return path.split('.').reduce((value,key)=>value==null?undefined:value[key],root);}
 function writePath(root:any,path:string,value:unknown){const keys=path.split('.');const next=structuredClone(root??{});let cursor=next;for(let i=0;i<keys.length-1;i++){const key=keys[i];if(cursor[key]==null)cursor[key]=/^\d+$/.test(keys[i+1])?[]:{};cursor=cursor[key];}cursor[keys[keys.length-1]]=value;return next;}
 
-export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){const user=await requireUser();const{id}=await params;const c=await db.case.findFirst({where:{id,userId:user.id}});if(!c)return new NextResponse('Dossier niet gevonden.',{status:404});return NextResponse.json(await db.professionalOverride.findMany({where:{caseId:id,userId:user.id},orderBy:{createdAt:'desc'}}));}
+export async function GET(_:Request,{params}:{params:Promise<{id:string}>}){const user=await requireUser();const{id}=await params;await requireCaseTenantAccess(user.id,id,"PROFESSIONAL");const c=await db.case.findFirst({where:{id,userId:user.id}});if(!c)return new NextResponse('Dossier niet gevonden.',{status:404});return NextResponse.json(await db.professionalOverride.findMany({where:{caseId:id,userId:user.id},orderBy:{createdAt:'desc'}}));}
 
 export async function POST(req:Request,{params}:{params:Promise<{id:string}>}){
  try{
