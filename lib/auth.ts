@@ -30,7 +30,7 @@ export async function createSession(userId: string) {
     .setIssuer(SESSION_ISSUER)
     .setAudience(SESSION_AUDIENCE)
     .setIssuedAt()
-    .setExpirationTime(SESSION_TTL_SECONDS)
+    .setExpirationTime("8h")
     .sign(secret);
 
   await db.authSession.create({
