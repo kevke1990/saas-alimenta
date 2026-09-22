@@ -6,6 +6,7 @@ import { requireSameOrigin } from "@/lib/request-security";
 import { db } from "@/lib/db";
 import { encryptSecret } from "@/lib/secrets";
 import { getStripeClient } from "@/lib/stripe";
+import { getSessionContext } from "@/lib/control-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -62,8 +63,13 @@ export async function GET() {
       db.stripeConfig.findFirst(),
       config(),
     ]);
+    const sessionContext = await getSessionContext();
+    const controlSession = sessionContext.sessionHash
+      ? await db.authSession.findFirst({ where: { tokenHash: sessionContext.sessionHash, userId: admin.id, revokedAt: null, expiresAt: { gt: new Date() } }, select: { controlMode: true } })
+      : null;
     return NextResponse.json({
       admin: { email: admin.email },
+      controlMode: controlSession?.controlMode === "READ_ONLY" ? "READ_ONLY" : "NORMAL",
       stats: { users, clients, cases, subscriptions, activeSubscriptions, pastDue, mailSent, mailFailed },
       users: recentUsers,
       cases: recentCases,
