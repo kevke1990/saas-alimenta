@@ -9,21 +9,21 @@ import { generateClientNumber } from "@/lib/client-number";
 export async function GET() {
   try {
     const u = await requireUser();
-    await ensureTenant(u);
-    return NextResponse.json(await db.client.findMany({ where: { userId: u.id }, orderBy: { createdAt: "desc" } }));
+    const tenant = await ensureTenant(u);
+    return NextResponse.json(await db.client.findMany({ where: { organizationId: tenant.id, deletedAt: null }, orderBy: { createdAt: "desc" } }));
   } catch { return new NextResponse("Unauthorized", { status: 401 }); }
 }
 
 export async function POST(req: Request) {
   try {
     const u = await requireUser();
-    await ensureTenant(u);
+    const tenant = await ensureTenant(u);
     const entitlement = await getClientEntitlement(u.id, u.plan);
     if (!entitlement.allowed) return NextResponse.json({ error: "Dossierlimiet van je abonnement bereikt.", used: entitlement.used, limit: entitlement.limit, upgrade: "/billing" }, { status: 402 });
     const data = clientSchema.parse(await req.json());
-    const reference = await generateClientNumber(u.id);
-    const c = await db.client.create({ data: { ...data, reference, userId: u.id, email: data.email || null } });
-    await db.auditLog.create({ data: { userId: u.id, action: "CLIENT_CREATED", metadata: { clientId: c.id, customerNumber: reference, plan: u.plan } } });
+    const customerNumber = await generateClientNumber(tenant.id);
+    const c = await db.client.create({ data: { ...data, reference: customerNumber, customerNumber, organizationId: tenant.id, createdByUserId: u.id, updatedByUserId: u.id, userId: u.id, email: data.email || null } });
+    await db.auditLog.create({ data: { userId: u.id, organizationId: tenant.id, action: "CLIENT_CREATED", entityType: "Client", entityId: c.id, actorRole: tenant.role, metadata: { clientId: c.id, customerNumber, plan: u.plan } } });
     return NextResponse.json(c);
   } catch (e: any) { return new NextResponse(e?.message || "Fout", { status: 400 }); }
 }
