@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { getSessionContext, isSystemControlWriteAllowed } from "./control-mode";
+import { ControlModeError, getSessionContext, isSystemControlWriteAllowed } from "./control-mode";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -42,13 +42,7 @@ export const db = basePrisma.$extends({
         session?.controlMode === "READ_ONLY" &&
         !isSystemControlWriteAllowed(model, operation, args, context.sessionHash)
       ) {
-        throw new (class extends Error {
-          readonly status = 423;
-          constructor() {
-            super("Deze sessie staat in alleen-lezenmodus. Schrijfacties zijn geblokkeerd.");
-            this.name = "ControlModeError";
-          }
-        })();
+        throw new ControlModeError();
       }
 
       return query(args);
