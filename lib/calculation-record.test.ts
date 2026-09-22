@@ -17,7 +17,6 @@ describe("tenant-scoped calculation persistence", () => {
       inputSnapshot: { parents: [], children: [] },
       result: { totalNeed: 123 },
       inputHash: "input-hash",
-      revision: 1,
     });
 
     expect(result).toEqual({ id: "calc-1", revision: 1 });
