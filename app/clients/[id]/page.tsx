@@ -13,7 +13,7 @@ const date=(v:Date)=>new Intl.DateTimeFormat("nl-NL",{day:"2-digit",month:"short
 
 export default async function ClientPage({params}:{params:Promise<{id:string}>}){
  const u=await requireUser();const tenant=await ensureTenant(u);const {id}=await params;
- const c=await db.client.findFirst({where:{id,userId:u.id},include:{cases:{orderBy:{updatedAt:"desc"}},documents:{orderBy:{createdAt:"desc"},take:20}}});
+ const c=await db.client.findFirst({where:{id,organizationId:tenant.id,deletedAt:null},include:{cases:{orderBy:{updatedAt:"desc"}},documents:{orderBy:{createdAt:"desc"},take:20}}});
  if(!c)return <AppShell><div className="notice error">Cliënt niet gevonden.</div></AppShell>;
  const cases=c.cases;
  const openCases=cases.filter(x=>x.reviewStatus!=="FINAL"&&x.reviewStatus!=="APPROVED");
