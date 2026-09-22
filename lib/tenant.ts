@@ -36,6 +36,18 @@ export function assertTenantRole(role: string, minimum: TenantRole) {
   return true;
 }
 
+export function assertRoleChangeAllowed(actorRole: string, targetRole: string, nextRole: string) {
+  const actor = ROLE_RANK[actorRole as TenantRole];
+  const target = ROLE_RANK[targetRole as TenantRole];
+  const next = ROLE_RANK[nextRole as TenantRole];
+  if (!actor || !target || !next) throw new Error("Ongeldige organisatierol.");
+  if (actor < ROLE_RANK.ADMIN) throw new Error("Onvoldoende organisatierechten.");
+  if (target === ROLE_RANK.OWNER && actor < ROLE_RANK.OWNER) throw new Error("Alleen de eigenaar kan de eigenaarrol wijzigen.");
+  if (next === ROLE_RANK.OWNER && actor < ROLE_RANK.OWNER) throw new Error("Alleen de eigenaar kan een eigenaar aanwijzen.");
+  if (target > actor || next > actor) throw new Error("Je kunt geen gebruiker met een hogere organisatierol beheren.");
+  return true;
+}
+
 export async function tenantUserIds(organizationId: string) {
   const rows = await db.$queryRaw<Array<{ userId: string }>>(Prisma.sql`SELECT "userId" FROM "OrganizationMember" WHERE "organizationId" = ${organizationId}`);
   return rows.map(row => row.userId);
