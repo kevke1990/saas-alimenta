@@ -1,6 +1,7 @@
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
 import {requireUser} from "@/lib/auth";
+import {ensureTenant} from "@/lib/tenant";
 import {db} from "@/lib/db";
 import DocumentPanel from "./DocumentPanel";
 import DeleteClientButton from "./DeleteClientButton";
@@ -11,7 +12,7 @@ const aiLabel=(v:string)=>({NOT_ANALYZED:"Nog niet geanalyseerd",PROCESSING:"Bez
 const date=(v:Date)=>new Intl.DateTimeFormat("nl-NL",{day:"2-digit",month:"short",year:"numeric"}).format(v);
 
 export default async function ClientPage({params}:{params:Promise<{id:string}>}){
- const u=await requireUser();const {id}=await params;
+ const u=await requireUser();const tenant=await ensureTenant(u);const {id}=await params;
  const c=await db.client.findFirst({where:{id,userId:u.id},include:{cases:{orderBy:{updatedAt:"desc"}},documents:{orderBy:{createdAt:"desc"},take:20}}});
  if(!c)return <AppShell><div className="notice error">Cliënt niet gevonden.</div></AppShell>;
  const cases=c.cases;
