@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { buildReviewCalculationBinding, isReviewBindingCurrent } from "../../../../../lib/review-binding";
@@ -13,7 +14,7 @@ const relation=(v:any)=>({COHABITATION:"Samenwonen",COHABITATION_CONTRACT:"Samen
 
 export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
   try{
-    const u=await requireUser(); const {id}=await params;
+    const u=await requireUser(); const {id}=await params; await requireCaseTenantAccess(u.id,id,"READ_ONLY");
     const c=await db.case.findFirst({where:{id,userId:u.id},include:{client:true,calculations:{orderBy:{createdAt:"desc"},take:1},overrides:{orderBy:{createdAt:"asc"}}}});
     if(!c) return new NextResponse("Dossier niet gevonden",{status:404});
     const r:any=c.result||{}; const calc=c.calculations[0]; const meta:any=c.metadata||{}; const data:any=c.data||{};
