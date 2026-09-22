@@ -64,6 +64,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
+  const tenant = await ensureTenant(user);
   const { id } = await params;
   const c = await db.case.findFirst({
     where: { id, userId: user.id },
