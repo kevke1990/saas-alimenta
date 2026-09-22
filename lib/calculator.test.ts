@@ -19,6 +19,18 @@ describe("Norm year resolution", () => {
     expect(r.normVersion).toBe("2025.1");
   });
 
+  it("keeps an explicit normYear authoritative over the calculation date", () => {
+    const r = calculate({
+      calculationDate: "2025-06-01",
+      normYear: 2026,
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+    });
+    expect(r.normYear).toBe(2026);
+    expect(r.normVersion).toBe("2026.1");
+  });
+
   it("rejects unsupported calculation years", () => {
     expect(() => getNormYearForDate("2027-01-01")).toThrow("Geen ondersteunde NormSet");
     expect(() => getNormYearForDate("2026/09/21")).toThrow("Ongeldige");
