@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
-import { db } from "@/lib/db";
-import { ensureTenant, TENANT_ROLES, type TenantRole } from "@/lib/tenant";
+import { db } from "./db";
+import { ensureTenant, TENANT_ROLES, type TenantRole } from "./tenant";
 import type { Prisma } from "@prisma/client";
 
 export function isTenantRole(value: string): value is TenantRole {
