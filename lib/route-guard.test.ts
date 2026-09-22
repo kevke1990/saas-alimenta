@@ -3,23 +3,20 @@ import { isProtectedAppPath } from "./route-guard";
 
 describe("route guard", () => {
   it("protects authenticated application areas", () => {
-    expect(isProtectedAppPath("/clients")).toBe(true);
-    expect(isProtectedAppPath("/clients/abc")).toBe(true);
-    expect(isProtectedAppPath("/cases/abc/review")).toBe(true);
-    expect(isProtectedAppPath("/work")).toBe(true);
-    expect(isProtectedAppPath("/beheer")).toBe(true);
+    for (const path of ["/dashboard","/work","/clients","/clients/abc","/cases/abc/review","/scan","/mail","/billing","/settings","/team","/tasks","/beheer"]) {
+      expect(isProtectedAppPath(path)).toBe(true);
+    }
   });
 
   it("does not protect public application routes", () => {
-    expect(isProtectedAppPath("/")).toBe(false);
-    expect(isProtectedAppPath("/login")).toBe(false);
-    expect(isProtectedAppPath("/register")).toBe(false);
-    expect(isProtectedAppPath("/faq")).toBe(false);
-    expect(isProtectedAppPath("/pricing")).toBe(false);
+    for (const path of ["/","/login","/register","/faq","/pricing"]) {
+      expect(isProtectedAppPath(path)).toBe(false);
+    }
   });
 
   it("does not treat similar prefixes as protected", () => {
     expect(isProtectedAppPath("/clients-public")).toBe(false);
     expect(isProtectedAppPath("/cases-public")).toBe(false);
+    expect(isProtectedAppPath("/mailing")).toBe(false);
   });
 });
