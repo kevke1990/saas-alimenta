@@ -1,22 +1,15 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { isProtectedAppPath } from "@/lib/tenant";
 
-export function proxy(req: NextRequest) {
-  const res = NextResponse.next();
-  res.headers.set("X-Content-Type-Options", "nosniff");
-  res.headers.set("X-Frame-Options", "DENY");
-  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-  res.headers.set(
-    "Content-Security-Policy",
-    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.stripe.com;"
-  );
-  if (req.nextUrl.pathname.startsWith("/api/")) {
-    res.headers.set("Cache-Control", "no-store");
-  }
-  return res;
+export function proxy(request: NextRequest) {
+  if (!isProtectedAppPath(request.nextUrl.pathname)) return NextResponse.next();
+  const hasSessionCookie = request.cookies.has("__Host-ka_session") || request.cookies.has("ka_session");
+  if (hasSessionCookie) return NextResponse.next();
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|manifest.webmanifest|sw.js).*)"],
 };
