@@ -6,6 +6,7 @@ import type { ProvenanceInput } from "./calculation-provenance";
 export async function persistCaseCalculationV2(input: {
   tx: Prisma.TransactionClient;
   caseId: string;
+  organizationId: string;
   userId: string;
   calculationInput: unknown;
   productionResult: unknown;
@@ -16,8 +17,8 @@ export async function persistCaseCalculationV2(input: {
   const fingerprint = fingerprintCalculation(snapshot.input, snapshot.result, snapshot.normVersion);
   const calculationId = randomUUID();
   await input.tx.$executeRaw(Prisma.sql`
-    INSERT INTO "Calculation" ("id","caseId","engineVersion","normVersion","inputSnapshot","result","createdAt","inputHash","resultHash","createdByUserId")
-    VALUES (${calculationId},${input.caseId},${CALCULATION_ENGINE_V2},${fingerprint.normVersion},CAST(${JSON.stringify(input.calculationInput)} AS jsonb),CAST(${JSON.stringify(input.productionResult)} AS jsonb),CURRENT_TIMESTAMP,${fingerprint.inputHash},${fingerprint.resultHash},${input.userId})
+    INSERT INTO "Calculation" ("id","caseId","engineVersion","normVersion","inputSnapshot","result","createdAt","inputHash","resultHash","createdByUserId","organizationId")
+    VALUES (${calculationId},${input.caseId},${CALCULATION_ENGINE_V2},${fingerprint.normVersion},CAST(${JSON.stringify(input.calculationInput)} AS jsonb),CAST(${JSON.stringify(input.productionResult)} AS jsonb),CURRENT_TIMESTAMP,${fingerprint.inputHash},${fingerprint.resultHash},${input.userId},${input.organizationId})
   `);
   for (const source of input.provenance ?? []) {
     await input.tx.$executeRaw(Prisma.sql`
