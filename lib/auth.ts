@@ -3,13 +3,13 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { createHash, randomUUID } from "node:crypto";
 import { db } from "./db";
+import { sessionCookieName, type ControlMode } from "./control-mode";
 
 const rawSecret = process.env.SESSION_SECRET;
 if (!rawSecret || rawSecret.length < 32) throw new Error("SESSION_SECRET must be set and contain at least 32 characters");
 const secret = new TextEncoder().encode(rawSecret);
 
 const secureCookies = process.env.APP_URL?.startsWith("https://") ?? process.env.NODE_ENV === "production";
-const sessionCookieName = secureCookies ? "__Host-ka_session" : "ka_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 const SESSION_ISSUER = "alimenta";
 const SESSION_AUDIENCE = "alimenta-app";
@@ -23,7 +23,7 @@ export async function verifyPassword(password: string, hash: string) { return bc
 
 export async function createSession(userId: string) {
   const sessionId = randomUUID();
-  const token = await new SignJWT({})
+  const token = await new SignJWT({ controlMode: "NORMAL" })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setSubject(userId)
     .setJti(sessionId)
@@ -38,12 +38,13 @@ export async function createSession(userId: string) {
       id: randomUUID(),
       userId,
       tokenHash: hashSessionId(sessionId),
+      controlMode: "NORMAL",
       expiresAt: new Date(Date.now() + SESSION_TTL_SECONDS * 1000),
     },
   });
 
   const jar = await cookies();
-  jar.set(sessionCookieName, token, {
+  jar.set(sessionCookieName(), token, {
     httpOnly: true,
     secure: secureCookies,
     sameSite: "strict",
@@ -72,7 +73,7 @@ export async function destroySession() {
       // The cookie is cleared even when the token is already invalid or expired.
     }
   }
-  jar.set(sessionCookieName, "", {
+  jar.set(sessionCookieName(), "", {
     httpOnly: true,
     secure: secureCookies,
     sameSite: "strict",
@@ -82,7 +83,7 @@ export async function destroySession() {
 }
 
 export async function currentUser() {
-  const token = (await cookies()).get(sessionCookieName)?.value;
+  const token = (await cookies()).get(sessionCookieName())?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret, {
@@ -114,6 +115,40 @@ export async function requireUser() {
   const user = await currentUser();
   if (!user) throw new Error("UNAUTHORIZED");
   return user;
+}
+
+export async function setSessionControlModeCookie(mode: ControlMode) {
+  const jar = await cookies();
+  const token = jar.get(sessionCookieName())?.value;
+  if (!token) throw new Error("UNAUTHORIZED");
+
+  const { payload } = await jwtVerify(token, secret, {
+    algorithms: ["HS256"],
+    issuer: SESSION_ISSUER,
+    audience: SESSION_AUDIENCE,
+  });
+  const userId = typeof payload.sub === "string" ? payload.sub : null;
+  const sessionId = typeof payload.jti === "string" ? payload.jti : null;
+  const expiresAt = typeof payload.exp === "number" ? payload.exp : null;
+  if (!userId || !sessionId || !expiresAt || expiresAt <= Math.floor(Date.now() / 1000)) throw new Error("UNAUTHORIZED");
+
+  const nextToken = await new SignJWT({ controlMode: mode })
+    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+    .setSubject(userId)
+    .setJti(sessionId)
+    .setIssuer(SESSION_ISSUER)
+    .setAudience(SESSION_AUDIENCE)
+    .setIssuedAt()
+    .setExpirationTime(expiresAt)
+    .sign(secret);
+
+  jar.set(sessionCookieName(), nextToken, {
+    httpOnly: true,
+    secure: secureCookies,
+    sameSite: "strict",
+    path: "/",
+    maxAge: Math.max(0, expiresAt - Math.floor(Date.now() / 1000)),
+  });
 }
 
 export async function requireAdmin() {
