@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { ensureTenant } from "@/lib/tenant";
 import { db } from "@/lib/db";
 import { calculatePartnerSupport } from "@/lib/partner-engine";
 import { caseCreateSchema } from "@/lib/case-validation";
@@ -35,6 +36,7 @@ export async function deleteCase(request: Request, params: Promise<{ id: string 
 export async function patchCase(req: Request, params: Promise<{ id: string }>) {
   try {
     const u = await requireUser();
+    const tenant = await ensureTenant(u);
     const { id } = await params;
     await requireCaseTenantAccess(u.id, id, "PROFESSIONAL");
     const existing = await db.case.findFirst({ where: { id, status: { not: "ARCHIVED" } }, include: { calculations: { orderBy: { createdAt: "desc" }, take: 1 } } });
@@ -102,8 +104,8 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
 
     const updated = await db.$transaction(async tx => {
       const c = await tx.case.update({ where: { id }, data: { name: body.name, data: calculationInput, result: productionResult, status: "CALCULATED", reviewStatus: "INCOMPLETE", reviewedAt: null, approvedAt: null, approvedByUserId: null, calculationVersion: calculation.fingerprint.normVersion, metadata: (body.meta ?? existing.metadata ?? {}) as any } });
-      const persisted = await persistCaseCalculationV2({ tx, caseId: id, userId: u.id, calculationInput, productionResult, normVersion: calculation.fingerprint.normVersion, provenance });
-      await tx.auditLog.create({ data: { userId: u.id, action: "CASE_RECALCULATED", metadata: { caseId: id, inputHash: persisted.fingerprint.inputHash, resultHash: persisted.fingerprint.resultHash, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: persisted.calculationId, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: CALCULATION_ENGINE_V2, contractVersion: CALCULATION_CONTRACT_VERSION, normVersion: persisted.fingerprint.normVersion, approvedFactIds: requestedFactIds, incomeFactProvenance: factProvenance, partnerChildCostShare, partnerChildCostShareSource } } });
+      const persisted = await persistCaseCalculationV2({ tx, caseId: id, organizationId: tenant.id, userId: u.id, calculationInput, productionResult, normVersion: calculation.fingerprint.normVersion, provenance });
+      await tx.auditLog.create({ data: { userId: u.id, organizationId: tenant.id, entityType: "CASE", entityId: id, actorRole: tenant.role, action: "CASE_RECALCULATED", metadata: { caseId: id, inputHash: persisted.fingerprint.inputHash, resultHash: persisted.fingerprint.resultHash, previousCalculationId: existing.calculations[0]?.id || null, newCalculationId: persisted.calculationId, previousReviewStatus: existing.reviewStatus, newReviewStatus: "INCOMPLETE", engineVersion: CALCULATION_ENGINE_V2, contractVersion: CALCULATION_CONTRACT_VERSION, normVersion: persisted.fingerprint.normVersion, approvedFactIds: requestedFactIds, incomeFactProvenance: factProvenance, partnerChildCostShare, partnerChildCostShareSource } } });
       return { c, persisted };
     });
     return NextResponse.json({ ...updated.c, calculation: updated.persisted, appliedIncomeFacts: requestedFactIds.length, incomeFactProvenance: factProvenance });
