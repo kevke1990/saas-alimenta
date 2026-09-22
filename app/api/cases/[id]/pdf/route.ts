@@ -12,10 +12,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
   const { id } = await params;
-  const authorizationUserId = user.id;
-  await requireCaseTenantAccess(user.id, id, "READ_ONLY");
+  const access = await requireCaseTenantAccess(user.id, id, "READ_ONLY");
   const record = await db.case.findFirst({
-    where: { id, organizationId: (await requireCaseTenantAccess(user.id, id, "READ_ONLY")).organizationId },
+    where: { id, organizationId: access.organizationId },
     include: { client: true, calculations: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
   if (!record) return NextResponse.json({ error: "Dossier niet gevonden" }, { status: 404 });
