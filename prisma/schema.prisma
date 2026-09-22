@@ -697,13 +697,14 @@ model AppConfig {
 }
 
 model AuthSession {
-  id        String    @id
-  userId    String
-  tokenHash String    @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String    @id
+  userId      String
+  tokenHash   String    @unique
+  controlMode String    @default("NORMAL")
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
   @@index([expiresAt])
