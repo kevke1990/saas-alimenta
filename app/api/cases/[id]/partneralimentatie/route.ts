@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireCaseTenantAccess } from '@/lib/tenant-access';
 import { requireUser } from '@/lib/auth';
 import { ensureTenant } from '@/lib/tenant';
 import { db } from '@/lib/db';
