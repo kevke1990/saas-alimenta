@@ -4,10 +4,9 @@ import bcrypt from "bcryptjs";
 import { createHash, randomUUID } from "node:crypto";
 import { db } from "./db";
 import { sessionCookieName, type ControlMode } from "./control-mode";
+import { requireRuntimeSecret } from "./runtime-secrets";
 
-const rawSecret = process.env.SESSION_SECRET;
-if (!rawSecret || rawSecret.length < 32) throw new Error("SESSION_SECRET must be set and contain at least 32 characters");
-const secret = new TextEncoder().encode(rawSecret);
+function sessionSecret() { return new TextEncoder().encode(requireRuntimeSecret("SESSION_SECRET")); }
 
 const secureCookies = process.env.APP_URL?.startsWith("https://") ?? process.env.NODE_ENV === "production";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -31,7 +30,7 @@ export async function createSession(userId: string) {
     .setAudience(SESSION_AUDIENCE)
     .setIssuedAt()
     .setExpirationTime("8h")
-    .sign(secret);
+    .sign(sessionSecret());
 
   await db.authSession.create({
     data: {
@@ -58,7 +57,7 @@ export async function destroySession() {
   const token = jar.get(sessionCookieName())?.value;
   if (token) {
     try {
-      const { payload } = await jwtVerify(token, secret, {
+      const { payload } = await jwtVerify(token, sessionSecret(), {
         algorithms: ["HS256"],
         issuer: SESSION_ISSUER,
         audience: SESSION_AUDIENCE,
@@ -86,7 +85,7 @@ export async function currentUser() {
   const token = (await cookies()).get(sessionCookieName())?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret, {
+    const { payload } = await jwtVerify(token, sessionSecret(), {
       algorithms: ["HS256"],
       issuer: SESSION_ISSUER,
       audience: SESSION_AUDIENCE,
@@ -122,7 +121,7 @@ export async function setSessionControlModeCookie(mode: ControlMode) {
   const token = jar.get(sessionCookieName())?.value;
   if (!token) throw new Error("UNAUTHORIZED");
 
-  const { payload } = await jwtVerify(token, secret, {
+  const { payload } = await jwtVerify(token, sessionSecret(), {
     algorithms: ["HS256"],
     issuer: SESSION_ISSUER,
     audience: SESSION_AUDIENCE,
@@ -140,7 +139,7 @@ export async function setSessionControlModeCookie(mode: ControlMode) {
     .setAudience(SESSION_AUDIENCE)
     .setIssuedAt()
     .setExpirationTime(expiresAt)
-    .sign(secret);
+    .sign(sessionSecret());
 
   jar.set(sessionCookieName(), nextToken, {
     httpOnly: true,
