@@ -10,7 +10,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     await requireCaseTenantAccess(u.id, id, "READ_ONLY");
     const c = await db.case.findFirst({
-      where: { id, userId: u.id },
+      where: { id, organizationId: (await requireCaseTenantAccess(u.id, id, "READ_ONLY")).organizationId },
       include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: "desc" } } },
     });
     if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
