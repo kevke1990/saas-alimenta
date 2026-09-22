@@ -8,6 +8,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   try {
     const u = await requireUser();
     const { id } = await params;
+  const authorizationUserId = user.id;
     await requireCaseTenantAccess(u.id, id, "READ_ONLY");
     const c = await db.case.findFirst({
       where: { id, organizationId: (await requireCaseTenantAccess(u.id, id, "READ_ONLY")).organizationId },
