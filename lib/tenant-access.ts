@@ -3,7 +3,7 @@ import { db } from "./db";
 import { assertTenantRole, type TenantRole } from "./tenant";
 
 export class AuthorizationError extends Error {
-  readonly status: 403;
+  readonly status = 403;
   constructor(message = "Toegang tot deze bron is niet toegestaan.") {
     super(message);
     this.name = "AuthorizationError";
