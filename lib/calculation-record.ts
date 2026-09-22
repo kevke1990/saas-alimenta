@@ -26,6 +26,9 @@ export async function persistCalculationRecord({
   inputHash,
 }: PersistCalculationRecordInput) {
   const resultHash = sha256(result);
+  const revisionRows = await tx.$queryRaw<Array<{ revision: number }>>`UPDATE "Case" SET "currentRevision" = "currentRevision" + 1, "updatedAt" = CURRENT_TIMESTAMP WHERE "id" = ${caseId} AND "organizationId" = ${organizationId} AND "deletedAt" IS NULL RETURNING "currentRevision" AS revision`;
+  const revision = revisionRows[0]?.revision;
+  if (!revision) throw new Error("Case not found or tenant mismatch while allocating calculation revision.");
   return tx.calculation.create({
     data: {
       id: randomUUID(),
@@ -38,6 +41,7 @@ export async function persistCalculationRecord({
       result: result as object,
       inputHash,
       resultHash,
+      revision,
     },
   });
 }
