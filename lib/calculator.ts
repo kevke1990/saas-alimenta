@@ -33,7 +33,7 @@ function careParentForChild(child: Child, parentIndex: number) { const resident 
 
 export function calculate(input: CaseInput) {
   validate(input);
-  const normYear = input.normYear ?? 2026;
+  const normYear = input.normYear ?? (input.calculationDate ? getNormYearForDate(input.calculationDate) : 2026);
   const normSet = getNormSet(normYear);
   const childCount = input.children.length;
   const historicalPeriod = input.historicalPeriod;
