@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 process.env.SESSION_SECRET = "test-session-secret-that-is-at-least-32-characters-long";
-process.env.NODE_ENV = "test";
 
 const { cookieGet, cookieSet, authSessionCreate, authSessionFindFirst, authSessionUpdateMany, userFindUnique } = vi.hoisted(() => ({
   cookieGet: vi.fn(),
