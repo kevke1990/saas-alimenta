@@ -2,6 +2,7 @@ import "./globals.css";
 import "./alimenta-public.css";
 import "./portal-premium.css";
 import "./contrast-accessibility.css";
+import "./design-tokens.css";
 import type { Viewport } from "next";
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#0c1220" };
