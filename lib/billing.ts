@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db } from "./db";
 
 export type BillingPlan = "PRIVATE" | "PRO";
 export type BillingStatus = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "INCOMPLETE";
