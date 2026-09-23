@@ -11,7 +11,14 @@ required=(
 
 get_value() {
   local key="$1"
-  sed -n -E "s/^${key}=(.*)$/\\1/p" "$ENV_FILE" | tail -n 1 | sed -E 's/^"(.*)"$/\\1/'
+  awk -F= -v key="$key" '
+    $1 == key {
+      value = substr($0, index($0, "=") + 1)
+      sub(/^"/, "", value)
+      sub(/"$/, "", value)
+      print value
+    }
+  ' "$ENV_FILE" | tail -n 1
 }
 
 fail=0
