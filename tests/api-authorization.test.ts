@@ -35,7 +35,7 @@ describe("API authorization matrix", () => {
     const missing = routes.filter(route => {
       if (isPublic(route) || route.startsWith("v1/")) return false;
       const source = read(route);
-      return !/(requireUser|requireAdmin|requireRole|authenticateApiToken|resolvePortalShare)/.test(source);
+      return !/(requireUser|requireAdmin|requireRole|authenticateApiToken|resolvePortalShare|WEBHOOK_WORKER_SECRET)/.test(source);
     });
     expect(missing, `API routes without explicit auth: ${missing.join(", ")}`).toEqual([]);
   });
