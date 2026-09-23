@@ -31,8 +31,11 @@ export async function POST(req: Request) {
     // Never store a webhook secret in plaintext. It is returned once to the creator.
     const secret = randomBytes(32).toString("base64url");
     const secretCipher = encryptSecret(secret);
-    const row = await db.usageEvent.create({ data: { userId: user.id, type: "WEBHOOK_SUBSCRIPTION", units: 1, metadata: { url, events, active: true, secretCipher } } });
-    await auditSecurity(user.id, "WEBHOOK_CREATED", { webhookId: row.id, url, events });
+    const row = await db.$transaction(async (tx) => {
+      const created = await tx.usageEvent.create({ data: { userId: user.id, type: "WEBHOOK_SUBSCRIPTION", units: 1, metadata: { url, events, active: true, secretCipher } } });
+      await auditSecurity(user.id, "WEBHOOK_CREATED", { webhookId: created.id, url, events }, { tx });
+      return created;
+    });
     return NextResponse.json({ id: row.id, url, events, secret, warning: "Bewaar het webhook secret veilig; het wordt daarna niet opnieuw getoond." }, { status: 201 });
   } catch { return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 }); }
 }
@@ -45,8 +48,10 @@ export async function DELETE(req: Request) {
     const row = await db.usageEvent.findFirst({ where: { id, userId: user.id, type: "WEBHOOK_SUBSCRIPTION" } });
     if (!row) return NextResponse.json({ error: "Webhook niet gevonden." }, { status: 404 });
     const m = (row.metadata || {}) as Record<string, unknown>;
-    await db.usageEvent.update({ where: { id }, data: { metadata: { ...m, active: false, revokedAt: new Date().toISOString() } } });
-    await auditSecurity(user.id, "WEBHOOK_REVOKED", { webhookId: id });
+    await db.$transaction(async (tx) => {
+      await tx.usageEvent.update({ where: { id }, data: { metadata: { ...m, active: false, revokedAt: new Date().toISOString() } } });
+      await auditSecurity(user.id, "WEBHOOK_REVOKED", { webhookId: id }, { tx });
+    });
     return NextResponse.json({ revoked: true });
   } catch { return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 }); }
 }

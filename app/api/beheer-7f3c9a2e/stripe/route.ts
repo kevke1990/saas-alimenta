@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { auditSecurity } from "@/lib/team-security";
+import { auditSecurity, withSecurityAudit } from "@/lib/team-security";
 import { distributedRateLimit, requestKey } from "@/lib/rate-limit";
 import { requireSameOrigin } from "@/lib/request-security";
 import { db } from "@/lib/db";
@@ -47,18 +47,20 @@ export async function POST(req: Request) {
       if (wh && !wh.startsWith("whsec_")) throw new Error("Ongeldige Stripe webhook secret");
       const mode = key.startsWith("sk_live_") ? "live" : "test";
       const old = await db.stripeConfig.findFirst();
-      if (old?.mode && old.mode !== mode) await db.stripePlan.updateMany({ data: { stripeProductId: null, stripePriceId: null } });
-      await db.stripeConfig.upsert({
-        where: { id: "singleton" },
-        update: { mode, secretKeyCipher: key ? encryptSecret(key) : undefined, webhookSecretCipher: wh ? encryptSecret(wh) : undefined, webhookEndpoint: new URL("/api/stripe/webhook", baseUrl).toString(), configuredAt: new Date() },
-        create: { id: "singleton", mode, secretKeyCipher: key ? encryptSecret(key) : null, webhookSecretCipher: wh ? encryptSecret(wh) : null, webhookEndpoint: new URL("/api/stripe/webhook", baseUrl).toString(), configuredAt: new Date() },
+      await withSecurityAudit(admin.id, "STRIPE_CREDENTIALS_UPDATED", { mode }, async (tx) => {
+        if (old?.mode && old.mode !== mode) await tx.stripePlan.updateMany({ data: { stripeProductId: null, stripePriceId: null } });
+        return tx.stripeConfig.upsert({
+          where: { id: "singleton" },
+          update: { mode, secretKeyCipher: key ? encryptSecret(key) : undefined, webhookSecretCipher: wh ? encryptSecret(wh) : undefined, webhookEndpoint: new URL("/api/stripe/webhook", baseUrl).toString(), configuredAt: new Date() },
+          create: { id: "singleton", mode, secretKeyCipher: key ? encryptSecret(key) : null, webhookSecretCipher: wh ? encryptSecret(wh) : null, webhookEndpoint: new URL("/api/stripe/webhook", baseUrl).toString(), configuredAt: new Date() },
+        });
       });
-      await auditSecurity(admin.id, "STRIPE_CREDENTIALS_UPDATED", { mode });
       return NextResponse.json({ ok: true });
     }
 
     if (action === "syncProducts") {
       const stripe = await getStripeClient();
+      const plans: Array<{ key: string; name: string; annualAmountCents: number; stripeProductId: string; stripePriceId: string }> = [];
       for (const [key, p] of Object.entries(PRICING)) {
         const existing = await db.stripePlan.findUnique({ where: { key } });
         let product: any = existing?.stripeProductId ? await stripe.products.retrieve(existing.stripeProductId).catch(() => null) : null;
@@ -69,9 +71,13 @@ export async function POST(req: Request) {
           if (oldPriceId) await stripe.prices.update(oldPriceId, { active: false }).catch(() => null);
           price = await stripe.prices.create({ currency: "eur", unit_amount: Math.round(p.annual * 100), recurring: { interval: "year" }, product: product.id, metadata: { plan: key } });
         }
-        await db.stripePlan.upsert({ where: { key }, update: { name: p.name, annualAmountCents: Math.round(p.annual * 100), stripeProductId: product.id, stripePriceId: price.id, active: true }, create: { key, name: p.name, annualAmountCents: Math.round(p.annual * 100), stripeProductId: product.id, stripePriceId: price.id, active: true } });
+        plans.push({ key, name: p.name, annualAmountCents: Math.round(p.annual * 100), stripeProductId: product.id, stripePriceId: price.id });
       }
-      await auditSecurity(admin.id, "STRIPE_PRODUCTS_SYNCED", { planCount: Object.keys(PRICING).length });
+      await withSecurityAudit(admin.id, "STRIPE_PRODUCTS_SYNCED", { planCount: plans.length }, async (tx) => {
+        for (const plan of plans) {
+          await tx.stripePlan.upsert({ where: { key: plan.key }, update: { ...plan, active: true }, create: { ...plan, active: true } });
+        }
+      });
       return NextResponse.json({ ok: true });
     }
 

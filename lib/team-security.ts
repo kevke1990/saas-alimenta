@@ -26,9 +26,15 @@ export function createInviteSecret() {
  * Append a security audit event using only server-derived actor/tenant fields.
  * The AuditLog table is append-only at the database boundary (Step 12).
  */
-export async function auditSecurity(userId: string, action: string, metadata: Prisma.InputJsonValue = {}) {
-  const membership = await db.organizationMember.findFirst({
-    where: { userId },
+export async function auditSecurity(
+  userId: string,
+  action: string,
+  metadata: Prisma.InputJsonValue = {},
+  options: { tx?: Prisma.TransactionClient; organizationId?: string } = {},
+) {
+  const client = options.tx ?? db;
+  const membership = await client.organizationMember.findFirst({
+    where: { userId, ...(options.organizationId ? { organizationId: options.organizationId } : {}) },
     select: { organizationId: true, role: true },
   });
 
@@ -36,13 +42,27 @@ export async function auditSecurity(userId: string, action: string, metadata: Pr
     throw new Error("AUDIT_ACTOR_TENANT_MISSING");
   }
 
-  await db.auditLog.create({
+  await client.auditLog.create({
     data: {
       userId,
       action,
       metadata,
-      organizationId: membership.organizationId,
+      organizationId: options.organizationId ?? membership.organizationId,
       actorRole: membership.role,
     },
+  });
+}
+
+export function withSecurityAudit<T>(
+  userId: string,
+  action: string,
+  metadata: Prisma.InputJsonValue,
+  mutation: (tx: Prisma.TransactionClient) => Promise<T>,
+  organizationId?: string,
+) {
+  return db.$transaction(async (tx) => {
+    const result = await mutation(tx);
+    await auditSecurity(userId, action, metadata, { tx, organizationId });
+    return result;
   });
 }

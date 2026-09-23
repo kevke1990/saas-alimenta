@@ -20,8 +20,9 @@ cat > "$CRON_FILE" <<EOF
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 $BACKUP_SCHEDULE root cd $APP_DIR && bash deploy/backup.sh >> /var/log/alimenta-backup.log 2>&1
+$RETENTION_SCHEDULE root cd $APP_DIR && printf '%s\n' 'DELETE FROM "Document" WHERE "createdAt" < CURRENT_TIMESTAMP - make_interval(days => $DOCUMENT_RETENTION_DAYS); DELETE FROM "MailLog" WHERE "createdAt" < CURRENT_TIMESTAMP - make_interval(days => $MAIL_RETENTION_DAYS); DELETE FROM "MailMessage" WHERE "createdAt" < CURRENT_TIMESTAMP - make_interval(days => $MAIL_RETENTION_DAYS); DELETE FROM "RateLimitBucket" WHERE "expiresAt" < CURRENT_TIMESTAMP;' | docker compose -f docker-compose.prod.yml exec -T app npx prisma db execute --stdin >> /var/log/alimenta-retention.log 2>&1
 $CERTBOT_SCHEDULE cd $APP_DIR && bash deploy/certbot-renew.sh >> /var/log/alimenta-certbot.log 2>&1
-$WEBHOOK_WORKER_SCHEDULE root cd $APP_DIR && docker compose -f docker-compose.prod.yml exec -T app sh -lc 'wget -qO- --post-data="" --header="Authorization: Bearer \${WEBHOOK_WORKER_SECRET}" http://127.0.0.1:3000/api/internal/webhooks/process >/var/log/alimenta-webhook-worker.log 2>&1 || true'
+$WEBHOOK_WORKER_SCHEDULE root cd $APP_DIR && docker compose -f docker-compose.prod.yml exec -T app sh -lc 'wget -qO- --post-data="" --header="Authorization: Bearer \${WEBHOOK_WORKER_SECRET}" http://127.0.0.1:3000/api/internal/webhooks/process' >> /var/log/alimenta-webhook-worker.log 2>&1
 EOF
 chmod 600 "$CRON_FILE"
 touch /var/log/alimenta-backup.log /var/log/alimenta-retention.log /var/log/alimenta-certbot.log /var/log/alimenta-webhook-worker.log

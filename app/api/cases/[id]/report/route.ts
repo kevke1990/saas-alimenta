@@ -18,7 +18,7 @@ export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
     const c=await db.case.findFirst({where:{id,organizationId:access.organizationId},include:{client:true,calculations:{orderBy:{createdAt:"desc"},take:1},overrides:{orderBy:{createdAt:"asc"}}}});
     if(!c) return new NextResponse("Dossier niet gevonden",{status:404});
     const r:any=c.result||{}; const calc=c.calculations[0]; const meta:any=c.metadata||{}; const data:any=c.data||{};
-    const approvalAudit=await db.auditLog.findFirst({where:{userId:u.id,action:"CASE_APPROVED",metadata:{path:["caseId"],equals:id}},orderBy:{createdAt:"desc"}});
+    const approvalAudit=await db.auditLog.findFirst({where:{action:"CASE_APPROVED",metadata:{path:["caseId"],equals:id}},orderBy:{createdAt:"desc"}});
     const approvalBinding=approvalAudit?.metadata&&typeof approvalAudit.metadata==="object"?(approvalAudit.metadata as Record<string,unknown>).calculationBinding as Partial<ReturnType<typeof buildReviewCalculationBinding>>|undefined:undefined;
     const currentBinding=calc?buildReviewCalculationBinding(calc):null;
     const approvedSnapshotBound=!!currentBinding&&!!approvalBinding&&isReviewBindingCurrent(approvalBinding,currentBinding);

@@ -69,4 +69,24 @@ describe("server-side audit log", () => {
       targetUserId: "user-2",
     });
   });
+
+  it("uses a resource organization only after verifying actor membership there", async () => {
+    const tx = {
+      organizationMember: { findFirst: memberFindFirst },
+      auditLog: { create: auditCreate },
+    } as any;
+
+    await auditSecurity("user-1", "DOCUMENT_UPLOADED", { caseId: "case-1" }, {
+      tx,
+      organizationId: "org-resource",
+    });
+
+    expect(memberFindFirst).toHaveBeenCalledWith({
+      where: { userId: "user-1", organizationId: "org-resource" },
+      select: { organizationId: true, role: true },
+    });
+    expect(auditCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({ organizationId: "org-resource", actorRole: "ADMIN" }),
+    });
+  });
 });

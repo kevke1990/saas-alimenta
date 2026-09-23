@@ -1,4 +1,5 @@
 import { db } from "./db";
+import type { Prisma } from "@prisma/client";
 
 export type BillingPlan = "PRIVATE" | "PRO";
 export type BillingStatus = "TRIALING" | "ACTIVE" | "PAST_DUE" | "CANCELED" | "INCOMPLETE";
@@ -50,12 +51,24 @@ export async function getServerBillingEntitlement(userId: string) {
   };
 }
 
-export async function assertCanCreateCase(userId: string, organizationId: string) {
-  const entitlement = await getServerBillingEntitlement(userId);
+export async function assertCanCreateCase(tx: Prisma.TransactionClient, userId: string, organizationId: string) {
+  await tx.$queryRaw`SELECT "id" FROM "Organization" WHERE "id" = ${organizationId} FOR UPDATE`;
+  const user = await tx.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
+  });
+  if (!user) throw new BillingEntitlementError("Gebruiker niet gevonden.");
+  const entitlement = {
+    plan: user.plan,
+    status: user.subscriptionStatus,
+    subscriptionEndsAt: user.subscriptionEndsAt,
+    paid: hasPaidEntitlement(user.plan, user.subscriptionStatus),
+    activeCaseLimit: activeCaseLimit(user.plan),
+  };
   if (!entitlement.paid) throw new BillingEntitlementError();
 
   if (entitlement.activeCaseLimit !== null) {
-    const activeCases = await db.case.count({
+    const activeCases = await tx.case.count({
       where: {
         organizationId,
         deletedAt: null,

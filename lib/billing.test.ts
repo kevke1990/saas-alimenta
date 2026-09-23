@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activeCaseLimit,
+  assertCanCreateCase,
   calculateVatExclusive,
   calculateVatInclusive,
   canCreateActiveCase,
@@ -30,6 +31,18 @@ describe("billing entitlement matrix", () => {
     expect(canCreateActiveCase("PRIVATE", 1)).toBe(false);
     expect(canCreateActiveCase("PRO", 4)).toBe(true);
     expect(canCreateActiveCase("PRO", 5)).toBe(false);
+  });
+
+  it("locks the organization before counting active cases on the transaction client", async () => {
+    const calls: string[] = [];
+    const tx = {
+      $queryRaw: async () => { calls.push("lock"); return [{ id: "org-1" }]; },
+      user: { findUnique: async () => { calls.push("user"); return { plan: "PRIVATE", subscriptionStatus: "ACTIVE", subscriptionEndsAt: null }; } },
+      case: { count: async () => { calls.push("count"); return 0; } },
+    } as any;
+
+    await expect(assertCanCreateCase(tx, "user-1", "org-1")).resolves.toMatchObject({ paid: true });
+    expect(calls).toEqual(["lock", "user", "count"]);
   });
 
   it("preserves existing VAT arithmetic", () => {

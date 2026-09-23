@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
-import { ensureTenant } from "@/lib/tenant";
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { db } from "@/lib/db";
 import { calculate } from "@/lib/calculator";
 import { calculatePartnerSupport } from "@/lib/partner-engine";
@@ -14,10 +14,10 @@ import { canRestoreCalculation, restoredReviewStatus } from "@/lib/restore-polic
 export async function POST(_: Request, { params }: { params: Promise<{ id: string; calculationId: string }> }) {
   try {
     const u = await requireUser();
-    const tenant = await ensureTenant(u);
     const { id, calculationId } = await params;
+    const access = await requireCaseTenantAccess(u.id, id, "PROFESSIONAL");
     const existing = await db.case.findFirst({
-      where: { id, organizationId: tenant.id, deletedAt: null, status: { not: "ARCHIVED" } },
+      where: { id, organizationId: access.organizationId, deletedAt: null, status: { not: "ARCHIVED" } },
       include: { calculations: { where: { id: calculationId }, take: 1 } },
     });
     if (!existing) return new NextResponse("Dossier niet gevonden.", { status: 404 });
@@ -72,7 +72,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
       const persisted = await persistCaseCalculationV2({
         tx,
         caseId: id,
-        organizationId: tenant.id,
+        organizationId: access.organizationId,
         userId: u.id,
         calculationInput: body.data,
         productionResult: productionSnapshot,
@@ -90,7 +90,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
         calculationVersion: childResult.normVersion,
         metadata: (body.meta ?? existing.metadata ?? {}) as any,
       } });
-      await tx.auditLog.create({ data: { userId: u.id, organizationId: tenant.id, entityType: "CASE", entityId: id, actorRole: tenant.role, action: "CASE_RESTORED", metadata: {
+      await tx.auditLog.create({ data: { userId: u.id, organizationId: access.organizationId, entityType: "CASE", entityId: id, actorRole: access.role, action: "CASE_RESTORED", metadata: {
         caseId: id,
         restoredFromCalculationId: snapshot.id,
         newCalculationId: persisted.calculationId,
@@ -104,6 +104,6 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     });
     return NextResponse.json({ ok: true, case: updated.c, restoredFromCalculationId: snapshot.id, calculation: updated.persisted });
   } catch (e: any) {
-    return new NextResponse(e?.message || "Herstellen van berekening mislukt", { status: 400 });
+    return new NextResponse(e?.message || "Herstellen van berekening mislukt", { status: e?.status === 403 ? 403 : 400 });
   }
 }

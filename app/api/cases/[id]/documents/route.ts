@@ -18,7 +18,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(); const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: user.id }, select: { id: true, clientId: true } });
+  const c = await db.case.findFirst({ where: { id, userId: user.id }, select: { id: true, clientId: true, organizationId: true } });
   if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
   const contentType = req.headers.get("content-type") || "";
   const body: any = contentType.includes("application/json") ? await req.json() : Object.fromEntries((await req.formData()).entries());
@@ -28,8 +28,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const analyze = body?.analyze !== "false";
   const bytes = Buffer.byteLength(text, "utf8");
   if (name.length < 2 || !text || bytes > MAX_DOCUMENT_BYTES) return new NextResponse("Ongeldig of te groot document", { status: 422 });
-  const document = await db.document.create({ data: { userId:user.id, clientId:c.clientId, caseId:id, name, mimeType, sizeBytes:bytes, sha256:sha256(Buffer.from(text)), storageCipher:encryptDocument(Buffer.from(text)), source:"UPLOAD", aiStatus:analyze?"QUEUED":"NOT_ANALYZED" } });
-  await auditSecurity(user.id,"DOCUMENT_UPLOADED",{caseId:id,documentId:document.id,mimeType,sizeBytes:bytes});
+  const document = await db.$transaction(async (tx) => {
+    const created = await tx.document.create({ data: { userId:user.id, clientId:c.clientId, caseId:id, name, mimeType, sizeBytes:bytes, sha256:sha256(Buffer.from(text)), storageCipher:encryptDocument(Buffer.from(text)), source:"UPLOAD", aiStatus:analyze?"QUEUED":"NOT_ANALYZED" } });
+    await auditSecurity(user.id,"DOCUMENT_UPLOADED",{caseId:id,documentId:created.id,mimeType,sizeBytes:bytes},{tx,organizationId:c.organizationId ?? undefined});
+    return created;
+  });
   if (!analyze) return contentType.includes("application/json") ? NextResponse.json({ok:true,document},{status:201}) : NextResponse.redirect(new URL(`/cases/${id}/documenten`,req.url));
   if (text.length < 30 || text.length > AI_INCOME_MAX_INPUT_CHARS || process.env.AI_PROCESSING_DISABLED === "true") {
     const aiStatus = process.env.AI_PROCESSING_DISABLED === "true" ? "DISABLED" : text.length < 30 ? "SKIPPED" : "TOO_LARGE";
@@ -44,12 +47,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const result = await analyzeIncomeDocument(text);
     const facts:Array<[string,string,number,string]> = [["grossAnnual","Bruto jaarinkomen",result.grossAnnual,"EUR/jaar"],["holidayAllowance","Vakantiegeld",result.holidayAllowance,"EUR/jaar"],["thirteenthMonth","13e maand",result.thirteenthMonth,"EUR/jaar"],["ikb","IKB",result.ikb,"EUR/jaar"],["pensionPremium","Pensioenpremie",result.pensionPremium,"EUR/jaar"],["taxableIncome","Belastbaar inkomen",result.taxableIncome,"EUR/jaar"],["netAnnual","Netto jaarinkomen",result.netAnnual,"EUR/jaar"]].filter(([, ,v])=>typeof v === "number" && Number.isFinite(v)) as Array<[string,string,number,string]>;
-    await db.$transaction([db.document.update({where:{id:document.id},data:{aiStatus:"ANALYZED",aiResult:result,analysisVersion:"income-v1",aiModel:model}}),db.aiRun.update({where:{id:run.id},data:{status:"SUCCEEDED",output:result,finishedAt:new Date()}}),...facts.map(([key,label,value,unit])=>db.incomeFact.create({data:{userId:user.id,documentId:document.id,caseId:id,key,label,valueNumber:value,unit,confidence:result.confidence??null,status:"PROPOSED"}}))]);
-    await auditSecurity(user.id,"DOCUMENT_AI_ANALYZED",{caseId:id,documentId:document.id,aiRunId:run.id,factCount:facts.length});
+    await db.$transaction(async (tx) => {
+      await tx.document.update({where:{id:document.id},data:{aiStatus:"ANALYZED",aiResult:result,analysisVersion:"income-v1",aiModel:model}});
+      await tx.aiRun.update({where:{id:run.id},data:{status:"SUCCEEDED",output:result,finishedAt:new Date()}});
+      await Promise.all(facts.map(([key,label,value,unit])=>tx.incomeFact.create({data:{userId:user.id,documentId:document.id,caseId:id,key,label,valueNumber:value,unit,confidence:result.confidence??null,status:"PROPOSED"}})));
+      await auditSecurity(user.id,"DOCUMENT_AI_ANALYZED",{caseId:id,documentId:document.id,aiRunId:run.id,factCount:facts.length},{tx,organizationId:c.organizationId ?? undefined});
+    });
     if (!contentType.includes("application/json")) return NextResponse.redirect(new URL(`/cases/${id}/documenten`,req.url));
     return NextResponse.json({ok:true,document:await db.document.findUnique({where:{id:document.id},include:{incomeFacts:true}}),disclaimer:"AI-extractie is uitsluitend een voorstel. Controleer elk feit professioneel voordat het in een berekening wordt gebruikt."},{status:201});
   } catch(error:any) {
-    await db.document.update({where:{id:document.id},data:{aiStatus:"FAILED"}}); await db.aiRun.update({where:{id:run.id},data:{status:"FAILED",error:String(error?.message||"AI-fout").slice(0,2000),finishedAt:new Date()}}).catch(()=>undefined); await auditSecurity(user.id,"DOCUMENT_AI_FAILED",{caseId:id,documentId:document.id});
+    await db.$transaction(async (tx) => {
+      await tx.document.update({where:{id:document.id},data:{aiStatus:"FAILED"}});
+      await tx.aiRun.update({where:{id:run.id},data:{status:"FAILED",error:String(error?.message||"AI-fout").slice(0,2000),finishedAt:new Date()}});
+      await auditSecurity(user.id,"DOCUMENT_AI_FAILED",{caseId:id,documentId:document.id},{tx,organizationId:c.organizationId ?? undefined});
+    }).catch(()=>undefined);
     if (!contentType.includes("application/json")) return NextResponse.redirect(new URL(`/cases/${id}/documenten`,req.url));
     return NextResponse.json({ok:false,document:{...document,aiStatus:"FAILED"},warning:"Document veilig opgeslagen; AI-analyse mislukt."},{status:201});
   }

@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { cache } from "react";
 import { ControlModeError, getSessionContext, isSystemControlWriteAllowed } from "./control-mode";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
@@ -19,27 +20,37 @@ const modelWriteOperations = new Set([
 
 const rawWriteOperations = new Set(["$executeRaw", "$executeRawUnsafe"]);
 
+const resolveSessionControlMode = cache(async () => {
+  const context = await getSessionContext();
+  if (!context.sessionHash) return { context, controlMode: "NORMAL" as const };
+
+  const session = await basePrisma.authSession.findFirst({
+    where: {
+      tokenHash: context.sessionHash,
+      userId: context.userId ?? undefined,
+      revokedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    select: { controlMode: true },
+  });
+
+  return {
+    context,
+    controlMode: session?.controlMode === "READ_ONLY" ? "READ_ONLY" as const : "NORMAL" as const,
+  };
+});
+
 const extendedPrisma = basePrisma.$extends({
   query: {
     async $allOperations({ model, operation, args, query }: any) {
       const isWrite = model ? modelWriteOperations.has(operation) : rawWriteOperations.has(operation);
       if (!isWrite) return query(args);
 
-      const context = await getSessionContext();
+      const { context, controlMode } = await resolveSessionControlMode();
       if (!context.sessionHash) return query(args);
 
-      const session = await basePrisma.authSession.findFirst({
-        where: {
-          tokenHash: context.sessionHash,
-          userId: context.userId ?? undefined,
-          revokedAt: null,
-          expiresAt: { gt: new Date() },
-        },
-        select: { controlMode: true },
-      });
-
       if (
-        session?.controlMode === "READ_ONLY" &&
+        controlMode === "READ_ONLY" &&
         !isSystemControlWriteAllowed(model, operation, args, context.sessionHash)
       ) {
         throw new ControlModeError();

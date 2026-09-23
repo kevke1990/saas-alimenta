@@ -18,20 +18,25 @@ export async function POST(req: Request) {
     const context = await getSessionContext();
     if (!context.sessionHash) return new NextResponse("Sessie ontbreekt.", { status: 401 });
 
-    const result = await db.authSession.updateMany({
-      where: {
-        tokenHash: context.sessionHash,
-        userId: admin.id,
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-      data: { controlMode: mode },
+    const result = await db.$transaction(async (tx) => {
+      const updated = await tx.authSession.updateMany({
+        where: {
+          tokenHash: context.sessionHash!,
+          userId: admin.id,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        data: { controlMode: mode },
+      });
+      if (updated.count === 1) {
+        await auditSecurity(admin.id, "CONTROL_MODE_CHANGED", { mode }, { tx });
+      }
+      return updated;
     });
 
     if (result.count !== 1) return new NextResponse("Actieve sessie niet gevonden.", { status: 401 });
 
     await setSessionControlModeCookie(mode);
-    await auditSecurity(admin.id, "CONTROL_MODE_CHANGED", { mode });
     return NextResponse.json({ ok: true, controlMode: mode });
   } catch (error: any) {
     if (error?.message === "CROSS_ORIGIN_REQUEST") {

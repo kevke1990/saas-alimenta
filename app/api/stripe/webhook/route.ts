@@ -24,9 +24,9 @@ async function syncSubscription(tx: Prisma.TransactionClient, s: Stripe.Subscrip
 
 async function markPaymentFailed(tx: Prisma.TransactionClient, inv: Stripe.Invoice) {
   const customer = String(inv.customer);
-  const user = await db.user.findFirst({ where: { stripeCustomerId: customer } });
+  const user = await tx.user.findFirst({ where: { stripeCustomerId: customer } });
   if (!user) return;
-  await db.user.update({ where: { id: user.id }, data: { subscriptionStatus: "PAST_DUE" } });
+  await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "PAST_DUE" } });
   const subscriptionId = String((inv as any).subscription || "");
   if (subscriptionId) await tx.subscription.updateMany({ where: { userId: user.id, stripeSubscriptionId: subscriptionId }, data: { status: "PAST_DUE" } });
 }
