@@ -4,7 +4,17 @@ import { calculate } from "../lib/calculator";
 
 const db = new PrismaClient();
 
+function assertDemoEnvironment() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Demo seed is geblokkeerd in NODE_ENV=production.");
+  }
+  if (process.env.DEMO_MODE !== "true") {
+    throw new Error("Demo seed vereist expliciet DEMO_MODE=true.");
+  }
+}
+
 async function main() {
+  assertDemoEnvironment();
   const email = (process.env.ADMIN_EMAIL || "admin@example.nl").toLowerCase();
   const user = await db.user.findUnique({ where: { email } });
   if (!user) throw new Error(`Admin ${email} bestaat nog niet. Voer eerst prisma/seed.ts uit.`);
