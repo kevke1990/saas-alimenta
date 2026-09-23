@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+
 import Link from "next/link";
+import { useState } from "react";
+import { AuthShell, AuthStatus } from "@/components/auth/AuthShell";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -14,17 +16,24 @@ export default function ForgotPasswordPage() {
       const r = await fetch("/api/auth/forgot-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email }) });
       if (!r.ok) throw new Error("Aanvraag kon niet worden verwerkt.");
       setSent(true);
-    } catch (e: any) { setError(e?.message || "Probeer het later opnieuw."); }
-    finally { setBusy(false); }
+    } catch (caught: unknown) {
+      setError(caught instanceof Error ? caught.message : "Probeer het later opnieuw.");
+    } finally { setBusy(false); }
   }
 
-  return <main className="auth-card-wrap" style={{ minHeight: "100vh" }}><section className="auth-card">
-    <h2>Wachtwoord vergeten?</h2>
-    {sent ? <><div className="notice topgap">Als het account bestaat, is er een e-mail met instructies verzonden.</div><p className="topgap"><Link href="/login" style={{color:"#315efb",fontWeight:700}}>Terug naar inloggen</Link></p></> : <>
-      <p>Vul je e-mailadres in. We sturen een beveiligde link als er een account bestaat.</p>
-      {error && <div className="notice error topgap">{error}</div>}
-      <form onSubmit={submit} className="topgap"><label className="label">E-mailadres</label><input className="input" type="email" required autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/><button className="btn topgap" disabled={busy} style={{width:"100%",justifyContent:"center"}}>{busy?"Versturen…":"Resetlink versturen"}</button></form>
-      <p className="topgap"><Link href="/login" style={{color:"#315efb",fontWeight:700}}>Terug naar inloggen</Link></p>
-    </>}
-  </section></main>;
+  return (
+    <AuthShell eyebrow="Account herstellen" title="Wachtwoord vergeten?" description="Vul je e-mailadres in. We sturen een beveiligde link als er een account bestaat.">
+      {sent ? <>
+        <AuthStatus>Als het account bestaat, is er een e-mail met instructies verzonden.</AuthStatus>
+        <Link href="/login" className="auth-secondary-action">Terug naar inloggen</Link>
+      </> : <>
+        {error ? <AuthStatus tone="error">{error}</AuthStatus> : null}
+        <form onSubmit={submit} className="auth-form" aria-busy={busy}>
+          <div className="auth-field"><label className="auth-label" htmlFor="email">E-mailadres</label><input id="email" className="auth-input" type="email" required autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <button className="auth-submit" disabled={busy} type="submit">{busy ? "Versturen…" : "Resetlink versturen"}</button>
+        </form>
+        <p className="auth-footer-link"><Link href="/login" className="auth-text-link">Terug naar inloggen</Link></p>
+      </>}
+    </AuthShell>
+  );
 }
