@@ -3,29 +3,35 @@
 ## Doel
 Een betrouwbare, controleerbare billinglaag voor SaaS-Alimenta, met duidelijke abonnementsstatussen, server-side entitlement checks en veilige Stripe-webhookverwerking.
 
-## Bestaande basis
-- `User` bevat al `plan`, `stripeCustomerId`, `stripeSubscriptionId`, `subscriptionStatus` en `subscriptionEndsAt`.
-- `Subscription` bevat een Stripe-subscription, prijs-ID, status en periode-einde.
-- `StripeConfig`, `StripePlan` en `StripeEvent` zijn aanwezig als basis voor beheerconfiguratie, prijsplannen en idempotente webhookverwerking.
-- Stripe is als dependency opgenomen.
+## Implementatie
+- Eén centrale server-side entitlementlaag in `lib/billing.ts`.
+- Planmatrix voor `FREE`, `PRIVATE`, `PRO`, `PRACTICE` en `ENTERPRISE`.
+- `PRIVATE` en `PRO` gebruiken server-side actieve-dossierlimieten van respectievelijk 1 en 5.
+- `PRACTICE` en `ENTERPRISE` kunnen als beheerde entitlements actief blijven zonder Stripe-status.
+- `FREE` heeft geen betaalde entitlement; dit blijft bewust los van demo/offline-functionaliteit, die in Stap 17 wordt gescheiden.
+- Case-creatie controleert de entitlement en actieve-dossierlimiet server-side; frontendwaarden zijn niet autoritatief.
+- Stripe checkout en customer portal blijven eigendom van de ingelogde gebruiker via de bestaande `requireUser()`-flow.
+- Stripe webhook-signatures worden server-side geverifieerd.
+- `StripeEvent` is de idempotency-key op applicatieniveau.
+- De `StripeEvent`-claim en subscription-mutaties worden in één PostgreSQL-transactie verwerkt. Bij een fout rolt de claim terug zodat Stripe veilig kan retryen.
+- Na een succesvolle verwerking wordt een event niet verwijderd.
+- Subscriptionstatussen worden expliciet gemapt; `PAST_DUE` blijft tijdelijk entitled, terwijl `CANCELED` en verlopen/incomplete staten geen betaalde entitlement geven.
+- Stripe secrets blijven server-side en versleuteld in de bestaande `StripeConfig`-opslag.
 
-## Implementatievolgorde
-1. Eén centrale server-side entitlementfunctie maken; UI-velden en client-input mogen nooit bepalen welke functies beschikbaar zijn.
-2. Plan- en featurematrix vastleggen voor `FREE`, `PRIVATE`, `PRO`, `PRACTICE` en `ENTERPRISE`.
-3. Alle betaalde API-routes laten controleren op actieve entitlement en accountstatus.
-4. Checkout- en customer-portalflows controleren op eigenaarschap van de ingelogde gebruiker.
-5. Webhooks strikt valideren met de Stripe-signature, idempotent verwerken via `StripeEvent` en subscriptionstatus atomair bijwerken.
-6. Downgrade, annulering, `PAST_DUE`, verlopen proefperiode en ontbrekende Stripe-data expliciet afhandelen.
-7. Billing-overzicht en foutmeldingen toevoegen zonder geheime Stripe-informatie naar de browser te sturen.
-8. Tests toevoegen voor entitlementgrenzen, webhook-idempotentie, verkeerde gebruikerskoppelingen en statusovergangen.
+## Bewust niet gewijzigd
+- Calculation engine, formules, normen, percentages, afronding en berekeningsresultaten.
+- Bestaande Stripe-prijzen en productconfiguratie.
+- Bestaande PostgreSQL/Prisma-persistence.
+- Geen tweede billingdatabase of lokale billingstaat.
+- Geen productie-deployment of productie-migratie tijdens de hardening-fase.
 
 ## Acceptatiecriteria
 - Geen betaalde functionaliteit is uitsluitend door frontendlogica afgeschermd.
 - Een gebruiker kan alleen zijn eigen Stripe customer/subscription beheren.
-- Een webhook kan veilig opnieuw worden aangeboden zonder dubbele mutaties.
-- Onbekende of ongeldige webhook-events worden geweigerd of veilig genegeerd.
-- `PAST_DUE`, `CANCELED` en verlopen abonnementen leiden tot voorspelbare featurebeperkingen.
+- Een webhook kan veilig opnieuw worden aangeboden zonder dubbele lokale mutaties.
+- Een mislukte webhooktransactie laat geen halfverwerkte `StripeEvent`-claim achter.
+- `PAST_DUE`, `CANCELED` en incomplete abonnementen hebben voorspelbare entitlementregels.
 - Secrets en webhook-signatures worden nooit gelogd of teruggegeven aan de client.
 
 ## Veiligheidsregel
-Bestaande `userId`-scoping en autorisatie blijven verplicht. Billing mag nooit toegang geven tot data van een andere gebruiker of tenant.
+Bestaande `userId`-scoping en tenant-autorisatie blijven verplicht. Billing mag nooit toegang geven tot data van een andere gebruiker of tenant.

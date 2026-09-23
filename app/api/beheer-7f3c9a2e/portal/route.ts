@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
-import { auditSecurity } from "@/lib/team-security";
+import { auditSecurity, withSecurityAudit } from "@/lib/team-security";
 import { distributedRateLimit, requestKey } from "@/lib/rate-limit";
 import { requireSameOrigin } from "@/lib/request-security";
 import { db } from "@/lib/db";
 import { encryptSecret } from "@/lib/secrets";
 import { getStripeClient } from "@/lib/stripe";
+import { getSessionContext } from "@/lib/control-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -62,8 +63,13 @@ export async function GET() {
       db.stripeConfig.findFirst(),
       config(),
     ]);
+    const sessionContext = await getSessionContext();
+    const controlSession = sessionContext.sessionHash
+      ? await db.authSession.findFirst({ where: { tokenHash: sessionContext.sessionHash, userId: admin.id, revokedAt: null, expiresAt: { gt: new Date() } }, select: { controlMode: true } })
+      : null;
     return NextResponse.json({
       admin: { email: admin.email },
+      controlMode: controlSession?.controlMode === "READ_ONLY" ? "READ_ONLY" : "NORMAL",
       stats: { users, clients, cases, subscriptions, activeSubscriptions, pastDue, mailSent, mailFailed },
       users: recentUsers,
       cases: recentCases,
@@ -93,16 +99,18 @@ export async function POST(req: Request) {
       const plan = String(b.plan || "FREE");
       const allowed = ["FREE", "PRO", "PRACTICE", "ENTERPRISE"];
       if (!userId || !allowed.includes(plan)) throw new Error("Ongeldig plan");
-      await db.user.update({ where: { id: userId }, data: { plan: plan as any, subscriptionStatus: plan === "FREE" ? null : "ACTIVE" } });
-      await auditSecurity(admin.id, "ADMIN_USER_PLAN_CHANGED", { targetUserId: userId, plan });
+      await withSecurityAudit(admin.id, "ADMIN_USER_PLAN_CHANGED", { targetUserId: userId, plan }, (tx) =>
+        tx.user.update({ where: { id: userId }, data: { plan: plan as any, subscriptionStatus: plan === "FREE" ? null : "ACTIVE" } }),
+      );
       return NextResponse.json({ ok: true });
     }
 
     if (action === "lockUser" || action === "unlockUser") {
       const userId = String(b.userId || "");
       if (userId === admin.id) throw new Error("Je kunt je eigen beheeraccount niet blokkeren");
-      await db.user.update({ where: { id: userId }, data: { lockedAt: action === "lockUser" ? new Date() : null } });
-      await auditSecurity(admin.id, action === "lockUser" ? "ADMIN_USER_LOCKED" : "ADMIN_USER_UNLOCKED", { targetUserId: userId });
+      await withSecurityAudit(admin.id, action === "lockUser" ? "ADMIN_USER_LOCKED" : "ADMIN_USER_UNLOCKED", { targetUserId: userId }, (tx) =>
+        tx.user.update({ where: { id: userId }, data: { lockedAt: action === "lockUser" ? new Date() : null } }),
+      );
       return NextResponse.json({ ok: true });
     }
 
@@ -116,8 +124,9 @@ export async function POST(req: Request) {
         if (atPeriodEnd) await stripe.subscriptions.update(user.stripeSubscriptionId, { cancel_at_period_end: true });
         else await stripe.subscriptions.cancel(user.stripeSubscriptionId);
       }
-      await db.user.update({ where: { id: userId }, data: { subscriptionStatus: atPeriodEnd ? "ACTIVE" : "CANCELED", ...(atPeriodEnd ? {} : { plan: "FREE" }) } });
-      await auditSecurity(admin.id, "ADMIN_SUBSCRIPTION_CANCELED", { targetUserId: userId, atPeriodEnd });
+      await withSecurityAudit(admin.id, "ADMIN_SUBSCRIPTION_CANCELED", { targetUserId: userId, atPeriodEnd }, (tx) =>
+        tx.user.update({ where: { id: userId }, data: { subscriptionStatus: atPeriodEnd ? "ACTIVE" : "CANCELED", ...(atPeriodEnd ? {} : { plan: "FREE" }) } }),
+      );
       return NextResponse.json({ ok: true });
     }
 
@@ -131,17 +140,17 @@ export async function POST(req: Request) {
       if (!fromEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(fromEmail)) throw new Error("Geldig afzenderadres is verplicht");
       const apiKeyCipher = apiKey ? encryptSecret(apiKey) : null;
       const webhookSecretCipher = webhookSecret ? encryptSecret(webhookSecret) : null;
-      await db.$executeRaw`
-        UPDATE "AppConfig"
-        SET "mailProvider"=${provider},
-            "mailFromName"=${fromName || null},
-            "mailFromEmail"=${fromEmail},
-            "mailReplyTo"=${replyTo || null},
-            "mailApiKeyCipher"=CASE WHEN ${Boolean(apiKey)} THEN ${apiKeyCipher} ELSE "mailApiKeyCipher" END,
-            "mailWebhookSecretCipher"=CASE WHEN ${Boolean(webhookSecret)} THEN ${webhookSecretCipher} ELSE "mailWebhookSecretCipher" END,
-            "updatedAt"=CURRENT_TIMESTAMP
-        WHERE "id"='singleton'`;
-      await auditSecurity(admin.id, "ADMIN_MAIL_CONFIG_UPDATED", { provider, fromEmail });
+      await withSecurityAudit(admin.id, "ADMIN_MAIL_CONFIG_UPDATED", { provider, fromEmail }, (tx) => tx.$executeRaw`
+          UPDATE "AppConfig"
+          SET "mailProvider"=${provider},
+              "mailFromName"=${fromName || null},
+              "mailFromEmail"=${fromEmail},
+              "mailReplyTo"=${replyTo || null},
+              "mailApiKeyCipher"=CASE WHEN ${Boolean(apiKey)} THEN ${apiKeyCipher} ELSE "mailApiKeyCipher" END,
+              "mailWebhookSecretCipher"=CASE WHEN ${Boolean(webhookSecret)} THEN ${webhookSecretCipher} ELSE "mailWebhookSecretCipher" END,
+              "updatedAt"=CURRENT_TIMESTAMP
+          WHERE "id"='singleton'`,
+      );
       return NextResponse.json({ ok: true });
     }
 
@@ -153,8 +162,9 @@ export async function POST(req: Request) {
       const systemPrompt = String(b.systemPrompt || "").trim();
       const temperature = Math.max(0, Math.min(2, Number(b.temperature ?? 0.2)));
       const maxTokens = Math.max(256, Math.min(32000, Number(b.maxTokens ?? 4000)));
-      await db.$executeRaw`UPDATE "AppConfig" SET "aiEnabled"=${Boolean(b.enabled)}, "aiProvider"=${provider}, "aiModel"=${model || null}, "aiBaseUrl"=${baseUrl || null}, "aiApiKeyCipher"=${apiKey ? encryptSecret(apiKey) : null}, "aiSystemPrompt"=${systemPrompt || null}, "aiTemperature"=${temperature}, "aiMaxTokens"=${maxTokens}, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"='singleton'`;
-      await auditSecurity(admin.id, "ADMIN_AI_CONFIG_UPDATED", { provider, model, enabled: Boolean(b.enabled) });
+      await withSecurityAudit(admin.id, "ADMIN_AI_CONFIG_UPDATED", { provider, model, enabled: Boolean(b.enabled) }, (tx) =>
+        tx.$executeRaw`UPDATE "AppConfig" SET "aiEnabled"=${Boolean(b.enabled)}, "aiProvider"=${provider}, "aiModel"=${model || null}, "aiBaseUrl"=${baseUrl || null}, "aiApiKeyCipher"=${apiKey ? encryptSecret(apiKey) : null}, "aiSystemPrompt"=${systemPrompt || null}, "aiTemperature"=${temperature}, "aiMaxTokens"=${maxTokens}, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"='singleton'`,
+      );
       return NextResponse.json({ ok: true });
     }
 

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { db } from "./db";
 import { decryptDocument } from "./document-store";
+import { withAuditLogMaintenance } from "./audit-log-maintenance";
 
 export const PRIVACY_POLICY_VERSION = "2026.2";
 export const RIGHTS = ["ACCESS", "RECTIFICATION", "RESTRICTION", "OBJECTION", "PORTABILITY", "ERASURE"] as const;
@@ -55,7 +56,7 @@ export async function buildAccountExport(userId: string) {
 }
 
 export async function eraseClientData(userId: string, clientId: string) {
-  return db.$transaction(async tx => {
+  return withAuditLogMaintenance(db, "erasure", async tx => {
     const client = await tx.client.findFirst({ where: { id: clientId, userId } });
     if (!client) return null;
     const now = new Date().toISOString();
@@ -74,7 +75,7 @@ export async function eraseClientData(userId: string, clientId: string) {
 }
 
 export async function eraseAccountData(userId: string) {
-  return db.$transaction(async tx => {
+  return withAuditLogMaintenance(db, "erasure", async tx => {
     const membership = await tx.$queryRaw<Array<{ organizationId: string }>>`SELECT "organizationId" FROM "OrganizationMember" WHERE "userId" = ${userId} LIMIT 1`;
     await tx.auditLog.deleteMany({ where: { userId } });
     await tx.user.delete({ where: { id: userId } });

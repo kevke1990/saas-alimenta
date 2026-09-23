@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createCalculationPdf } from "@/lib/pdf-report";
@@ -11,8 +12,9 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     return NextResponse.json({ error: "Niet ingelogd" }, { status: 401 });
   }
   const { id } = await params;
+  const access = await requireCaseTenantAccess(user.id, id, "READ_ONLY");
   const record = await db.case.findFirst({
-    where: { id, userId: user.id },
+    where: { id, organizationId: access.organizationId },
     include: { client: true, calculations: { orderBy: { createdAt: "desc" }, take: 1 } },
   });
   if (!record) return NextResponse.json({ error: "Dossier niet gevonden" }, { status: 404 });

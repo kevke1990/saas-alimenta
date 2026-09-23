@@ -51,26 +51,31 @@ export async function POST(req: Request) {
       : process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash";
     const inputHash = hashAiInput(text);
 
-    const run = await db.aiRun.create({
-      data: {
-        userId: user.id,
-        operation: "ANALYZE_INCOME",
-        model,
-        status: "RUNNING",
-        inputHash,
-      },
+    const run = await db.$transaction(async (tx) => {
+      const created = await tx.aiRun.create({
+        data: {
+          userId: user.id,
+          operation: "ANALYZE_INCOME",
+          model,
+          status: "RUNNING",
+          inputHash,
+        },
+      });
+      await auditSecurity(user.id, "AI_ANALYSIS_STARTED", { operation: "ANALYZE_INCOME", model }, { tx });
+      return created;
     });
     aiRunId = run.id;
-    await auditSecurity(user.id, "AI_ANALYSIS_STARTED", { operation: "ANALYZE_INCOME", model });
     logInfo("AI_ANALYSIS_STARTED", { userId: user.id, operation: "ANALYZE_INCOME", model });
 
     const result = await measure("ai.analyze_income", () => analyzeIncomeDocument(text));
 
-    await db.aiRun.update({
-      where: { id: run.id },
-      data: { status: "SUCCEEDED", output: result, finishedAt: new Date() },
+    await db.$transaction(async (tx) => {
+      await tx.aiRun.update({
+        where: { id: run.id },
+        data: { status: "SUCCEEDED", output: result, finishedAt: new Date() },
+      });
+      await auditSecurity(user.id, "AI_ANALYSIS_COMPLETED", { operation: "ANALYZE_INCOME", model }, { tx });
     });
-    await auditSecurity(user.id, "AI_ANALYSIS_COMPLETED", { operation: "ANALYZE_INCOME", model });
     logInfo("AI_ANALYSIS_COMPLETED", { userId: user.id, operation: "ANALYZE_INCOME", model });
 
     return NextResponse.json({
@@ -82,21 +87,30 @@ export async function POST(req: Request) {
     const message = e?.message || genericFailure;
 
     if (aiRunId) {
-      await db.aiRun.update({
-        where: { id: aiRunId },
-        data: {
-          status: message.includes("te lang") ? "TIMEOUT" : "FAILED",
-          error: String(message).slice(0, 2000),
-          finishedAt: new Date(),
-        },
+      await db.$transaction(async (tx) => {
+        await tx.aiRun.update({
+          where: { id: aiRunId! },
+          data: {
+            status: message.includes("te lang") ? "TIMEOUT" : "FAILED",
+            error: String(message).slice(0, 2000),
+            finishedAt: new Date(),
+          },
+        });
+        if (userId) {
+          await auditSecurity(userId, "AI_ANALYSIS_FAILED", {
+            operation: "ANALYZE_INCOME",
+            reason: message.includes("te lang") ? "TIMEOUT" : "ERROR",
+          }, { tx });
+        }
       }).catch(() => undefined);
-    }
-
-    if (userId) {
+    } else if (userId) {
       await auditSecurity(userId, "AI_ANALYSIS_FAILED", {
         operation: "ANALYZE_INCOME",
         reason: message.includes("te lang") ? "TIMEOUT" : "ERROR",
       }).catch(() => undefined);
+    }
+
+    if (userId) {
       logError("AI_ANALYSIS_FAILED", {
         userId,
         operation: "ANALYZE_INCOME",

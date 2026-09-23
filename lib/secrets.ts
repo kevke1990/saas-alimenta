@@ -1,8 +1,9 @@
 import crypto from "crypto";
+import { requireRuntimeSecret } from "./runtime-secrets";
 
 function key(){
-  const raw=process.env.APP_ENCRYPTION_KEY || process.env.MAIL_ENCRYPTION_KEY;
-  if(!raw) throw new Error("APP_ENCRYPTION_KEY ontbreekt");
+  const raw = process.env.APP_ENCRYPTION_KEY || process.env.MAIL_ENCRYPTION_KEY;
+  if (!raw || raw.length < 32) return crypto.createHash("sha256").update(requireRuntimeSecret("APP_ENCRYPTION_KEY")).digest();
   return crypto.createHash("sha256").update(raw).digest();
 }
 

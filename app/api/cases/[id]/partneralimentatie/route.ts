@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { requireCaseTenantAccess } from '@/lib/tenant-access';
 import { requireUser } from '@/lib/auth';
+import { ensureTenant } from '@/lib/tenant';
 import { db } from '@/lib/db';
 import { calculatePartnerSupport } from '@/lib/partner-engine';
 import { calculatePartnerCapacity } from '@/lib/partner-capacity';
@@ -37,9 +39,10 @@ function latestChildCostShare(
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
+  const tenant = await ensureTenant(user);
   const { id } = await params;
   const c = await db.case.findFirst({
-    where: { id, userId: user.id },
+    where: { id, organizationId: tenant.id, deletedAt: null },
     include: { calculations: { orderBy: { createdAt: 'desc' }, take: 10 } },
   });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
@@ -62,9 +65,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
+  const tenant = await ensureTenant(user);
   const { id } = await params;
+  await requireCaseTenantAccess(user.id, id, "PROFESSIONAL");
   const c = await db.case.findFirst({
-    where: { id, userId: user.id },
+    where: { id, organizationId: tenant.id, deletedAt: null },
     include: { calculations: { orderBy: { createdAt: 'desc' }, take: 10 } },
   });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
@@ -122,6 +127,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       const snapshot = await persistCaseCalculationV2({
         tx,
         caseId: id,
+        organizationId: tenant.id,
         userId: user.id,
         calculationInput,
         productionResult: persistedResult,

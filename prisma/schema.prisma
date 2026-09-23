@@ -90,6 +90,7 @@ model User {
   memberships          OrganizationMember[]
   sentInvites          OrganizationInvite[]
   authTokens           AuthToken[]
+  authSessions         AuthSession[]
   portalShares         ClientPortalShare[]
   webhookDeliveries    WebhookDelivery[]
 }
@@ -693,6 +694,20 @@ model AppConfig {
   aiMaxTokens             Int?
   createdAt               DateTime @default(now())
   updatedAt               DateTime @default(now())
+}
+
+model AuthSession {
+  id          String    @id
+  userId      String
+  tokenHash   String    @unique
+  controlMode String    @default("NORMAL")
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
 }
 
 model AuthToken {
