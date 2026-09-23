@@ -17,10 +17,10 @@ const included = [
 ] as const;
 
 const faqItems = [
-  ["Wat kost Alimenta?", "Alimenta heeft momenteel twee productvormen. De actuele bedragen en btw-behandeling komen rechtstreeks uit de bestaande productcatalogus in de applicatie."],
+  ["Wat kost Alimenta?", "Alimenta heeft momenteel twee productvormen. De actuele bedragen en btw-behandeling staan bij ieder plan vermeld."],
   ["Wat is inbegrepen?", "Beide productvormen gebruiken dezelfde kernfunctionaliteit voor berekeningen en rapportage. Het zakelijke plan bevat daarnaast meerdere actieve cliëntdossiers."],
-  ["Is er een gratis plan?", "Nee. De huidige productopzet werkt met een betaald Particulier- of Zakelijk-account en stuurt registratie door naar de bestaande betaalflow."],
-  ["Kan ik mijn abonnement wijzigen?", "Wijzigingen en betaling blijven onderdeel van de bestaande billing- en Stripe-flow. Deze pagina bevat alleen de presentatie van de plannen."],
+  ["Is er een gratis plan?", "Nee. Er is geen gratis plan. Je kiest bij registratie voor Particulier of Zakelijk."],
+  ["Kan ik mijn abonnement wijzigen?", "Een planwijziging is momenteel niet beschikbaar via deze publieke pagina. Kies bij een nieuwe registratie het gewenste plan."],
 ] as const;
 
 export default function PricingPage() {
@@ -87,7 +87,7 @@ export default function PricingPage() {
           <div className="al-section-head">
             <div className="al-eyebrow">Inbegrepen</div>
             <h2>Dezelfde professionele basis, helder gepresenteerd.</h2>
-            <p>De UI volgt de Lovable-informatiearchitectuur, terwijl de bestaande product- en backendcontracten leidend blijven.</p>
+            <p>Je krijgt dezelfde professionele basisfunctionaliteit, overzichtelijk verdeeld over rekenen, vastleggen en rapporteren.</p>
           </div>
           <div className="al-grid-3">
             {included.map((column) => (
@@ -107,7 +107,7 @@ export default function PricingPage() {
           <div className="al-section-head">
             <div className="al-eyebrow">Veelgestelde vragen</div>
             <h2>Prijzen en abonnementen.</h2>
-            <p>Praktische antwoorden zonder nieuwe billinglogica in de publieke UI.</p>
+            <p>Praktische antwoorden over de beschikbare plannen en registratie.</p>
           </div>
           <div className="al-faq-list">
             {faqItems.map(([question,answer], index) => (
@@ -124,7 +124,7 @@ export default function PricingPage() {
         <div className="al-container al-final-cta">
           <div className="al-eyebrow">Starten</div>
           <h2>Kies je account en ga verder met de bestaande registratieflow.</h2>
-          <p className="al-lead">Na registratie blijft de bestaande betaal- en entitlementlogica verantwoordelijk voor toegang en abonnementen.</p>
+          <p className="al-lead">Na registratie wordt je gekozen plan gekoppeld aan je account.</p>
           <div className="al-actions" style={{justifyContent:'center'}}>
             <Link href="/register?type=private" className="al-btn al-btn-secondary">Particulier</Link>
             <Link href="/register?type=business" className="al-btn al-btn-primary">Zakelijk →</Link>
