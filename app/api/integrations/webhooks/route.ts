@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { auditSecurity } from "@/lib/team-security";
 import { encryptSecret } from "@/lib/secrets";
 
 const EVENTS = ["case.created", "case.updated", "case.calculated", "case.approved"];
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
     const secret = randomBytes(32).toString("base64url");
     const secretCipher = encryptSecret(secret);
     const row = await db.usageEvent.create({ data: { userId: user.id, type: "WEBHOOK_SUBSCRIPTION", units: 1, metadata: { url, events, active: true, secretCipher } } });
-    await db.auditLog.create({ data: { userId: user.id, action: "WEBHOOK_CREATED", metadata: { webhookId: row.id, url, events } } });
+    await auditSecurity(user.id, "WEBHOOK_CREATED", { webhookId: row.id, url, events });
     return NextResponse.json({ id: row.id, url, events, secret, warning: "Bewaar het webhook secret veilig; het wordt daarna niet opnieuw getoond." }, { status: 201 });
   } catch { return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 }); }
 }
@@ -43,7 +44,7 @@ export async function DELETE(req: Request) {
     if (!row) return NextResponse.json({ error: "Webhook niet gevonden." }, { status: 404 });
     const m = (row.metadata || {}) as Record<string, unknown>;
     await db.usageEvent.update({ where: { id }, data: { metadata: { ...m, active: false, revokedAt: new Date().toISOString() } } });
-    await db.auditLog.create({ data: { userId: user.id, action: "WEBHOOK_REVOKED", metadata: { webhookId: id } } });
+    await auditSecurity(user.id, "WEBHOOK_REVOKED", { webhookId: id });
     return NextResponse.json({ revoked: true });
   } catch { return NextResponse.json({ error: "Ongeldige aanvraag." }, { status: 400 }); }
 }
