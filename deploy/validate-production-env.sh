@@ -11,15 +11,11 @@ required=(
 
 get_value() {
   local key="$1"
-  sed -n -E "s/^${key}=(.*)$/\1/p" "$ENV_FILE" | tail -n 1 | sed -E 's/^"(.*)"$/\1/'
+  sed -n -E "s/^${key}=(.*)$/\\1/p" "$ENV_FILE" | tail -n 1 | sed -E 's/^"(.*)"$/\\1/'
 }
 
 fail=0
 
-# Cryptographic application secrets must be supplied at runtime and meet a
-# minimum length contract. Other credentials retain their existing validation
-# semantics; do not impose arbitrary length requirements on database or
-# third-party integration credentials.
 for key in SESSION_SECRET APP_ENCRYPTION_KEY; do
   value="$(get_value "$key")"
   if [[ "${#value}" -lt 32 ]]; then
@@ -50,25 +46,22 @@ for placeholder in \
 done
 
 app_url="$(get_value APP_URL)"
-demo_mode="$(get_value DEMO_MODE)"
 case "$app_url" in
   https://*) ;;
-  http://*)
-    if [[ "$demo_mode" != "true" ]]; then
-      echo "[FAIL] APP_URL moet HTTPS gebruiken buiten DEMO_MODE"
-      fail=1
-    else
-      echo "[WARN] HTTP toegestaan omdat DEMO_MODE=true (alleen voor lokale/demo-VM's)"
-    fi
-    ;;
   *)
-    echo "[FAIL] APP_URL moet beginnen met http:// of https://"
+    echo "[FAIL] APP_URL moet in productie HTTPS gebruiken"
     fail=1
     ;;
 esac
 
 node_env="$(get_value NODE_ENV)"
 [[ "$node_env" == "production" ]] || { echo "[FAIL] NODE_ENV moet production zijn"; fail=1; }
+
+demo_mode="$(get_value DEMO_MODE)"
+if [[ -n "$demo_mode" && "$demo_mode" != "false" ]]; then
+  echo "[FAIL] DEMO_MODE moet in productie false zijn"
+  fail=1
+fi
 
 if [[ "$fail" -ne 0 ]]; then
   echo "Production environment validation FAILED."
