@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { ProcessEnv } from "node:process";
 import { getConfiguredBaseDomain, isReservedTenantSlug, isValidTenantSlug, normalizeHostname, parseTenantHost, tenantHostname, TenantHostError } from "./tenant-host";
+
+const env = (values: Record<string, string> = {}) => ({ NODE_ENV: "test", ...values }) as ProcessEnv;
 
 describe("tenant host routing", () => {
   it("normalizes a hostname and strips a port", () => expect(normalizeHostname("  ACME.Alimenta.nl:443. ")).toBe("acme.alimenta.nl"));
@@ -21,9 +24,9 @@ describe("tenant host routing", () => {
     expect(() => normalizeHostname("user@acme.alimenta.nl")).toThrow(TenantHostError);
   });
   it("builds a canonical tenant hostname", () => expect(tenantHostname("Acme", "Alimenta.nl")).toBe("acme.alimenta.nl"));
-  it("does not invent a base domain", () => expect(getConfiguredBaseDomain({})).toBeNull());
+  it("does not invent a base domain", () => expect(getConfiguredBaseDomain(env())).toBeNull());
   it("validates configured base domains", () => {
-    expect(getConfiguredBaseDomain({ ALIMENTA_BASE_DOMAIN: "alimenta.nl" })).toBe("alimenta.nl");
-    expect(() => getConfiguredBaseDomain({ ALIMENTA_BASE_DOMAIN: "localhost" })).toThrow(TenantHostError);
+    expect(getConfiguredBaseDomain(env({ ALIMENTA_BASE_DOMAIN: "alimenta.nl" }))).toBe("alimenta.nl");
+    expect(() => getConfiguredBaseDomain(env({ ALIMENTA_BASE_DOMAIN: "localhost" }))).toThrow(TenantHostError);
   });
 });
