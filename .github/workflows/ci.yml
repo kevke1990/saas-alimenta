@@ -109,12 +109,12 @@ jobs:
           sed -i \
             -e 's#CHANGE-ME#ci-change-me#g' \
             -e 's#GENERATE-A-LONG-RANDOM-PASSWORD#ci-postgres-password#g' \
-            -e 's#GENERATE-A-LONG-RANDOM-SECRET#ci-session-secret-0123456789abcdef#g' \
-            -e 's#USE-A-LONG-UNIQUE-PASSWORD#ci-admin-password#g' \
+            -e 's#GENERATE-A-LONG-RANDOM-SECRET#ci-session-secret-0123456789abcdef00#g' \
+            -e 's#USE-A-LONG-UNIQUE-PASSWORD#ci-admin-password-01#g' \
             -e 's#change-this-to-a-long-random-secret#ci-privacy-salt-long-enough#g' \
             -e 's#jouwdomein.nl#staging.example.test#g' \
             -e 's#admin@example.nl#admin@staging.example.test#g' \
-            -e 's#https://app.staging.example.nl#https://staging.example.test#g' \
+            -e 's#https://app.jouwdomein.nl#https://staging.example.test#g' \
             -e 's#APP_ENCRYPTION_KEY="ci-session-secret-0123456789abcdef"#APP_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"#g' \
             -e 's#POSTMARK_INBOUND_SECRET="ci-change-me-LONG-RANDOM-SECRET"#POSTMARK_INBOUND_SECRET="ci-inbound-secret-long-enough"#g' \
             .env.production
