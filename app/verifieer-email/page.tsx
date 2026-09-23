@@ -1,7 +1,9 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+
 import Link from "next/link";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { AuthShell, AuthStatus } from "@/components/auth/AuthShell";
 
 function VerifyEmailContent() {
   const params = useSearchParams();
@@ -11,72 +13,50 @@ function VerifyEmailContent() {
 
   useEffect(() => {
     const token = params.get("token");
-    if (!token) {
-      setState("waiting");
-      return;
-    }
-
+    if (!token) { setState("waiting"); return; }
     fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error(await response.text());
-        setState("ok");
-      })
-      .catch((error) => {
-        setState("error");
-        setMessage(error?.message || "De verificatielink is ongeldig of verlopen.");
-      });
+      .then(async (response) => { if (!response.ok) throw new Error(await response.text()); setState("ok"); })
+      .catch((caught: unknown) => { setState("error"); setMessage(caught instanceof Error ? caught.message : "De verificatielink is ongeldig of verlopen."); });
   }, [params]);
 
   async function resend() {
-    setResending(true);
-    setMessage("");
+    setResending(true); setMessage("");
     try {
       const response = await fetch("/api/auth/verify-email", { method: "POST" });
       if (!response.ok) throw new Error(await response.text());
       setMessage("Een nieuwe verificatiemail is verzonden.");
-    } catch (error: any) {
-      setMessage(error?.message || "De verificatiemail kon niet worden verzonden.");
-    } finally {
-      setResending(false);
-    }
+    } catch (caught: unknown) {
+      setMessage(caught instanceof Error ? caught.message : "De verificatiemail kon niet worden verzonden.");
+    } finally { setResending(false); }
   }
 
   return (
-    <main className="auth-card-wrap" style={{ minHeight: "100vh" }}>
-      <section className="auth-card">
-        <h2>E-mailadres bevestigen</h2>
-        {state === "loading" && <p>Je e-mailadres wordt gecontroleerd…</p>}
-        {state === "waiting" && (
-          <>
-            <div className="notice">Je account is aangemaakt. Controleer je inbox en klik op de verificatielink om je e-mailadres te bevestigen.</div>
-            <p className="topgap">Geen mail ontvangen? Controleer ook je spamfolder of vraag hieronder een nieuwe mail aan.</p>
-            {message && <div className="notice topgap">{message}</div>}
-            <button className="btn topgap" onClick={resend} disabled={resending}>{resending ? "Verzenden…" : "Verificatiemail opnieuw sturen"}</button>
-            <p className="topgap"><Link href="/dashboard" style={{ color: "#315efb", fontWeight: 700 }}>Verder naar je werkplek</Link></p>
-          </>
-        )}
-        {state === "ok" && (
-          <>
-            <div className="notice">Je e-mailadres is bevestigd. Je kunt nu verder met Alimenta Pro.</div>
-            <p className="topgap"><Link href="/dashboard" style={{ color: "#315efb", fontWeight: 700 }}>Naar je werkplek</Link></p>
-          </>
-        )}
-        {state === "error" && (
-          <>
-            <div className="notice error">{message}</div>
-            <p className="topgap">Log opnieuw in en vraag eventueel een nieuwe verificatiemail aan.</p>
-            <p className="topgap"><Link href="/login" style={{ color: "#315efb", fontWeight: 700 }}>Terug naar inloggen</Link></p>
-          </>
-        )}
-      </section>
-    </main>
+    <AuthShell eyebrow="Accountbeveiliging" title="E-mailadres bevestigen" description="Bevestig je e-mailadres om je account volledig te activeren.">
+      {state === "loading" ? <AuthStatus>Je e-mailadres wordt gecontroleerd…</AuthStatus> : null}
+      {state === "waiting" ? <>
+        <AuthStatus>Je account is aangemaakt. Controleer je inbox en klik op de verificatielink.</AuthStatus>
+        <p className="auth-plan-note">Geen mail ontvangen? Controleer ook je spamfolder of vraag hieronder een nieuwe mail aan.</p>
+        {message ? <AuthStatus tone="success">{message}</AuthStatus> : null}
+        <button className="auth-submit" onClick={resend} disabled={resending} type="button">{resending ? "Verzenden…" : "Verificatiemail opnieuw sturen"}</button>
+        <p className="auth-footer-link"><Link className="auth-text-link" href="/dashboard">Verder naar je werkplek</Link></p>
+      </> : null}
+      {state === "ok" ? <>
+        <AuthStatus tone="success">Je e-mailadres is bevestigd. Je kunt nu verder met Alimenta Pro.</AuthStatus>
+        <Link href="/dashboard" className="auth-submit">Naar je werkplek</Link>
+      </> : null}
+      {state === "error" ? <>
+        <AuthStatus tone="error">{message}</AuthStatus>
+        <p className="auth-plan-note">Log opnieuw in en vraag eventueel een nieuwe verificatiemail aan.</p>
+        <Link href="/login" className="auth-secondary-action">Terug naar inloggen</Link>
+      </> : null}
+    </AuthShell>
   );
 }
 
+function VerifyEmailFallback() {
+  return <AuthShell eyebrow="Accountbeveiliging" title="E-mailadres bevestigen" description="De verificatielink wordt gecontroleerd."><AuthStatus>Je e-mailadres wordt gecontroleerd…</AuthStatus></AuthShell>;
+}
+
 export default function VerifyEmailPage() {
-  return (
-    <Suspense fallback={<main className="auth-card-wrap" style={{ minHeight: "100vh" }}><section className="auth-card"><h2>E-mailadres bevestigen</h2><p>Je e-mailadres wordt gecontroleerd…</p></section></main>}>
-      <VerifyEmailContent />
-    </Suspense>
-  );
+  return <Suspense fallback={<VerifyEmailFallback />}><VerifyEmailContent /></Suspense>;
 }
