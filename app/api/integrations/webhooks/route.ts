@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { auditSecurity } from "@/lib/team-security";
 import { encryptSecret } from "@/lib/secrets";
+import { assertSafeWebhookUrl } from "@/lib/webhook-target";
 
 const EVENTS = ["case.created", "case.updated", "case.calculated", "case.approved"];
 
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
     let parsed: URL;
     try { parsed = new URL(url); } catch { return NextResponse.json({ error: "Ongeldige webhook-URL." }, { status: 422 }); }
     if (parsed.protocol !== "https:") return NextResponse.json({ error: "Webhooks moeten HTTPS gebruiken." }, { status: 422 });
+    try { await assertSafeWebhookUrl(url); } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Onveilige webhook-URL." }, { status: 422 }); }
     const events = Array.isArray(body.events) ? body.events.filter((e: unknown) => EVENTS.includes(String(e))) : ["case.updated"];
     if (!events.length) return NextResponse.json({ error: "Minimaal één geldig event vereist." }, { status: 422 });
 
