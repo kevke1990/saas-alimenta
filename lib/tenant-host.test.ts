@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { ProcessEnv } from "node:process";
 import { getConfiguredBaseDomain, isReservedTenantSlug, isValidTenantSlug, normalizeHostname, parseTenantHost, tenantHostname, TenantHostError } from "./tenant-host";
 
-const env = (values: Record<string, string> = {}) => ({ NODE_ENV: "test", ...values }) as ProcessEnv;
+const env = (values: Record<string, string> = {}) =>
+  ({ NODE_ENV: "test", ...values }) as Parameters<typeof getConfiguredBaseDomain>[0];
 
 describe("tenant host routing", () => {
   it("normalizes a hostname and strips a port", () => expect(normalizeHostname("  ACME.Alimenta.nl:443. ")).toBe("acme.alimenta.nl"));
