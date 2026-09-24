@@ -60,9 +60,10 @@ export default async function Dashboard() {
       take: 6,
       include: { client: true },
     }),
-    db.case.findFirst({
-      where: { userId: user.id, result: { not: null } },
-      orderBy: { updatedAt: "desc" },
+    db.calculation.findFirst({
+      where: { case: { userId: user.id } },
+      orderBy: { createdAt: "desc" },
+      include: { case: true },
     }),
     db.calculation.count({ where: { case: { userId: user.id } } }),
     db.case.count({ where: { userId: user.id, reviewStatus: "READY_FOR_REVIEW" } }),
@@ -169,8 +170,8 @@ export default async function Dashboard() {
             {latestWithResult ? <section className="dashboard-result-card">
               <span className="stat-label">Laatste resultaat</span>
               {latestResult?.totalNeed != null ? <strong>{euro(latestResult.totalNeed)}</strong> : null}
-              <span>Behoefte · {latestWithResult.name}</span>
-              <Link href={`/cases/${latestWithResult.id}`}>Bekijk dossier <span aria-hidden>→</span></Link>
+              <span>Behoefte · {latestWithResult.case.name}</span>
+              <Link href={`/cases/${latestWithResult.caseId}`}>Bekijk dossier <span aria-hidden>→</span></Link>
             </section> : null}
           </aside>
         </div>
