@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { AuthShell, AuthStatus } from "@/components/auth/AuthShell";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -27,38 +28,25 @@ export default function Login() {
   }
 
   return (
-    <main className="auth-page auth-page-premium">
-      <section className="auth-side auth-side-premium">
-        <div className="auth-brand">
-          <div className="brand-mark brand-mark-light">A</div>
-          <div><strong>Alimenta</strong><span>PRO</span></div>
+    <AuthShell eyebrow="Veilige toegang" title="Welkom terug" description="Log in op je professionele Alimenta Pro-werkplek.">
+      {error ? <AuthStatus tone="error">{error}</AuthStatus> : null}
+      <form onSubmit={submit} className="auth-form" aria-busy={busy}>
+        <div className="auth-field">
+          <label className="auth-label" htmlFor="email">E-mailadres</label>
+          <input id="email" className="auth-input" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
         </div>
-        <div className="auth-pitch">
-          <div className="eyebrow eyebrow-light">Professionele alimentatiesoftware</div>
-          <h1>Van dossier naar onderbouwd resultaat.</h1>
-          <p>Een rustige, professionele werkplek voor cliënten, berekeningen, onderbouwing en rapportages.</p>
-          <div className="auth-points"><span>✓ Transparante berekeningen</span><span>✓ Professionele rapportage</span><span>✓ Veilige dossieromgeving</span></div>
+        <div className="auth-field">
+          <div className="auth-label-row">
+            <label className="auth-label" htmlFor="password">Wachtwoord</label>
+            <Link href="/wachtwoord-vergeten" className="auth-text-link">Wachtwoord vergeten?</Link>
+          </div>
+          <input id="password" className="auth-input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
-        <small>Alimenta Pro · voor alimentatieprofessionals</small>
-      </section>
-
-      <section className="auth-card-wrap auth-card-wrap-premium">
-        <div className="auth-card auth-card-premium">
-          <div className="mobile-auth-brand"><div className="brand-mark">A</div><div><strong>Alimenta</strong><span>PRO</span></div></div>
-          <div className="auth-kicker">Veilige toegang</div>
-          <h2>Welkom terug</h2>
-          <p>Log in op je professionele Alimenta Pro-werkplek.</p>
-          {error && <div className="notice error topgap" role="alert">{error}</div>}
-          <form onSubmit={submit} className="auth-form topgap">
-            <div><label className="label" htmlFor="email">E-mailadres</label><input id="email" className="input" type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></div>
-            <div><div className="label-row"><label className="label" htmlFor="password">Wachtwoord</label><Link href="/wachtwoord-vergeten">Vergeten?</Link></div><input id="password" className="input" type="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} /></div>
-            <button className="btn btn-premium" disabled={busy} type="submit">{busy ? "Bezig met inloggen…" : "Inloggen"}<span aria-hidden>→</span></button>
-          </form>
-          <div className="auth-divider"><span>Nieuw bij Alimenta Pro?</span></div>
-          <Link href="/register" className="btn secondary auth-register">Account aanmaken</Link>
-          <div className="auth-trust">Je gegevens worden verwerkt binnen je beveiligde werkplek.</div>
-        </div>
-      </section>
-    </main>
+        <button className="auth-submit" disabled={busy} type="submit">{busy ? "Bezig met inloggen…" : "Inloggen"}<span aria-hidden="true">→</span></button>
+      </form>
+      <div className="auth-divider"><span>Nieuw bij Alimenta Pro?</span></div>
+      <Link href="/register" className="auth-secondary-action">Account aanmaken</Link>
+      <div className="auth-trust">Je gegevens worden verwerkt binnen je beveiligde werkplek.</div>
+    </AuthShell>
   );
 }
