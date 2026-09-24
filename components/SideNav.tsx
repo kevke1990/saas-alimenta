@@ -2,17 +2,10 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 const nav: Array<{ href: Route; label: string; icon: string }> = [
-  { href: "/dashboard", label: "Overzicht", icon: "grid" },
-  { href: "/work", label: "Werkvoorraad", icon: "briefcase" },
-  { href: "/clients", label: "Cliënten", icon: "users" },
-  { href: "/cases", label: "Dossiers", icon: "folder" },
-  { href: "/cases/new", label: "Nieuwe berekening", icon: "plus" },
-  { href: "/scan", label: "Documenten scannen", icon: "scan" },
-  { href: "/mail", label: "E-mail", icon: "mail" },
-  { href: "/billing", label: "Abonnement", icon: "card" },
-  { href: "/settings", label: "Instellingen", icon: "settings" },
+  { href: "/dashboard", label: "Overzicht", icon: "grid" }, { href: "/work", label: "Werkvoorraad", icon: "briefcase" }, { href: "/clients", label: "Cliënten", icon: "users" }, { href: "/cases", label: "Dossiers", icon: "folder" }, { href: "/cases/new", label: "Nieuwe berekening", icon: "plus" }, { href: "/scan", label: "Documenten scannen", icon: "scan" }, { href: "/mail", label: "E-mail", icon: "mail" }, { href: "/billing", label: "Abonnement", icon: "card" }, { href: "/settings", label: "Instellingen", icon: "settings" },
 ];
 
 function Icon({ name }: { name: string }) {
@@ -30,5 +23,19 @@ function Icon({ name }: { name: string }) {
 
 export default function SideNav() {
   const path = usePathname();
-  return <nav className="side-nav side-nav-premium" aria-label="Werkpleknavigatie"><div className="nav-label">WERKPLEK</div>{nav.map((item)=>{const active=item.href==="/dashboard"?path==="/dashboard":path===item.href||path.startsWith(item.href+"/");return <Link key={item.href} href={item.href} className={`side-link side-link-premium${active?" active":""}`} aria-current={active?"page":undefined}><Icon name={item.icon}/><span>{item.label}</span>{item.href==="/cases/new"?<span className="nav-cta-dot"/>:null}</Link>})}</nav>;
+  const [open, setOpen] = useState(false);
+  return <div className="navigation-wrap">
+    <button type="button" className="mobile-nav-toggle" aria-expanded={open} aria-controls="workspace-navigation" onClick={() => setOpen((current) => !current)}>
+      <span className="mobile-nav-icon" aria-hidden><span/><span/><span/></span><span>Werkpleknavigatie</span><span className="mobile-nav-state" aria-hidden>{open ? "Sluiten" : "Menu"}</span>
+    </button>
+    <nav id="workspace-navigation" className={"side-nav side-nav-premium" + (open ? " mobile-open" : "")} aria-label="Werkpleknavigatie">
+      <div className="nav-label">Werkplek</div>
+      {nav.map((item) => {
+        const active = item.href === "/dashboard" ? path === "/dashboard" : path === item.href || path.startsWith(item.href + "/");
+        return <Link key={item.href} href={item.href} className={"side-link side-link-premium" + (active ? " active" : "")} aria-current={active ? "page" : undefined} onClick={() => setOpen(false)}>
+          <span className="side-link-icon" aria-hidden><Icon name={item.icon}/></span><span>{item.label}</span>{item.href === "/cases/new" ? <span className="nav-cta-dot" aria-hidden/> : null}
+        </Link>;
+      })}
+    </nav>
+  </div>;
 }
