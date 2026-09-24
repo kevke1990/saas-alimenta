@@ -13,8 +13,8 @@ export default function ClientsLoading() {
           <span className="clients-skeleton clients-skeleton-search" />
           <div className="clients-loading-rows">{Array.from({ length: 5 }, (_, index) => <span className="clients-skeleton clients-skeleton-row" key={index} />)}</div>
         </section>
-        
       </div>
+      <span className="sr-only" role="status">Cliënten worden geladen…</span>
     </AppShell>
   );
 }
