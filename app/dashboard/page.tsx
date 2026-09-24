@@ -74,7 +74,8 @@ export default async function Dashboard() {
     db.task.count({ where: { userId: user.id, status: "OPEN" } }),
   ]);
 
-  const latestResult = latestWithResult?.result as { totalNeed?: unknown } | null | undefined;
+  const latestResult = latestWithResult?.result as { totalNeed?: unknown; child?: { totalNeed?: unknown } } | null | undefined;
+  const latestTotalNeed = latestResult?.totalNeed ?? latestResult?.child?.totalNeed;
   const workQueue = reviewQueue;
   const attentionCount = readyCount + reviewedCount + incompleteCount;
   const firstName = user.name?.split(" ")[0] || "welkom";
@@ -169,7 +170,7 @@ export default async function Dashboard() {
 
             {latestWithResult ? <section className="dashboard-result-card">
               <span className="stat-label">Laatste resultaat</span>
-              {latestResult?.totalNeed != null ? <strong>{euro(latestResult.totalNeed)}</strong> : null}
+              {latestTotalNeed != null ? <strong>{euro(latestTotalNeed)}</strong> : null}
               <span>Behoefte · {latestWithResult.case.name}</span>
               <Link href={`/cases/${latestWithResult.caseId}`}>Bekijk dossier <span aria-hidden>→</span></Link>
             </section> : null}
