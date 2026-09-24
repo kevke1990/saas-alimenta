@@ -47,10 +47,10 @@ export default function Register() {
           <span className="auth-label">Type account</span>
           <div className="auth-account-choice" role="group" aria-label="Type account">
             <button type="button" className={business ? "auth-choice auth-choice-active" : "auth-choice"} onClick={() => set("accountType","BUSINESS")} aria-pressed={business}>
-              <strong>Zakelijk · €249/jaar</strong><small>5 actieve cliëntdossiers inbegrepen</small>
+              <strong>Zakelijk · €249/jaar · excl. btw</strong><small>5 actieve cliëntdossiers inbegrepen</small>
             </button>
             <button type="button" className={!business ? "auth-choice auth-choice-active" : "auth-choice"} onClick={() => set("accountType","PRIVATE")} aria-pressed={!business}>
-              <strong>Particulier · €19,95/jaar</strong><small>1 persoonlijk dossier</small>
+              <strong>Particulier · €19,95/jaar · incl. btw</strong><small>1 persoonlijk dossier</small>
             </button>
           </div>
         </div>
