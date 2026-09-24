@@ -9,6 +9,7 @@ function VerifyEmailContent() {
   const params = useSearchParams();
   const [state, setState] = useState<"loading" | "waiting" | "ok" | "error">("loading");
   const [message, setMessage] = useState("");
+  const [resendStatus, setResendStatus] = useState<"idle" | "success" | "error">("idle");
   const [resending, setResending] = useState(false);
 
   useEffect(() => {
@@ -20,13 +21,15 @@ function VerifyEmailContent() {
   }, [params]);
 
   async function resend() {
-    setResending(true); setMessage("");
+    setResending(true); setMessage(""); setResendStatus("idle");
     try {
       const response = await fetch("/api/auth/verify-email", { method: "POST" });
       if (!response.ok) throw new Error(await response.text());
       setMessage("Een nieuwe verificatiemail is verzonden.");
+      setResendStatus("success");
     } catch (caught: unknown) {
       setMessage(caught instanceof Error ? caught.message : "De verificatiemail kon niet worden verzonden.");
+      setResendStatus("error");
     } finally { setResending(false); }
   }
 
@@ -36,7 +39,7 @@ function VerifyEmailContent() {
       {state === "waiting" ? <>
         <AuthStatus>Je account is aangemaakt. Controleer je inbox en klik op de verificatielink.</AuthStatus>
         <p className="auth-plan-note">Geen mail ontvangen? Controleer ook je spamfolder of vraag hieronder een nieuwe mail aan.</p>
-        {message ? <AuthStatus tone="success">{message}</AuthStatus> : null}
+        {message ? <AuthStatus tone={resendStatus === "error" ? "error" : "success"}>{message}</AuthStatus> : null}
         <button className="auth-submit" onClick={resend} disabled={resending} type="button">{resending ? "Verzenden…" : "Verificatiemail opnieuw sturen"}</button>
         <p className="auth-footer-link"><Link className="auth-text-link" href="/dashboard">Verder naar je werkplek</Link></p>
       </> : null}
