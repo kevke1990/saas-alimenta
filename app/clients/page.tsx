@@ -27,7 +27,7 @@ export default async function Clients({ searchParams }: { searchParams?: SearchP
   const emptyCopy = q ? "Probeer een andere naam, klantnummer, e-mailadres of telefoonnummer." : status === "ARCHIVED" ? "Gearchiveerde cliënten verschijnen hier zodra je een cliënt archiveert." : "Voeg je eerste cliënt toe om een alimentatiedossier te starten.";
   return (
     <AppShell>
-      <main className="clients-page" aria-labelledby="clients-title">
+      <div className="clients-page" aria-labelledby="clients-title">
         <header className="page-head clients-page-head">
           <div><div className="eyebrow">Relaties</div><h1 className="page-title" id="clients-title">Cliënten</h1><p className="page-subtitle">Beheer actieve cliënten, archief en bijbehorende alimentatiedossiers.</p></div>
           <Link className="btn clients-primary-action" href="/clients/new"><span aria-hidden="true">+</span> Nieuwe cliënt</Link>
@@ -58,7 +58,7 @@ export default async function Clients({ searchParams }: { searchParams?: SearchP
             </tbody></table></div>
           )}
         </section>
-      </main>
+      </div>
     </AppShell>
   );
 }
