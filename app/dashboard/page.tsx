@@ -51,9 +51,19 @@ function DashboardIcon({ name }: { name: DashboardIconName }) {
 
 export default async function Dashboard() {
   const user = await requireUser();
-  const [clients, cases, calculations, readyCount, reviewedCount, incompleteCount, documentCount, proposedFactCount, openTaskCount] = await Promise.all([
+  const [clients, cases, reviewQueue, latestWithResult, calculations, readyCount, reviewedCount, incompleteCount, documentCount, proposedFactCount, openTaskCount] = await Promise.all([
     db.client.count({ where: { userId: user.id, status: "ACTIVE" } }),
     db.case.findMany({ where: { userId: user.id }, orderBy: { updatedAt: "desc" }, take: 12, include: { client: true } }),
+    db.case.findMany({
+      where: { userId: user.id, reviewStatus: { notIn: ["FINAL", "APPROVED"] } },
+      orderBy: { updatedAt: "desc" },
+      take: 6,
+      include: { client: true },
+    }),
+    db.case.findFirst({
+      where: { userId: user.id, result: { not: null } },
+      orderBy: { updatedAt: "desc" },
+    }),
     db.calculation.count({ where: { case: { userId: user.id } } }),
     db.case.count({ where: { userId: user.id, reviewStatus: "READY_FOR_REVIEW" } }),
     db.case.count({ where: { userId: user.id, reviewStatus: "REVIEWED" } }),
@@ -63,9 +73,8 @@ export default async function Dashboard() {
     db.task.count({ where: { userId: user.id, status: "OPEN" } }),
   ]);
 
-  const latest = cases[0];
-  const latestResult = latest?.result as { totalNeed?: unknown } | null | undefined;
-  const workQueue = cases.filter((item) => item.reviewStatus !== "FINAL" && item.reviewStatus !== "APPROVED").slice(0, 6);
+  const latestResult = latestWithResult?.result as { totalNeed?: unknown } | null | undefined;
+  const workQueue = reviewQueue;
   const attentionCount = readyCount + reviewedCount + incompleteCount;
   const firstName = user.name?.split(" ")[0] || "welkom";
   const dateLabel = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
@@ -157,11 +166,11 @@ export default async function Dashboard() {
               </div>
             </section>
 
-            {latest ? <section className="dashboard-result-card">
+            {latestWithResult ? <section className="dashboard-result-card">
               <span className="stat-label">Laatste resultaat</span>
-              <strong>{euro(latestResult?.totalNeed)}</strong>
-              <span>Behoefte · {latest.name}</span>
-              <Link href={`/cases/${latest.id}`}>Bekijk dossier <span aria-hidden>→</span></Link>
+              {latestResult?.totalNeed != null ? <strong>{euro(latestResult.totalNeed)}</strong> : null}
+              <span>Behoefte · {latestWithResult.name}</span>
+              <Link href={`/cases/${latestWithResult.id}`}>Bekijk dossier <span aria-hidden>→</span></Link>
             </section> : null}
           </aside>
         </div>
