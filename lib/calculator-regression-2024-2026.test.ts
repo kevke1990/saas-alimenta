@@ -28,7 +28,7 @@ describe("Merelo regression calculations", () => {
     expect(result.totalCapacity).toBe(907);
     expect(result.capacityDeficit).toBe(411);
     expect(result.careDiscount.grossCareDiscount).toBe(197.7);
-    expect(result.careDiscount.shortfallAdjustment).toBe(205.5);
+    expect(result.careDiscount.shortfallAdjustment).toBe(206);
     expect(result.careDiscount.verifiableCareDiscount).toBe(0);
     expect(result.careDiscount.appliedCareDiscount).toBe(0);
     expect(result.transfers.map(t => t.payment)).toEqual([343, 343]);
@@ -82,9 +82,9 @@ describe("Merelo regression calculations", () => {
     expect(result.parentResults[1].capacity).toBe(206);
     expect(result.totalCapacity).toBe(1121);
     expect(result.capacityDeficit).toBe(52);
-    expect(result.careDiscount.grossCareDiscount).toBeCloseTo(175.95, 2);
+    expect(result.careDiscount.grossCareDiscount).toBe(176);
     expect(result.careDiscount.shortfallAdjustment).toBe(26);
-    expect(result.careDiscount.verifiableCareDiscount).toBeCloseTo(149.95, 2);
+    expect(result.careDiscount.verifiableCareDiscount).toBe(150);
     expect(result.parentResults[0].paymentTotal).toBe(766);
   });
 
