@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { calculate } from "../lib/calculator";
 
@@ -39,6 +39,7 @@ async function main() {
     actualKgbReceivingParent: 350
   };
   const result = calculate(data);
+  const resultJson = JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue;
   const existing = await db.case.findFirst({ where: { userId: user.id, name: "DEMO — Voorbeeldgezin" } });
   if (existing) {
     await db.case.update({ where: { id: existing.id }, data: { data, result, status: "CALCULATED", calculationVersion: result.normVersion } });
@@ -48,11 +49,11 @@ async function main() {
   const c = await db.case.create({
     data: {
       userId: user.id, clientId: client.id, name: "DEMO — Voorbeeldgezin", status: "CALCULATED",
-      calculationVersion: result.normVersion, data, result,
+      calculationVersion: result.normVersion, data, result: resultJson,
       metadata: { effectiveDate: "2026-01-01", notes: "Fictieve demo-data. Niet juridisch gebruiken." }
     }
   });
-  await db.calculation.create({ data: { caseId: c.id, engineVersion: result.engineVersion, normVersion: result.normVersion, inputSnapshot: data, result } });
+  await db.calculation.create({ data: { caseId: c.id, engineVersion: result.engineVersion, normVersion: result.normVersion, inputSnapshot: data, result: resultJson } });
   console.log(`Demo dossier aangemaakt: ${c.id}`);
 }
 
