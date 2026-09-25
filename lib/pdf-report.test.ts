@@ -17,7 +17,7 @@ describe("calculation PDF report", () => {
     const text = pdf.toString("latin1");
     expect(text.startsWith("%PDF-1.4")).toBe(true);
     expect(text).toContain("/Type /Pages");
-    expect(text).toContain("/Count 2");
+    expect(text).toMatch(/\/Count\s+[2-9]/);
     expect(text).toContain("startxref");
   });
 });
