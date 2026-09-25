@@ -89,7 +89,18 @@ export function createCalculationPdf(input: {
     { text: "Samenvatting", size: 14, bold: true },
   ];
   if (typeof r.totalNeed === "number") lines.push({ text: `Eigen aandeel kinderen: € ${Math.round(r.totalNeed)} per maand` });
-  if (Array.isArray(r.transfers)) for (const t of r.transfers as any[]) lines.push({ text: `Kind ${t.childIndex}: ${t.direction}, bijdrage € ${Math.round(t.payment)} p/m, zorgkorting € ${Math.round(t.careDiscount)}` });
+  const historical = r.historicalCalculation as Record<string, any> | undefined;
+  if (historical) {
+    const statusLabel = historical.status === "HISTORICAL_ENTERED" ? "HISTORISCH INGEVOERD" : "AFGELEID / INDICATIEF";
+    const displayedNBGI = historical.status === "HISTORICAL_ENTERED" ? historical.historicalNBGI : historical.fallbackNBGI;
+    lines.push({ text: `NBGI: € ${displayedNBGI ?? "—"} · status: ${statusLabel}` });
+    if (historical.status !== "HISTORICAL_ENTERED") lines.push({ text: "Het historische NBGI is niet afzonderlijk vastgelegd. Het weergegeven bedrag is uitsluitend afgeleid uit actuele inkomensgegevens en mag niet worden beschouwd als vastgesteld historisch NBGI." });
+  }
+  const care = r.careDiscount as Record<string, any> | undefined;
+  if (care) {
+    lines.push({ text: `Zorgkorting: bruto € ${care.grossCareDiscount ?? 0} · tekortcorrectie € ${care.shortfallAdjustment ?? 0} · verzilverbaar € ${care.verifiableCareDiscount ?? 0} · toegepast € ${care.appliedCareDiscount ?? 0}` });
+  }
+  if (Array.isArray(r.transfers)) for (const t of r.transfers as any[]) lines.push({ text: `Kind ${t.childIndex}: ${t.direction}, bijdrage € ${Math.round(t.payment)} p/m, bruto zorgkorting € ${Math.round(t.grossCareDiscount ?? t.careDiscount ?? 0)}, tekortcorrectie € ${Math.round(t.shortfallCareDiscountAdjustment ?? 0)}, verzilverbaar/toegepast € ${Math.round(t.appliedCareDiscount ?? t.careDiscount ?? 0)}` });
   if (typeof r.netPartnerSupport === "number") lines.push({ text: `Partneralimentatie: € ${Math.round(r.netPartnerSupport)} netto per maand` });
   if (typeof r.additionalNeed === "number") lines.push({ text: `Aanvullende behoefte partner: € ${Math.round(r.additionalNeed)} netto per maand` });
   lines.push({ text: "" }, { text: "Methodiek en aandachtspunten", size: 14, bold: true });

@@ -1,5 +1,6 @@
 import { CAPACITY } from './norms';
 import type { NormSet } from './norms';
+import { roundWholeEuro } from './calculation-rounding';
 
 export type SupportType = 'CHILD_SUPPORT' | 'PARTNER_SUPPORT';
 export type SupportCapacityInput = {
@@ -36,7 +37,7 @@ export type SupportCapacityResult = {
 
 const num = (v: unknown) => Math.max(0, Number.isFinite(Number(v)) ? Number(v) : 0);
 const signed = (v: unknown) => Number.isFinite(Number(v)) ? Number(v) : 0;
-const round = (v: number) => Math.round(Math.max(0, v) + 1e-9);
+const round = (v: number) => roundWholeEuro(Math.max(0, v));
 
 function tableCapacity(nbi: number, aow = false, normSet = { capacity: CAPACITY } as NormSet) {
   const cfg = aow ? normSet.capacity.aow : normSet.capacity.underAow;

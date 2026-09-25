@@ -1,3 +1,5 @@
+import { roundCurrency } from "./calculation-rounding";
+
 /**
  * Auditable Trema/Alimentatienormen 2026 calculation core.
  *
@@ -86,7 +88,7 @@ export interface Trema2026Result {
 
 export const TREMA_2026_ENGINE_VERSION = "3.1.0-trema-2026-auditable";
 
-const round = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100;
+const round = (value: number): number => roundCurrency(value);
 const nonNegative = (value: number): number => Math.max(0, round(value));
 const assertFinite = (name: string, value: number): void => {
   if (!Number.isFinite(value)) throw new Error(`${name} moet een eindig getal zijn.`);
