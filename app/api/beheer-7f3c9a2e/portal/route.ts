@@ -68,7 +68,7 @@ export async function GET() {
       ? await db.authSession.findFirst({ where: { tokenHash: sessionContext.sessionHash, userId: admin.id, revokedAt: null, expiresAt: { gt: new Date() } }, select: { controlMode: true } })
       : null;
     return NextResponse.json({
-      admin: { email: admin.email },
+      admin: { id: admin.id, email: admin.email },
       controlMode: controlSession?.controlMode === "READ_ONLY" ? "READ_ONLY" : "NORMAL",
       stats: { users, clients, cases, subscriptions, activeSubscriptions, pastDue, mailSent, mailFailed },
       users: recentUsers,
@@ -102,6 +102,26 @@ export async function POST(req: Request) {
       await withSecurityAudit(admin.id, "ADMIN_USER_PLAN_CHANGED", { targetUserId: userId, plan }, (tx) =>
         tx.user.update({ where: { id: userId }, data: { plan: plan as any, subscriptionStatus: plan === "FREE" ? null : "ACTIVE" } }),
       );
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "deleteUser") {
+      const userId = String(b.userId || "");
+      if (!userId) throw new Error("Gebruiker ontbreekt");
+      if (userId === admin.id) throw new Error("Je kunt je eigen beheeraccount niet verwijderen");
+
+      const target = await db.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, stripeSubscriptionId: true, subscriptionStatus: true },
+      });
+      if (!target) throw new Error("Gebruiker niet gevonden");
+      if (target.stripeSubscriptionId || ["ACTIVE", "TRIALING", "PAST_DUE"].includes(target.subscriptionStatus || "")) {
+        throw new Error("Annuleer eerst het actieve abonnement voordat je het account verwijdert");
+      }
+
+      await withSecurityAudit(admin.id, "ADMIN_USER_DELETED", { targetUserId: target.id, targetEmail: target.email }, async (tx) => {
+        await tx.user.delete({ where: { id: target.id } });
+      });
       return NextResponse.json({ ok: true });
     }
 

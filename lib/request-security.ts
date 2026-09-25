@@ -11,13 +11,20 @@ export function requireSameOrigin(req: Request) {
   if (!configuredUrl) return;
 
   let expected: string;
+  let requestOrigin: string;
   try {
     expected = new URL(configuredUrl).origin;
+    requestOrigin = new URL(req.url).origin;
   } catch {
     throw new Error("APP_URL_INVALID");
   }
 
-  if (new URL(origin).origin !== expected) {
+  // APP_URL can intentionally point at a loopback/reverse-proxy address while
+  // the browser reaches the same application through another valid host.
+  // Still require the browser Origin to match either the configured origin or
+  // the origin of the actual HTTP request; arbitrary cross-origin writes remain blocked.
+  const actual = new URL(origin).origin;
+  if (actual !== expected && actual !== requestOrigin) {
     throw new Error("CROSS_ORIGIN_REQUEST");
   }
 }
