@@ -1,3 +1,5 @@
+import { roundCurrency } from "./calculation-rounding";
+
 /**
  * Auditable Trema/Alimentatienormen 2026 calculation core.
  *
