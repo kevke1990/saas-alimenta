@@ -103,7 +103,7 @@ repls={
  'POSTMARK_INBOUND_SECRET':setv('POSTMARK_INBOUND_SECRET',val(),True),
  'MAIL_ENCRYPTION_KEY':setv('MAIL_ENCRYPTION_KEY',val(),True),
  'ADMIN_PATH':setv('ADMIN_PATH','beheer-'+secrets.token_hex(8),True),
- 'ALIMENTA_IMAGE_TAG':'1.3.1-rc1',
+ 'ALIMENTA_IMAGE_TAG':'1.0',
  'DEMO_MODE':'true',
  'APP_BASE_DOMAIN':domain.split('.',1)[-1] if '.' in domain else domain,
 }
