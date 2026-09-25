@@ -73,7 +73,7 @@ describe("Alimenta Pro calculation engine 1.3.0", () => {
       children: [{ age: 10, residence: "A" }],
     });
 
-    expect(r.engineVersion).toBe("1.3.0");
+    expect(r.engineVersion).toBe("1.4.0");
     expect(r.normVersion).toBe("2026.1");
     expect(r.totalNeed).toBe(680);
     expect(r.transfers[0].payerIndex).toBe(1);
@@ -230,5 +230,56 @@ describe("Central monetary rounding policy", () => {
     expect(roundMoney(123.456)).toBe(123.46);
     expect(roundWholeEuro(123.49)).toBe(123);
     expect(roundWholeEuro(123.5)).toBe(124);
+  });
+});
+
+
+describe("Legal stepchild maintenance", () => {
+  it("recognizes stepchildren for a married/registered parent and deducts an evidenced monthly contribution from capacity", () => {
+    const r = calculate({
+      historicalNBGI: 5000,
+      parents: [
+        {
+          nbi: 3000,
+          newPartner: {
+            present: true,
+            relationship: "REGISTERED_PARTNERSHIP",
+            monthlyNbi: 2000,
+            maintenanceObligation: true,
+            includedInCalculation: true,
+            children: [{ label: "Stiefkind", age: 8, livesAtHome: true, monthlyAmount: 120 }]
+          }
+        },
+        { nbi: 2500 },
+      ],
+      children: [{ age: 10, residence: "B" }],
+    });
+    expect(r.parentResults[0].stiefchildMaintenance).toBe(120);
+    expect(r.partnerReview[0].legalStepParent).toBe(true);
+    expect(r.partnerReview[0].status).toBe("CALCULATED");
+    expect(r.parentResults[0].capacity).toBe(395);
+    expect(r.warnings.some((w: string) => w.includes("stiefkinderen"))).toBe(true);
+  });
+
+  it("does not invent a stiefchild contribution when the amount is missing", () => {
+    const r = calculate({
+      historicalNBGI: 5000,
+      parents: [
+        {
+          nbi: 3000,
+          newPartner: {
+            present: true,
+            relationship: "REGISTERED_PARTNERSHIP",
+            monthlyNbi: 2000,
+            children: [{ label: "Stiefkind", age: 8, livesAtHome: true }]
+          }
+        },
+        { nbi: 2500 },
+      ],
+      children: [{ age: 10, residence: "B" }],
+    });
+    expect(r.parentResults[0].stiefchildMaintenance).toBe(0);
+    expect(r.partnerReview[0].status).toBe("REVIEW_REQUIRED");
+    expect(r.warnings.some((w: string) => w.includes("vastgestelde/onderbouwde maandbijdrage"))).toBe(true);
   });
 });
