@@ -42,7 +42,7 @@ async function main() {
   const resultJson = JSON.parse(JSON.stringify(result)) as Prisma.InputJsonValue;
   const existing = await db.case.findFirst({ where: { userId: user.id, name: "DEMO — Voorbeeldgezin" } });
   if (existing) {
-    await db.case.update({ where: { id: existing.id }, data: { data, result, status: "CALCULATED", calculationVersion: result.normVersion } });
+    await db.case.update({ where: { id: existing.id }, data: { data, result: resultJson, status: "CALCULATED", calculationVersion: result.normVersion } });
     console.log(`Demo dossier bijgewerkt: ${existing.id}`);
     return;
   }
