@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import AppShell from "@/components/AppShell";
 import CaseActions from "./CaseActions";
 import { requireUser } from "@/lib/auth";
@@ -54,7 +55,7 @@ export default async function CasesPage({
   const allowedReviews = ["INCOMPLETE", "READY_FOR_REVIEW", "IN_REVIEW", "REVIEWED", "APPROVED", "FINAL"];
   const review = allowedReviews.includes(String(params.review)) ? String(params.review) : "";
 
-  const baseWhere = {
+  const baseWhere: Prisma.CaseWhereInput = {
     userId: u.id,
     status: { in: ["DRAFT", "CALCULATED"] },
     ...(q
