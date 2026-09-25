@@ -100,7 +100,7 @@ export function createCalculationPdf(input: {
   if (care) {
     lines.push({ text: `Zorgkorting: bruto € ${care.grossCareDiscount ?? 0} · tekortcorrectie € ${care.shortfallAdjustment ?? 0} · verzilverbaar € ${care.verifiableCareDiscount ?? 0} · toegepast € ${care.appliedCareDiscount ?? 0}` });
   }
-  if (Array.isArray(r.transfers)) for (const t of r.transfers as any[]) lines.push({ text: `Kind ${t.childIndex}: ${t.direction}, bijdrage € ${Math.round(t.payment)} p/m, zorgkorting € ${Math.round(t.careDiscount)}` });
+  if (Array.isArray(r.transfers)) for (const t of r.transfers as any[]) lines.push({ text: `Kind ${t.childIndex}: ${t.direction}, bijdrage € ${Math.round(t.payment)} p/m, bruto zorgkorting € ${Math.round(t.grossCareDiscount ?? t.careDiscount ?? 0)}, tekortcorrectie € ${Math.round(t.shortfallCareDiscountAdjustment ?? 0)}, verzilverbaar/toegepast € ${Math.round(t.appliedCareDiscount ?? t.careDiscount ?? 0)}` });
   if (typeof r.netPartnerSupport === "number") lines.push({ text: `Partneralimentatie: € ${Math.round(r.netPartnerSupport)} netto per maand` });
   if (typeof r.additionalNeed === "number") lines.push({ text: `Aanvullende behoefte partner: € ${Math.round(r.additionalNeed)} netto per maand` });
   lines.push({ text: "" }, { text: "Methodiek en aandachtspunten", size: 14, bold: true });
