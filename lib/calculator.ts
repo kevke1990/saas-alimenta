@@ -95,12 +95,12 @@ export function calculate(input: CaseInput) {
     const delta = target - shares.reduce((a, b) => a + b, 0);
     if (delta !== 0) { const largest = parentResults.reduce((best, p, i) => p.capacity > parentResults[best].capacity ? i : best, 0); shares[largest] = Math.max(0, shares[largest] + delta); }
     const sourceChild = input.children[child.childIndex - 1];
-    const careDiscounts = parentResults.map((p, i) => careParentForChild(sourceChild, i) ? roundCurrency(child.baseNeed * careDiscountPercentage(p.careDaysPerWeek)) : 0);
+    const careDiscounts = parentResults.map((p, i) => careParentForChild(sourceChild, i) ? money(child.baseNeed * careDiscountPercentage(p.careDaysPerWeek)) : 0);
     return { childIndex: child.childIndex, need: child.need, parentShares: shares, careDiscounts };
   });
   const grossCareDiscount = roundCurrency(childAllocations.reduce((sum, c) => sum + Math.max(...c.careDiscounts), 0));
   const shortfall = money(Math.max(0, totalNeed - totalCapacity));
-  const shortfallAdjustment = shortfall > 0 ? roundCurrency(shortfall / 2) : 0;
+  const shortfallAdjustment = shortfall > 0 ? roundWholeEuro(shortfall / 2) : 0;
   const appliedCareDiscount = shortfall > 0 ? roundCurrency(Math.max(0, grossCareDiscount - shortfallAdjustment)) : grossCareDiscount;
   const careMultiplier = grossCareDiscount > 0 ? appliedCareDiscount / grossCareDiscount : 1;
   const transfers = input.children.map((child, i) => {
