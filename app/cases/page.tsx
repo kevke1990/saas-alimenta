@@ -56,7 +56,7 @@ export default async function CasesPage({
 
   const baseWhere = {
     userId: u.id,
-    status: { in: ["DRAFT", "CALCULATED"] as const },
+    status: { in: ["DRAFT", "CALCULATED"] },
     ...(q
       ? {
           OR: [
@@ -68,12 +68,11 @@ export default async function CasesPage({
       : {}),
   };
 
-  const [cases, reviewCases] = await Promise.all([
-    db.case.findMany({
-      where: {
-        ...baseWhere,
-        ...(review ? { reviewStatus: review } : {}),
-      },
+  const cases = await db.case.findMany({
+    where: {
+      ...baseWhere,
+      ...(review ? { reviewStatus: review } : {}),
+    },
     include: {
       client: true,
       calculations: { orderBy: { createdAt: "desc" }, take: 2 },
@@ -89,13 +88,13 @@ export default async function CasesPage({
         select: { dueAt: true },
       },
     },
-      orderBy: { updatedAt: "desc" },
-    }),
-    db.case.findMany({
-      where: baseWhere,
-      select: { reviewStatus: true },
-    }),
-  ]);
+    orderBy: { updatedAt: "desc" },
+  });
+
+  const reviewCases = await db.case.findMany({
+    where: baseWhere,
+    select: { reviewStatus: true },
+  });
 
   const now = new Date();
   const todayStart = new Date(now);
