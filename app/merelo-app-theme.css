@@ -1,0 +1,353 @@
+/*
+ * Merelo authenticated application theme.
+ *
+ * The legacy premium layer is retained for layout compatibility, but this
+ * final theme layer owns the authenticated product palette. It prevents the
+ * older dark/gold presentation from overriding the Merelo design system and
+ * keeps foreground/background pairs readable.
+ */
+
+.app-shell-premium {
+  background: var(--al-ds-background);
+  color: var(--al-ds-foreground);
+}
+
+.sidebar-premium {
+  background: var(--al-ds-surface);
+  border-right: 1px solid var(--al-ds-border);
+  color: var(--al-ds-foreground);
+}
+
+.brand-lockup-premium {
+  border-bottom-color: var(--al-ds-border);
+}
+
+.brand-lockup-premium .merelo-wordmark strong {
+  color: var(--al-ds-primary);
+}
+
+.brand-lockup-premium .merelo-wordmark small {
+  color: var(--al-ds-muted-foreground);
+}
+
+.workspace-premium {
+  background: var(--al-ds-elevated);
+  border-color: var(--al-ds-border);
+}
+
+.workspace-premium .workspace-copy b {
+  color: var(--al-ds-foreground);
+}
+
+.workspace-premium .workspace-copy small {
+  color: var(--al-ds-muted-foreground);
+}
+
+.workspace-dot {
+  background: var(--al-ds-success);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--al-ds-success) 10%, transparent);
+}
+
+.side-nav-premium .nav-label {
+  color: var(--al-ds-muted-foreground);
+}
+
+.side-link-premium {
+  color: var(--al-ds-muted-foreground);
+}
+
+.side-link-premium:hover {
+  background: var(--al-ds-secondary);
+  color: var(--al-ds-primary);
+}
+
+.side-link-premium.active {
+  background: var(--al-ds-secondary);
+  color: var(--al-ds-primary);
+  box-shadow: inset 3px 0 var(--al-ds-accent);
+}
+
+.nav-cta-dot {
+  background: var(--al-ds-accent);
+}
+
+.help-card-premium {
+  background: var(--al-ds-elevated);
+  border-color: var(--al-ds-border);
+}
+
+.help-card-premium b {
+  color: var(--al-ds-foreground);
+}
+
+.help-card-premium span {
+  color: var(--al-ds-muted-foreground);
+}
+
+.help-card-premium a {
+  color: var(--al-ds-primary);
+}
+
+.help-icon {
+  border-color: color-mix(in oklab, var(--al-ds-primary) 28%, var(--al-ds-border));
+  color: var(--al-ds-primary);
+}
+
+.logout-btn-premium {
+  color: var(--al-ds-muted-foreground);
+}
+
+.main-area-premium {
+  background: var(--al-ds-background);
+}
+
+.topbar-premium {
+  background: color-mix(in oklab, var(--al-ds-surface) 94%, transparent);
+  border-bottom-color: var(--al-ds-border);
+}
+
+.topbar-premium .breadcrumbs {
+  color: var(--al-ds-muted-foreground);
+}
+
+.topbar-premium .breadcrumbs span:first-child {
+  color: var(--al-ds-primary);
+}
+
+.secure-pill {
+  color: var(--al-ds-muted-foreground);
+  border-color: var(--al-ds-border);
+  background: var(--al-ds-elevated);
+}
+
+.secure-dot {
+  background: var(--al-ds-success);
+}
+
+.user-chip-premium b {
+  color: var(--al-ds-foreground);
+}
+
+.user-chip-premium small {
+  color: var(--al-ds-muted-foreground);
+}
+
+.avatar-premium {
+  background: var(--al-ds-secondary);
+  color: var(--al-ds-primary);
+}
+
+.content-premium {
+  background: transparent;
+}
+
+.content-premium .page-title,
+.content-premium .panel-title,
+.content-premium .stat-value {
+  color: var(--al-ds-foreground);
+}
+
+.content-premium .page-subtitle,
+.content-premium .panel-sub,
+.content-premium .stat-meta {
+  color: var(--al-ds-muted-foreground);
+}
+
+.content-premium .eyebrow,
+.content-premium .section-kicker {
+  color: var(--al-ds-primary);
+}
+
+.content-premium .stat-label {
+  color: var(--al-ds-muted-foreground);
+}
+
+.content-premium .stat-card,
+.content-premium .panel,
+.content-premium .form-card,
+.content-premium .review-card,
+.content-premium .price-card {
+  background: var(--al-ds-surface);
+  border-color: var(--al-ds-border);
+  box-shadow: var(--al-ds-shadow-panel);
+  color: var(--al-ds-foreground);
+}
+
+.content-premium .stat-icon,
+.content-premium .dashboard-kpi-icon,
+.content-premium .dashboard-quick-icon {
+  background: var(--al-ds-elevated);
+  color: var(--al-ds-primary);
+}
+
+.content-premium .table th {
+  color: var(--al-ds-muted-foreground);
+  border-color: var(--al-ds-border);
+}
+
+.content-premium .table td {
+  color: var(--al-ds-foreground);
+  border-color: var(--al-ds-border);
+}
+
+.content-premium .table-link {
+  color: var(--al-ds-primary);
+}
+
+.content-premium .table-link:hover {
+  color: var(--al-ds-foreground);
+}
+
+.content-premium .btn {
+  background: var(--al-ds-primary);
+  color: var(--al-ds-primary-foreground) !important;
+  box-shadow: 0 6px 18px color-mix(in oklab, var(--al-ds-primary) 18%, transparent);
+}
+
+.content-premium .btn:hover {
+  background: color-mix(in oklab, var(--al-ds-primary) 88%, black);
+}
+
+.content-premium .btn.secondary {
+  background: var(--al-ds-surface);
+  color: var(--al-ds-primary) !important;
+  border-color: var(--al-ds-border);
+  box-shadow: none;
+}
+
+.content-premium .btn.secondary:hover,
+.content-premium .btn.ghost:hover {
+  background: var(--al-ds-secondary);
+}
+
+.content-premium .btn.ghost {
+  background: transparent;
+  color: var(--al-ds-primary) !important;
+  box-shadow: none;
+}
+
+.content-premium .dashboard-kpi,
+.content-premium .dashboard-meta-strip,
+.content-premium .dashboard-review-card,
+.content-premium .dashboard-result-card,
+.content-premium .dashboard-empty,
+.content-premium .dashboard-demo-panel {
+  color: var(--al-ds-foreground);
+}
+
+.content-premium .dashboard-meta-strip {
+  background: var(--al-ds-surface);
+  border-color: var(--al-ds-border);
+}
+
+.content-premium .dashboard-meta-strip > div {
+  border-color: var(--al-ds-border);
+}
+
+.content-premium .dashboard-meta-strip strong,
+.content-premium .dashboard-review-card strong,
+.content-premium .dashboard-result-card > strong,
+.content-premium .dashboard-empty strong {
+  color: var(--al-ds-foreground);
+}
+
+.content-premium .dashboard-meta-strip > div,
+.content-premium .dashboard-review-card span,
+.content-premium .dashboard-review-card small,
+.content-premium .dashboard-result-card > span:not(.stat-label),
+.content-premium .dashboard-empty,
+.content-premium .dashboard-empty p {
+  color: var(--al-ds-muted-foreground);
+}
+
+.content-premium .dashboard-review-card,
+.content-premium .dashboard-quick-link:hover {
+  border-color: var(--al-ds-border);
+  background: var(--al-ds-elevated);
+}
+
+.content-premium .dashboard-quick-link b {
+  color: var(--al-ds-foreground);
+}
+
+.content-premium .dashboard-quick-link small {
+  color: var(--al-ds-muted-foreground);
+}
+
+.content-premium .dashboard-quick-link > svg {
+  color: var(--al-ds-muted-foreground);
+}
+
+.content-premium .dashboard-result-card {
+  border-color: color-mix(in oklab, var(--al-ds-primary) 24%, var(--al-ds-border));
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--al-ds-primary) 8%, var(--al-ds-surface)),
+    var(--al-ds-surface)
+  );
+}
+
+.content-premium .dashboard-demo-panel {
+  background: var(--al-ds-surface) !important;
+}
+
+.content-premium .dashboard-demo-mark {
+  background: var(--al-ds-secondary);
+  color: var(--al-ds-primary);
+}
+
+.content-premium .input,
+.content-premium .select {
+  color: var(--al-ds-foreground);
+  background: var(--al-ds-surface);
+  border-color: var(--al-ds-input);
+}
+
+.content-premium .input::placeholder,
+.content-premium .select::placeholder {
+  color: var(--al-ds-muted-foreground);
+}
+
+.content-premium .status.green {
+  color: var(--al-ds-success);
+  background: color-mix(in oklab, var(--al-ds-success) 12%, transparent);
+}
+
+.content-premium .status.amber {
+  color: var(--al-ds-warning);
+  background: color-mix(in oklab, var(--al-ds-warning) 12%, transparent);
+}
+
+.content-premium .status.gray {
+  color: var(--al-ds-muted-foreground);
+  background: var(--al-ds-muted);
+}
+
+@media (max-width: 760px) {
+  .sidebar-premium {
+    border-bottom-color: var(--al-ds-border);
+  }
+
+  .mobile-nav-toggle {
+    background: var(--al-ds-elevated);
+    border-color: var(--al-ds-border);
+    color: var(--al-ds-foreground);
+  }
+
+  .mobile-nav-icon span {
+    background: currentColor;
+  }
+
+  .mobile-nav-state {
+    color: var(--al-ds-muted-foreground);
+  }
+
+  .side-nav-premium .side-link {
+    color: var(--al-ds-muted-foreground);
+  }
+
+  .side-nav-premium .side-link.active {
+    color: var(--al-ds-primary);
+    background: var(--al-ds-secondary);
+  }
+}
