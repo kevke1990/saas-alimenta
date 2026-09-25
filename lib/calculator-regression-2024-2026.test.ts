@@ -86,6 +86,35 @@ describe("Merelo regression calculations", () => {
     expect(result.parentResults[0].paymentTotal).toBeGreaterThanOrEqual(0);
   });
 
+  it("allocates insufficient combined capacity equally across children when no differentiated own share is supplied", () => {
+    const result = calculate({
+      historicalNBGI: 7500,
+      parents: [
+        { nbi: 1800, careDaysPerWeek: 0 },
+        { nbi: 1800, careDaysPerWeek: 0 },
+      ],
+      children: [
+        { age: 7, residence: "B" },
+        { age: 4, residence: "B" },
+      ],
+      normYear: 2026,
+      calculationDate: "2026-09-25",
+    });
+
+    expect(result.capacitySufficient).toBe(false);
+    expect(result.totalCapacity).toBe(50);
+
+    const child0Total = result.childResults[0].parentShares.reduce((sum, value) => sum + value, 0);
+    const child1Total = result.childResults[1].parentShares.reduce((sum, value) => sum + value, 0);
+    expect(child0Total).toBe(25);
+    expect(child1Total).toBe(25);
+
+    const parent0Total = result.childResults.reduce((sum, child) => sum + child.parentShares[0], 0);
+    const parent1Total = result.childResults.reduce((sum, child) => sum + child.parentShares[1], 0);
+    expect(parent0Total + parent1Total).toBe(50);
+    expect(Math.abs(parent0Total - parent1Total)).toBeLessThanOrEqual(2);
+  });
+
   it("requires review before an illustrative new-partner case is used without maintenance data", () => {
     const result = calculate({
       historicalNBGI: 5752,
