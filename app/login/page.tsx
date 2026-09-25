@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AuthShell, AuthStatus } from "@/components/auth/AuthShell";
+
+function safeNext(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
+  return value;
+}
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,6 +16,8 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,7 +25,7 @@ export default function Login() {
     setBusy(true);
     try {
       const r = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
-      if (r.ok) router.push("/dashboard");
+      if (r.ok) router.push(next);
       else setError(await r.text());
     } catch {
       setError("Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.");
