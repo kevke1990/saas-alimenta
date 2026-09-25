@@ -182,7 +182,7 @@ chown root:root /usr/local/bin/alimenta
 
 # Persist installer output without exposing it in normal output.
 cat > "$APP_DIR/secrets/install-info.txt" <<INFO
-Alimenta Pro v1.3.1
+Merelo v1.0
 Domein: $DOMAIN
 Admin: $ADMIN_EMAIL_INPUT
 Geïnstalleerd: $(date -u +%FT%TZ)
@@ -194,7 +194,7 @@ bash deploy/install-scheduled-jobs.sh
 
 echo
 echo "============================================================"
-echo "Alimenta Pro v1.3.1 installatie voltooid"
+echo "Merelo v1.0 installatie voltooid"
 echo "URL: https://$DOMAIN"
 echo "Beheer CLI: alimenta doctor | status | logs | backup | update | restore"
 echo "Admin-gegevens staan in $APP_DIR/.env.production (chmod 600)."
