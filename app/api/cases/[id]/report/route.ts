@@ -27,7 +27,7 @@ export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
     const parents=data.parents||[]; const childrenInput=data.children||[];
     const parentNames=parents.map((p:any,i:number)=>p.name||c.client?.[i===0?"personAName":"personBName"]||`Ouder ${String.fromCharCode(65+i)}`);
     const childNames=childrenInput.map((x:any,i:number)=>x.name||`Kind ${i+1}`);
-    const childResults=r.childResults||[]; const parentResults=r.parentResults||[]; const transfers=r.transfers||[]; const historical=r.historicalCalculation||{}; const careDiscount=r.careDiscount||{};
+    const childResults=r.childResults||[]; const parentResults=r.parentResults||[]; const transfers=r.transfers||[]; const historical=r.historicalCalculation||{};
     const combined=r.combined||{}; const pal=r.partnerSupport;
     const childTotal=Number(combined.childSupportTotal??transfers.reduce((s:number,t:any)=>s+Number(t.payment||0),0));
     const palGross=Number(combined.partnerSupport?.monthlyGross||pal?.result?.monthlyGross||0); const palNet=Number(combined.partnerSupport?.monthlyNet||pal?.result?.monthlyNet||0);
