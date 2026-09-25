@@ -283,3 +283,67 @@ describe("Legal stepchild maintenance", () => {
     expect(r.warnings.some((w: string) => w.includes("vastgestelde/onderbouwde maandbijdrage"))).toBe(true);
   });
 });
+
+
+describe("Final calculation hardening audit", () => {
+  it("applies statutory indexation only when an existing contribution is explicitly supplied", () => {
+    const base = calculate({
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+      normYear: 2026,
+    });
+    expect(base.indexationCalculation).toMatchObject({
+      applied: false,
+      rate: 0.046,
+      baseContribution: null,
+      indexedContribution: null,
+    });
+
+    const indexed = calculate({
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+      normYear: 2026,
+      priorContribution: 1000,
+      applyIndexation: true,
+    });
+    expect(indexed.indexationCalculation).toEqual({
+      applied: true,
+      rate: 0.046,
+      baseContribution: 1000,
+      indexedContribution: 1046,
+    });
+  });
+
+  it("does not silently invent an indexation base", () => {
+    expect(() => calculate({
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+      normYear: 2026,
+      applyIndexation: true,
+    })).toThrow("bestaande bijdrage");
+  });
+
+  it("keeps per-child care shortfall adjustments transparent and bounded", () => {
+    const result = calculate({
+      historicalNBGI: 7500,
+      parents: [
+        { nbi: 1800, careDaysPerWeek: 0 },
+        { nbi: 1800, careDaysPerWeek: 3 },
+      ],
+      children: [
+        { age: 7, residence: "B" },
+        { age: 4, residence: "B" },
+      ],
+      normYear: 2026,
+    });
+
+    expect(result.capacitySufficient).toBe(false);
+    const grossByChild = result.childResults.map(c => Math.max(...c.grossCareDiscountByParent));
+    const adjustmentByChild = result.transfers.map(t => t.shortfallCareDiscountAdjustment);
+    expect(adjustmentByChild.every((value, i) => value >= 0 && value <= grossByChild[i])).toBe(true);
+    expect(adjustmentByChild.reduce((sum, value) => sum + value, 0)).toBeLessThanOrEqual(result.careDiscount.grossCareDiscount);
+  });
+});
