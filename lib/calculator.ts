@@ -49,11 +49,11 @@ export function calculate(input: CaseInput) {
     const student = studentNeed(child, normSet, input.calculationDate);
     const isYoungAdult = child.age >= 18 && child.age <= 21;
     const rawNeed = isYoungAdult ? (student as number) : minorBase + n(child.specialCosts);
-    return { childIndex: index + 1, age: child.age, residence: child.residence || "A", isYoungAdult, baseNeed: money(isYoungAdult ? rawNeed : minorBase), need: money(rawNeed), needSource: isYoungAdult ? "WSF_" + normYear : historicalNeed !== undefined ? "HISTORICAL_NEED_" + normYear : "NEED_TABLE_" + normYear, specialCosts: n(child.specialCosts), ownIncome: n(child.ownIncome), studyGrant: n(child.studyGrant) };
+    return { childIndex: index + 1, age: child.age, residence: child.residence || "A", isYoungAdult, baseNeed: roundCurrency(isYoungAdult ? rawNeed : minorBase), need: roundCurrency(rawNeed), needSource: isYoungAdult ? "WSF_" + normYear : historicalNeed !== undefined ? "HISTORICAL_NEED_" + normYear : "NEED_TABLE_" + normYear, specialCosts: n(child.specialCosts), ownIncome: n(child.ownIncome), studyGrant: n(child.studyGrant) };
   });
   const minorIndexes = childResults.map((c, i) => c.age < 18 ? i : -1).filter(i => i >= 0);
   if (minorIndexes.length) { const target = minorTableTotal + minorIndexes.reduce((sum, i) => sum + n(childResults[i].specialCosts), 0); const current = minorIndexes.reduce((sum, i) => sum + childResults[i].need, 0); const delta = target - current; childResults[minorIndexes[minorIndexes.length - 1]].need = Math.max(0, childResults[minorIndexes[minorIndexes.length - 1]].need + delta); }
-  const totalNeed = childResults.reduce((sum, c) => sum + c.need, 0);
+  const totalNeed = roundCurrency(childResults.reduce((sum, c) => sum + c.need, 0));
   const parentResults = input.parents.map((parent, parentIndex) => {
     const hasCareResidence = input.children.some(c => residenceParent(c) === parentIndex);
     const capResult = calculateChildSupportCapacity({ ...parent, nbi: incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi, isCareParent: hasCareResidence }, normSet);
@@ -63,7 +63,7 @@ export function calculate(input: CaseInput) {
   const capacitySufficient = totalCapacity >= totalNeed;
   const allocatable = Math.min(totalNeed, totalCapacity);
   const childAllocations = childResults.map(child => {
-    const target = money(allocatable * child.need / Math.max(totalNeed, 1));
+    const target = roundCurrency(allocatable * child.need / Math.max(totalNeed, 1));
     const rawShares = parentResults.map(p => totalCapacity > 0 ? target * p.capacity / totalCapacity : 0);
     const shares = rawShares.map(money);
     const delta = target - shares.reduce((a, b) => a + b, 0);
