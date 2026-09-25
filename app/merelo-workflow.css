@@ -1,0 +1,217 @@
+/* Merelo workflow surfaces: calculations and document scanning. */
+.mobile-scan,
+.merelo-calculation-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 34px 40px 56px;
+  color: var(--al-ds-foreground);
+}
+
+.mobile-scan .page-head,
+.merelo-calculation-page .page-head {
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.mobile-scan .page-title,
+.merelo-calculation-page .page-title {
+  color: var(--al-ds-foreground);
+}
+
+.mobile-scan .page-subtitle,
+.merelo-calculation-page .page-subtitle {
+  color: var(--al-ds-muted-foreground);
+  max-width: 920px;
+  line-height: 1.55;
+}
+
+.mobile-scan .panel,
+.merelo-calculation-page .panel,
+.merelo-calculation-page .form-card,
+.merelo-calculation-page .summary-sticky {
+  background: var(--al-ds-surface);
+  border-color: var(--al-ds-border);
+  box-shadow: var(--al-ds-shadow-panel);
+}
+
+.mobile-scan .label,
+.merelo-calculation-page .label {
+  color: var(--al-ds-muted-foreground);
+}
+
+.mobile-scan .input,
+.merelo-calculation-page .input,
+.merelo-calculation-page .select {
+  background: var(--al-ds-surface);
+  color: var(--al-ds-foreground);
+  border-color: var(--al-ds-input);
+}
+
+.mobile-scan .input::placeholder,
+.merelo-calculation-page .input::placeholder {
+  color: #788885;
+}
+
+.mobile-scan .input:focus,
+.merelo-calculation-page .input:focus {
+  border-color: var(--al-ds-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--al-ds-ring) 18%, transparent);
+}
+
+.mobile-scan .scan-frame {
+  min-height: 360px;
+  border: 1px dashed color-mix(in oklab, var(--al-ds-primary) 28%, var(--al-ds-border));
+  border-radius: var(--al-ds-radius-xl);
+  background:
+    radial-gradient(circle at 50% 35%, color-mix(in oklab, var(--al-ds-accent) 9%, transparent), transparent 45%),
+    var(--al-ds-elevated);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.mobile-scan .scan-frame video {
+  width: 100%;
+  height: 100%;
+  min-height: 360px;
+  max-height: 620px;
+  object-fit: contain;
+  background: #102c2a;
+}
+
+.mobile-scan .scan-guide {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 12px 18px;
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 10px;
+  background: rgba(22,60,58,.82);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.mobile-scan .actions {
+  margin-top: 18px;
+}
+
+.mobile-scan .notice.success {
+  background: color-mix(in oklab, var(--al-ds-success) 9%, var(--al-ds-surface));
+  border-color: color-mix(in oklab, var(--al-ds-success) 35%, var(--al-ds-border));
+  color: #176a4c;
+}
+
+.merelo-calculation-page .wizard-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.merelo-calculation-page .wizard-main {
+  overflow: hidden;
+  border-radius: var(--al-ds-radius-xl);
+}
+
+.merelo-calculation-page .wizard-steps {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  background: var(--al-ds-elevated);
+  border-bottom-color: var(--al-ds-border);
+}
+
+.merelo-calculation-page .wizard-steps button {
+  min-width: 0;
+  color: var(--al-ds-muted-foreground);
+  background: transparent;
+  border-bottom-color: transparent;
+  padding: 15px 12px;
+}
+
+.merelo-calculation-page .wizard-steps button.active {
+  color: var(--al-ds-primary);
+  background: var(--al-ds-surface);
+  border-bottom-color: var(--al-ds-accent);
+}
+
+.merelo-calculation-page .wizard-steps button.done {
+  color: var(--al-ds-success);
+}
+
+.merelo-calculation-page .wizard-steps span {
+  border-color: var(--al-ds-input);
+}
+
+.merelo-calculation-page .wizard-steps .active span {
+  background: var(--al-ds-primary);
+  border-color: var(--al-ds-primary);
+}
+
+.merelo-calculation-page .wizard-steps b {
+  color: inherit;
+}
+
+.merelo-calculation-page .wizard-section {
+  background: var(--al-ds-surface);
+}
+
+.merelo-calculation-page .big-title {
+  color: var(--al-ds-foreground);
+}
+
+.merelo-calculation-page .panel-sub,
+.merelo-calculation-page .field-help,
+.merelo-calculation-page .toggle-row label {
+  color: var(--al-ds-muted-foreground);
+}
+
+.merelo-calculation-page .form-card {
+  background: var(--al-ds-elevated);
+}
+
+.merelo-calculation-page .form-card-head h3,
+.merelo-calculation-page .form-card-head span,
+.merelo-calculation-page .notice,
+.merelo-calculation-page .review-card {
+  color: var(--al-ds-foreground);
+}
+
+.merelo-calculation-page .review-card {
+  background: var(--al-ds-elevated);
+  border-color: var(--al-ds-border);
+}
+
+.merelo-calculation-page .wizard-section > .actions {
+  border-top: 1px solid var(--al-ds-border);
+}
+
+@media (max-width: 1100px) {
+  .mobile-scan,
+  .merelo-calculation-page {
+    padding: 28px 24px 48px;
+  }
+
+  .merelo-calculation-page .wizard-steps {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .mobile-scan,
+  .merelo-calculation-page {
+    padding: 22px 15px 36px;
+  }
+
+  .mobile-scan .scan-frame,
+  .mobile-scan .scan-frame video {
+    min-height: 280px;
+  }
+
+  .merelo-calculation-page .wizard-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .merelo-calculation-page .wizard-steps button {
+    padding: 12px 9px;
+  }
+}
