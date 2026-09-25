@@ -17,7 +17,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (isCaseLockedForCalculation(c.reviewStatus)) return new NextResponse('Dit dossier is vergrendeld. Heropen eerst de review.', { status: 409 });
     if (!c.calculations[0]) return new NextResponse('Er is nog geen berekeningssnapshot beschikbaar.', { status: 409 });
     await db.auditLog.create({ data: { userId: user.id, action: 'CASE_REVIEW_CHECKED', metadata: { caseId: id, calculationId: c.calculations[0].id, section, checkedAt: new Date().toISOString() } } });
-    if (!isJson) return NextResponse.redirect(new URL(`/cases/${id}/review`, req.url), 303);
+    if (!isJson) {
+      // Keep the redirect relative so an upstream proxy cannot turn an internal
+      // host such as 0.0.0.0 into the browser's public URL.
+      return new NextResponse(null, { status: 303, headers: { Location: `/cases/${id}/review` } });
+    }
     return NextResponse.json({ ok: true, section, calculationId: c.calculations[0].id });
   } catch (e: any) { return new NextResponse(e?.message || 'Controleonderdeel opslaan mislukt.', { status: 400 }); }
 }
