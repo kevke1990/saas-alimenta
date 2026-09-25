@@ -59,7 +59,7 @@ export function calculate(input: CaseInput) {
     const partner = parent.newPartner;
     const partnerRelationshipIsFormal = partner?.relationship === "MARRIED" || partner?.relationship === "REGISTERED_PARTNERSHIP";
     const qualifyingStepChildren = partnerRelationshipIsFormal
-      ? (partner?.children ?? []).filter(c => c.active !== false && n(c.age) < 21 && c.livesAtHome !== false)
+      ? (partner?.children ?? []).filter(c => c.active !== false && c.age !== undefined && c.age !== null && String(c.age).trim() !== "" && n(c.age) < 21 && c.livesAtHome !== false)
       : [];
     const stiefchildMaintenance = qualifyingStepChildren.reduce((sum, child) => sum + n(child.monthlyAmount), 0);
     const explicitOtherMaintenance = n(parent.otherMaintenance);
@@ -131,7 +131,7 @@ export function calculate(input: CaseInput) {
     const reasons: string[] = [];
     const formalRelationship = partner.relationship === "MARRIED" || partner.relationship === "REGISTERED_PARTNERSHIP";
     const qualifyingStepChildren = formalRelationship
-      ? (partner.children ?? []).filter(c => c.active !== false && n(c.age) < 21 && c.livesAtHome !== false)
+      ? (partner.children ?? []).filter(c => c.active !== false && c.age !== undefined && c.age !== null && String(c.age).trim() !== "" && n(c.age) < 21 && c.livesAtHome !== false)
       : [];
     if (formalRelationship && qualifyingStepChildren.length && partner.monthlyNbi === undefined) reasons.push("PARTNER_NBI_ONTBREEKT");
     if (formalRelationship && qualifyingStepChildren.some(c => n(c.monthlyAmount) <= 0)) reasons.push("STIEFKIND_BIJDRAGE_ONTBREEKT");
