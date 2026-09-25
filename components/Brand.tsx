@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 
 export const MEReloBrand = {
   name: "Merelo",
@@ -15,7 +16,7 @@ export function MereloMark({ size = 40, dark = false }: { size?: number; dark?: 
   </svg>;
 }
 
-export function MereloLogo({ href = "/", compact = false, dark = false }: { href?: string; compact?: boolean; dark?: boolean }) {
+export function MereloLogo({ href = "/", compact = false, dark = false }: { href?: Route; compact?: boolean; dark?: boolean }) {
   return <Link href={href} className="merelo-brand-link" aria-label="Merelo home">
     <span className={`merelo-lockup${compact ? " merelo-lockup-compact" : ""}${dark ? " merelo-lockup-dark" : ""}`}>
       <span className="merelo-mark"><MereloMark size={compact ? 34 : 42} dark={dark}/></span>
