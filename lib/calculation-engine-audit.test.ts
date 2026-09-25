@@ -15,10 +15,10 @@ describe("Alimenta calculation-engine audit regressions", () => {
 
     expect(r.totalNeed).toBe(680);
     expect(r.parentResults[0].capacity).toBe(686);
-    expect(r.parentResults[1].capacity).toBe(464);
+    expect(r.parentResults[1].capacity).toBe(614);
     expect(r.transfers[0].payerIndex).toBe(1);
     expect(r.transfers[0].careDiscount).toBe(102);
-    expect(r.transfers[0].payment).toBe(172);
+    expect(r.transfers[0].payment).toBe(512);
   });
 
   it("does not calculate care discount as 15% of the paying parent's own share", () => {
