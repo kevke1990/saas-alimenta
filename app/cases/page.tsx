@@ -51,24 +51,29 @@ export default async function CasesPage({
   const u = await requireUser();
   const params = searchParams ? await searchParams : {};
   const q = String(params.q || "").trim();
-  const allowedReviews = ["INCOMPLETE", "READY_FOR_REVIEW", "REVIEWED", "APPROVED", "FINAL"];
+  const allowedReviews = ["INCOMPLETE", "READY_FOR_REVIEW", "IN_REVIEW", "REVIEWED", "APPROVED", "FINAL"];
   const review = allowedReviews.includes(String(params.review)) ? String(params.review) : "";
 
-  const cases = await db.case.findMany({
-    where: {
-      userId: u.id,
-      status: { in: ["DRAFT", "CALCULATED"] },
-      ...(review ? { reviewStatus: review } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { client: { name: { contains: q, mode: "insensitive" } } },
-              { client: { reference: { contains: q, mode: "insensitive" } } },
-            ],
-          }
-        : {}),
-    },
+  const baseWhere = {
+    userId: u.id,
+    status: { in: ["DRAFT", "CALCULATED"] as const },
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: "insensitive" as const } },
+            { client: { name: { contains: q, mode: "insensitive" as const } } },
+            { client: { reference: { contains: q, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+  };
+
+  const [cases, reviewCases] = await Promise.all([
+    db.case.findMany({
+      where: {
+        ...baseWhere,
+        ...(review ? { reviewStatus: review } : {}),
+      },
     include: {
       client: true,
       calculations: { orderBy: { createdAt: "desc" }, take: 2 },
@@ -84,8 +89,13 @@ export default async function CasesPage({
         select: { dueAt: true },
       },
     },
-    orderBy: { updatedAt: "desc" },
-  });
+      orderBy: { updatedAt: "desc" },
+    }),
+    db.case.findMany({
+      where: baseWhere,
+      select: { reviewStatus: true },
+    }),
+  ]);
 
   const now = new Date();
   const todayStart = new Date(now);
@@ -94,7 +104,7 @@ export default async function CasesPage({
   todayEnd.setHours(23, 59, 59, 999);
 
   const reviewCounts = allowedReviews.reduce<Record<string, number>>((acc, value) => {
-    acc[value] = cases.filter((item) => item.reviewStatus === value).length;
+    acc[value] = reviewCases.filter((item) => item.reviewStatus === value).length;
     return acc;
   }, {});
 
