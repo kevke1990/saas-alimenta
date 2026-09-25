@@ -30,6 +30,8 @@ export function calculate(input: CaseInput) {
   validate(input);
   const normYear = input.normYear ?? (input.calculationDate ? getNormYearForDate(input.calculationDate) : 2026);
   const normSet = getNormSet(normYear);
+  const indexationRate = input.indexation ?? ({2024:0.062,2025:0.065,2026:0.046}[normYear] ?? 0);
+  const indexationCalculation = { applied: input.applyIndexation === true, rate: indexationRate, baseContribution: input.priorContribution !== undefined ? money(input.priorContribution) : null, indexedContribution: input.applyIndexation === true ? money((input.priorContribution ?? 0) * (1 + indexationRate)) : null };
   const childCount = input.children.length;
   const historicalPeriod = input.historicalPeriod;
   if (historicalPeriod && !historicalPeriod.kgbIncluded) throw new Error("Het historische NBGI-object moet aangeven dat het relevante KGB al in het NBGI is verwerkt.");
