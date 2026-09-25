@@ -1,16 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import type { Route } from "next";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { AuthShell, AuthStatus } from "@/components/auth/AuthShell";
 
-export default function Login() {
+function safeNext(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
+  return value;
+}
+
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -18,7 +26,7 @@ export default function Login() {
     setBusy(true);
     try {
       const r = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
-      if (r.ok) router.push("/dashboard");
+      if (r.ok) router.push(next as Route);
       else setError(await r.text());
     } catch {
       setError("Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.");
@@ -48,5 +56,13 @@ export default function Login() {
       <Link href="/register" className="auth-secondary-action">Account aanmaken</Link>
       <div className="auth-trust">Je gegevens worden verwerkt binnen je beveiligde werkplek.</div>
     </AuthShell>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<AuthShell eyebrow="Veilige toegang" title="Welkom terug" description="Log in op je professionele Merelo-werkplek."> <div aria-hidden="true" /></AuthShell>}>
+      <LoginForm />
+    </Suspense>
   );
 }

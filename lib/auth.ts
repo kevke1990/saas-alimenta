@@ -8,6 +8,14 @@ import { requireRuntimeSecret } from "./runtime-secrets";
 
 function sessionSecret() { return new TextEncoder().encode(requireRuntimeSecret("SESSION_SECRET")); }
 
+export function normalizeEmail(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[“”]/g, "")
+    .replace(/[‘’]/g, "");
+}
+
 const secureCookies = process.env.APP_URL?.startsWith("https://") ?? process.env.NODE_ENV === "production";
 const SESSION_TTL_SECONDS = 60 * 60 * 8;
 const SESSION_ISSUER = "alimenta";
@@ -68,9 +76,7 @@ export async function destroySession() {
           data: { revokedAt: new Date() },
         });
       }
-    } catch {
-      // The cookie is cleared even when the token is already invalid or expired.
-    }
+    } catch {}
   }
   jar.set(sessionCookieName(), "", {
     httpOnly: true,
@@ -152,6 +158,7 @@ export async function setSessionControlModeCookie(mode: ControlMode) {
 
 export async function requireAdmin() {
   const user = await requireUser();
-  if (!(user.isAdmin || user.role === "ADMIN") || user.email !== process.env.ADMIN_EMAIL?.toLowerCase()) throw new Error("FORBIDDEN");
+  const configuredAdminEmail = normalizeEmail(process.env.ADMIN_EMAIL || "");
+  if (!(user.isAdmin || user.role === "ADMIN") || !configuredAdminEmail || normalizeEmail(user.email) !== configuredAdminEmail) throw new Error("FORBIDDEN");
   return user;
 }
