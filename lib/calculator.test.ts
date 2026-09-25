@@ -283,3 +283,96 @@ describe("Legal stepchild maintenance", () => {
     expect(r.warnings.some((w: string) => w.includes("vastgestelde/onderbouwde maandbijdrage"))).toBe(true);
   });
 });
+
+
+describe("Final calculation hardening audit", () => {
+  it("applies statutory indexation only when an existing contribution is explicitly supplied", () => {
+    const base = calculate({
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+      normYear: 2026,
+    });
+    expect(base.indexationCalculation).toMatchObject({
+      applied: false,
+      rate: 0.046,
+      baseContribution: null,
+      indexedContribution: null,
+    });
+
+    const indexed = calculate({
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+      normYear: 2026,
+      priorContribution: 1000,
+      applyIndexation: true,
+    });
+    expect(indexed.indexationCalculation).toEqual({
+      applied: true,
+      rate: 0.046,
+      baseContribution: 1000,
+      indexedContribution: 1046,
+    });
+  });
+
+  it("does not silently invent an indexation base", () => {
+    expect(() => calculate({
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 10, residence: "A" }],
+      normYear: 2026,
+      applyIndexation: true,
+    })).toThrow("bestaande bijdrage");
+  });
+
+  it("requires explicit young-adult education and residence inputs", () => {
+    const base = {
+      parents: [{ nbi: 3000 }, { nbi: 2500 }],
+      children: [{ age: 18, residence: "A" as const }],
+      calculationDate: "2026-09-25",
+    };
+    expect(() => calculate(base)).toThrow("MBO of HBO expliciet");
+    expect(() => calculate({ ...base, children: [{ age: 18, residence: "A" as const, studentType: "OTHER" as const, livesAtHome: true }] })).toThrow("MBO of HBO expliciet");
+    expect(() => calculate({ ...base, children: [{ age: 18, residence: "A" as const, studentType: "MBO" as const }] })).toThrow("expliciet worden vastgelegd of het kind thuis woont");
+  });
+
+  it("keeps mixed minor/young-adult scenarios on their own norm paths", () => {
+    const result = calculate({
+      historicalNBGI: 5000,
+      parents: [{ nbi: 3000, careDaysPerWeek: 1 }, { nbi: 2500, careDaysPerWeek: 0 }],
+      children: [
+        { age: 10, residence: "A", specialCosts: 100 },
+        { age: 18, residence: "A", studentType: "HBO", livesAtHome: true, ownIncome: 0, studyGrant: 0 },
+      ],
+      normYear: 2026,
+      calculationDate: "2026-09-25",
+    });
+    expect(result.childResults[0].needSource).toBe("NEED_TABLE_2026");
+    expect(result.childResults[1].needSource).toBe("WSF_2026");
+    expect(result.childResults[0].specialCosts).toBe(100);
+    expect(result.childResults[1].isYoungAdult).toBe(true);
+    expect(result.childResults[0].need).toBeGreaterThan(result.childResults[0].baseNeed);
+  });
+
+  it("keeps per-child care shortfall adjustments transparent and bounded", () => {
+    const result = calculate({
+      historicalNBGI: 7500,
+      parents: [
+        { nbi: 1800, careDaysPerWeek: 0 },
+        { nbi: 1800, careDaysPerWeek: 3 },
+      ],
+      children: [
+        { age: 7, residence: "B" },
+        { age: 4, residence: "B" },
+      ],
+      normYear: 2026,
+    });
+
+    expect(result.capacitySufficient).toBe(false);
+    const grossByChild = result.childResults.map(c => Math.max(...c.grossCareDiscountByParent));
+    const adjustmentByChild = result.transfers.map(t => t.shortfallCareDiscountAdjustment);
+    expect(adjustmentByChild.every((value, i) => value >= 0 && value <= grossByChild[i])).toBe(true);
+    expect(adjustmentByChild.reduce((sum, value) => sum + value, 0)).toBeLessThanOrEqual(result.careDiscount.grossCareDiscount);
+  });
+});
