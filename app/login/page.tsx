@@ -61,7 +61,7 @@ function LoginForm() {
 
 export default function Login() {
   return (
-    <Suspense fallback={<AuthShell eyebrow="Veilige toegang" title="Welkom terug" description="Log in op je professionele Merelo-werkplek." />}>
+    <Suspense fallback={<AuthShell eyebrow="Veilige toegang" title="Welkom terug" description="Log in op je professionele Merelo-werkplek."> <div aria-hidden="true" /></AuthShell>}>
       <LoginForm />
     </Suspense>
   );
