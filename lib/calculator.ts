@@ -9,7 +9,7 @@ type Residence = "A" | "B" | "50-50";
 export type Child = { age: number; specialCosts?: number; residence?: Residence; studentType?: "MBO" | "HBO" | "OTHER"; livesAtHome?: boolean; ownIncome?: number; studyGrant?: number };
 export type HistoricalNBGIStatus = "HISTORICAL_ENTERED" | "DERIVED_INDICATIVE";
 export type HistoricalCalculationPeriod = { nbgi?: number; kgbIncluded: boolean; calculationDate?: string; effectiveDate?: string; source?: { type: string; id?: string; label?: string }; historicalKGB?: number; historicalIncomeSources?: Array<Record<string, unknown>>; historicalNeed?: number };
-export type NewPartnerInput = { present: boolean; name?: string; relationship?: string; monthlyNbi?: number; selfSupporting?: boolean; maintenanceObligation?: boolean; includedInCalculation?: boolean; children?: Array<{ id?: string; label?: string; monthlyAmount?: number; active?: boolean }> };
+export type NewPartnerInput = { present: boolean; name?: string; relationship?: string; monthlyNbi?: number; selfSupporting?: boolean; maintenanceObligation?: boolean; includedInCalculation?: boolean; children?: Array<{ id?: string; label?: string; age?: number; livesAtHome?: boolean; monthlyAmount?: number; active?: boolean }> };
 export type Parent = { nbi: number; kgb?: number; aow?: boolean; housingCosts?: number; specialNecessaryCosts?: number; otherMaintenance?: number; careDaysPerWeek?: number; receivesBijstand?: boolean; stepParentLiable?: boolean; capacityAdjustment?: number; income?: IncomeProfile; newPartner?: NewPartnerInput };
 export type CaseInput = { historicalNBGI?: number; historicalPeriod?: HistoricalCalculationPeriod; historicalNeed?: number; historicalIncomeSources?: Array<Record<string, unknown>>; historicalKGB?: number; parents: Parent[]; children: Child[]; actualKgbReceivingParent?: number; indexation?: number; normYear?: NormYear; calculationDate?: string };
 
@@ -158,7 +158,7 @@ export function calculate(input: CaseInput) {
   input.parents.forEach((parent, parentIndex) => {
     const partner = parent.newPartner;
     const formalRelationship = partner?.relationship === "MARRIED" || partner?.relationship === "REGISTERED_PARTNERSHIP";
-    const qualifyingStepChildren = formalRelationship ? (partner?.children ?? []).filter(c => c.active !== false && n(c.age) < 21 && c.livesAtHome !== false) : [];
+    const qualifyingStepChildren = formalRelationship ? (partner?.children ?? []).filter(c => c.active !== false && c.age !== undefined && c.age !== null && String(c.age).trim() !== "" && n(c.age) < 21 && c.livesAtHome !== false) : [];
     if (qualifyingStepChildren.length) {
       warnings.push("Ouder " + (parentIndex + 1) + " is juridisch onderhoudsplichtig voor de geregistreerde stiefkinderen jonger dan 21 jaar; de ingevoerde stiefkindbijdrage is daarom in mindering gebracht op de draagkracht.");
       if (qualifyingStepChildren.some(c => n(c.monthlyAmount) <= 0)) warnings.push("REVIEW_REQUIRED: voor één of meer stiefkinderen ontbreekt een vastgestelde/onderbouwde maandbijdrage. De berekening gebruikt daarom geen geschatte bijdrage.");
