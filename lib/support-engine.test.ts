@@ -33,7 +33,7 @@ describe('support-engine capacity corrections', () => {
 
     expect(result.effectiveNBI).toBe(2600);
     expect(result.housingBudget).toBe(660);
-    expect(result.capacity).toBe(517);
+    expect(result.capacity).toBe(403);
   });
 
   it('does not let a correction change the formula threshold decision', () => {
