@@ -74,7 +74,7 @@ export function calculate(input: CaseInput) {
   });
   const grossCareDiscount = roundCurrency(childAllocations.reduce((sum, c) => sum + Math.max(...c.careDiscounts), 0));
   const shortfall = money(Math.max(0, totalNeed - totalCapacity));
-  const shortfallAdjustment = shortfall > 0 ? roundCurrency(shortfall / 2) : 0;
+  const shortfallAdjustment = shortfall > 0 ? roundWholeEuro(shortfall / 2) : 0;
   const appliedCareDiscount = shortfall > 0 ? roundCurrency(Math.max(0, grossCareDiscount - shortfallAdjustment)) : grossCareDiscount;
   const careMultiplier = grossCareDiscount > 0 ? appliedCareDiscount / grossCareDiscount : 1;
   const transfers = input.children.map((child, i) => {
