@@ -368,7 +368,7 @@ Bij APPROVED wordt bovendien een exacte calculation binding opgeslagen. Een nieu
 
 ## Release status
 
-**v1.3.1-rc1 — Demo Release Candidate**
+**v1.0 — Eerste stabiele release**
 
 ### Fase A — Demo MVP
 
