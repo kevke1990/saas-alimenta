@@ -113,6 +113,6 @@ describe("Merelo regression calculations", () => {
     expect(result.parentResults[0].capacity).toBe(686);
     expect(result.partnerReview[0].status).toBe("REVIEW_REQUIRED");
     expect(result.partnerReview[0].includedInCalculation).toBe(true);
-    expect(result.warnings).toContain(expect.stringContaining("REVIEW_REQUIRED"));
+    expect(result.warnings.some(w => w.includes("REVIEW_REQUIRED"))).toBe(true);
   });
 });
