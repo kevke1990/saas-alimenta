@@ -1,8 +1,6 @@
-import AppShell from "@/components/AppShell";
-
 export default function CasesLoading() {
   return (
-    <AppShell>
+    <>
       <div className="cases-page" aria-busy="true" aria-label="Dossiers laden">
         <header className="cases-header">
           <div>
@@ -22,6 +20,6 @@ export default function CasesLoading() {
         </section>
       </div>
       <span className="sr-only" role="status">Dossiers worden geladen…</span>
-    </AppShell>
+    </>
   );
 }
