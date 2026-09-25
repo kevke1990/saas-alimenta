@@ -6,14 +6,14 @@ import "./design-tokens.css";
 import "./auth.css";
 import type { Viewport } from "next";
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#0c1220" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#163C3A" };
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Alimenta Pro",
+  title: "Merelo",
   manifest: "/manifest.webmanifest",
-  description: "Professionele omgeving voor alimentatieprofessionals.",
-  applicationName: "Alimenta Pro",
+  description: "Alimentatie inzichtelijk. Bereken, begrijp en spreek af vanuit één professionele werkplek.",
+  applicationName: "Merelo",
   referrer: "strict-origin-when-cross-origin"
 };
 
