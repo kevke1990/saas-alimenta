@@ -1,6 +1,6 @@
 # Alimenta Pro
 
-> **v1.3.1-rc1 — Demo Release Candidate**
+> **v1.0 — Eerste stabiele release**
 >
 > Professionele alimentatie-werkplek voor kinderalimentatie en partneralimentatie.
 
