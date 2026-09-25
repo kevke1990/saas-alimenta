@@ -101,3 +101,15 @@
 @media(prefers-reduced-motion:reduce){
   .cases-summary-item,.cases-table tbody tr{transition:none}
 }
+
+.cases-skeleton{display:block;border-radius:8px;background:linear-gradient(90deg,var(--al-ds-elevated) 25%,color-mix(in oklab,var(--al-ds-elevated) 55%,var(--al-ds-surface)) 50%,var(--al-ds-elevated) 75%);background-size:200% 100%;animation:cases-skeleton-shimmer 1.4s ease-in-out infinite}
+.cases-skeleton-kicker{width:120px;height:9px;margin-bottom:10px}
+.cases-skeleton-title{width:min(420px,75vw);height:34px}
+.cases-skeleton-copy{width:min(620px,82vw);height:12px;margin-top:10px}
+.cases-loading-summary{min-height:74px}
+.cases-skeleton-summary{height:38px;margin:17px 12px}
+.cases-skeleton-filter{height:58px;margin-bottom:18px}
+.cases-loading-rows{display:grid;gap:10px}
+.cases-skeleton-row{height:52px}
+@keyframes cases-skeleton-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){.cases-skeleton{animation:none}}
