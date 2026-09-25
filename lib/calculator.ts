@@ -56,8 +56,34 @@ export function calculate(input: CaseInput) {
   const totalNeed = roundCurrency(childResults.reduce((sum, c) => sum + c.need, 0));
   const parentResults = input.parents.map((parent, parentIndex) => {
     const hasCareResidence = input.children.some(c => residenceParent(c) === parentIndex);
-    const capResult = calculateChildSupportCapacity({ ...parent, nbi: incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi, isCareParent: hasCareResidence }, normSet);
-    return { parentIndex, nbi: money(incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi), kgb: money(n(parent.kgb)), income: incomeResults[parentIndex], capacity: capResult.capacity, careDaysPerWeek: n(parent.careDaysPerWeek), careDiscountPctByChild: childResults.map(c => careParentForChild(input.children[c.childIndex - 1], parentIndex) ? careDiscountPercentage(n(parent.careDaysPerWeek)) : 0), capacityMethod: capResult.method, capacityNormYear: capResult.normYear };
+    const partner = parent.newPartner;
+    const partnerRelationshipIsFormal = partner?.relationship === "MARRIED" || partner?.relationship === "REGISTERED_PARTNERSHIP";
+    const qualifyingStepChildren = partnerRelationshipIsFormal
+      ? (partner?.children ?? []).filter(c => c.active !== false && n(c.age) < 21 && c.livesAtHome !== false)
+      : [];
+    const stiefchildMaintenance = qualifyingStepChildren.reduce((sum, child) => sum + n(child.monthlyAmount), 0);
+    const explicitOtherMaintenance = n(parent.otherMaintenance);
+    const effectiveOtherMaintenance = explicitOtherMaintenance + stiefchildMaintenance;
+    const capResult = calculateChildSupportCapacity({
+      ...parent,
+      nbi: incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi,
+      otherMaintenance: effectiveOtherMaintenance,
+      isCareParent: hasCareResidence
+    }, normSet);
+    return {
+      parentIndex,
+      nbi: money(incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi),
+      kgb: money(n(parent.kgb)),
+      income: incomeResults[parentIndex],
+      capacity: capResult.capacity,
+      careDaysPerWeek: n(parent.careDaysPerWeek),
+      careDiscountPctByChild: childResults.map(c => careParentForChild(input.children[c.childIndex - 1], parentIndex) ? careDiscountPercentage(n(parent.careDaysPerWeek)) : 0),
+      capacityMethod: capResult.method,
+      capacityNormYear: capResult.normYear,
+      otherMaintenance: money(explicitOtherMaintenance),
+      stiefchildMaintenance: money(stiefchildMaintenance),
+      effectiveOtherMaintenance: money(effectiveOtherMaintenance)
+    };
   });
   const totalCapacity = parentResults.reduce((sum, p) => sum + p.capacity, 0);
   const capacitySufficient = totalCapacity >= totalNeed;
@@ -79,10 +105,10 @@ export function calculate(input: CaseInput) {
   const careMultiplier = grossCareDiscount > 0 ? appliedCareDiscount / grossCareDiscount : 1;
   const transfers = input.children.map((child, i) => {
     const allocation = childAllocations[i];
+    const resident = residenceParent(child);
     const effectiveCare = allocation.careDiscounts.map(v => roundCurrency(v * careMultiplier));
     const afterCare = allocation.parentShares.map(share => Math.max(0, share));
     if (!capacitySufficient) {
-      const resident = residenceParent(child);
       const payer = resident === 0 ? 1 : resident === 1 ? 0 : (allocation.parentShares[1] >= allocation.parentShares[0] ? 1 : 0);
       const receiver = payer === 0 ? 1 : 0;
       const payerCapacityShare = totalCapacity > 0 ? roundCurrency(parentResults[payer].capacity * (childResults[i].need / Math.max(totalNeed, 1))) : 0;
@@ -103,10 +129,24 @@ export function calculate(input: CaseInput) {
     const partner = parent.newPartner;
     if (!partner?.present) return { parentIndex, status: "NOT_APPLICABLE", includedInCalculation: false, reasons: [] as string[] };
     const reasons: string[] = [];
+    const formalRelationship = partner.relationship === "MARRIED" || partner.relationship === "REGISTERED_PARTNERSHIP";
+    const qualifyingStepChildren = formalRelationship
+      ? (partner.children ?? []).filter(c => c.active !== false && n(c.age) < 21 && c.livesAtHome !== false)
+      : [];
+    if (formalRelationship && qualifyingStepChildren.length && partner.monthlyNbi === undefined) reasons.push("PARTNER_NBI_ONTBREEKT");
+    if (formalRelationship && qualifyingStepChildren.some(c => n(c.monthlyAmount) <= 0)) reasons.push("STIEFKIND_BIJDRAGE_ONTBREEKT");
+    if (formalRelationship && qualifyingStepChildren.length && parent.newPartner?.maintenanceObligation !== true) reasons.push("WETTELIJKE_STIEFOUDER_ONDERHOUDSPLICHT_NIET_GEREGISTREERD");
     if (partner.includedInCalculation === true && partner.maintenanceObligation === undefined) reasons.push("ONDERHOUDSVERPLICHTING_ONDUIDELIJK");
     if (partner.children?.length && partner.includedInCalculation === true && partner.maintenanceObligation !== true) reasons.push("STIEFKINDEREN_MAAR_GEEN_VASTGESTELDE_ONDERHOUDSVERPLICHTING");
-    if (partner.monthlyNbi === undefined) reasons.push("PARTNER_NBI_ONTBREEKT");
-    return { parentIndex, status: reasons.length ? "REVIEW_REQUIRED" : "RECORDED_ONLY", includedInCalculation: partner.includedInCalculation === true, reasons };
+    return {
+      parentIndex,
+      status: reasons.length ? "REVIEW_REQUIRED" : (qualifyingStepChildren.length ? "CALCULATED" : "RECORDED_ONLY"),
+      includedInCalculation: partner.includedInCalculation === true,
+      legalStepParent: formalRelationship && qualifyingStepChildren.length > 0,
+      qualifyingStepChildren: qualifyingStepChildren.map(c => ({ label: c.label ?? null, age: n(c.age), monthlyAmount: money(n(c.monthlyAmount)) })),
+      stiefchildMaintenance: money(qualifyingStepChildren.reduce((sum, c) => sum + n(c.monthlyAmount), 0)),
+      reasons
+    };
   });
   const warnings: string[] = [];
   if (historicalNBGIStatus === "DERIVED_INDICATIVE") { warnings.push("Geen historisch NBGI afzonderlijk vastgelegd; de actuele inkomenssom is uitsluitend als rekenkundige indicatie gebruikt. Dit bedrag is geen vastgesteld historisch NBGI."); warnings.push("REVIEW_REQUIRED: historische behoefte en het historische NBGI moeten afzonderlijk worden geverifieerd voordat de uitkomst definitief wordt gebruikt."); }
@@ -115,10 +155,32 @@ export function calculate(input: CaseInput) {
   if (input.children.some(c => c.age >= 18 && c.age <= 21)) warnings.push("Voor jongmeerderjarigen is de WSF-norm uit de geselecteerde NormSet en periode gebruikt; controleer beurs, eigen inkomsten, concrete studiekosten en de juiste reken-/ingangsdatum.");
   if (input.children.some(c => n(c.specialCosts) > 0)) warnings.push("Bijzondere kindkosten zijn toegevoegd. De zorgkorting wordt berekend over de basisbehoefte en niet over deze aanvullende kosten; controleer de kwalificatie en bewijsstukken.");
   if (input.parents.some(p => n(p.otherMaintenance) > 0)) warnings.push("Andere onderhoudsverplichtingen zijn als capaciteitscorrectie verwerkt; controleer rangorde en toerekening per onderhoudsgerechtigde.");
+  input.parents.forEach((parent, parentIndex) => {
+    const partner = parent.newPartner;
+    const formalRelationship = partner?.relationship === "MARRIED" || partner?.relationship === "REGISTERED_PARTNERSHIP";
+    const qualifyingStepChildren = formalRelationship ? (partner?.children ?? []).filter(c => c.active !== false && n(c.age) < 21 && c.livesAtHome !== false) : [];
+    if (qualifyingStepChildren.length) {
+      warnings.push("Ouder " + (parentIndex + 1) + " is juridisch onderhoudsplichtig voor de geregistreerde stiefkinderen jonger dan 21 jaar; de ingevoerde stiefkindbijdrage is daarom in mindering gebracht op de draagkracht.");
+      if (qualifyingStepChildren.some(c => n(c.monthlyAmount) <= 0)) warnings.push("REVIEW_REQUIRED: voor één of meer stiefkinderen ontbreekt een vastgestelde/onderbouwde maandbijdrage. De berekening gebruikt daarom geen geschatte bijdrage.");
+    }
+  });
   partnerReview.forEach(review => review.reasons.forEach(reason => warnings.push("REVIEW_REQUIRED: nieuwe partner ouder " + (review.parentIndex + 1) + ": " + reason + ".")));
   const historicalCalculation = { calculationDate: input.calculationDate ?? null, normYear, historicalNBGI: suppliedNBGI, historicalKGB: input.historicalKGB ?? historicalPeriod?.historicalKGB ?? null, historicalIncomeSources: input.historicalIncomeSources ?? historicalPeriod?.historicalIncomeSources ?? [], historicalNeed: historicalNeed !== undefined ? money(historicalNeed) : (historicalNBGIStatus === "HISTORICAL_ENTERED" ? money(minorTableTotal) : null), status: historicalNBGIStatus, source: historicalPeriod?.source ?? null, fallbackNBGI: historicalNBGIStatus === "DERIVED_INDICATIVE" ? calculatedNBGI : null };
-  const currentCalculation = { calculationDate: input.calculationDate ?? null, normYear, parentA_NBI: currentNBI[0] ?? 0, parentA_KGB: currentKGB[0] ?? 0, parentB_NBI: currentNBI[1] ?? 0, parentB_KGB: currentKGB[1] ?? 0, parentA_capacity: parentResults[0]?.capacity ?? 0, parentB_capacity: parentResults[1]?.capacity ?? 0, combinedCapacity: totalCapacity, contribution: money(transfers.reduce((s, t) => s + t.payment, 0)) };
+  const currentCalculation = {
+    calculationDate: input.calculationDate ?? null,
+    normYear,
+    parentA_NBI: currentNBI[0] ?? 0,
+    parentA_KGB: currentKGB[0] ?? 0,
+    parentB_NBI: currentNBI[1] ?? 0,
+    parentB_KGB: currentKGB[1] ?? 0,
+    parentA_capacity: parentResults[0]?.capacity ?? 0,
+    parentB_capacity: parentResults[1]?.capacity ?? 0,
+    parentA_stiefchildMaintenance: parentResults[0]?.stiefchildMaintenance ?? 0,
+    parentB_stiefchildMaintenance: parentResults[1]?.stiefchildMaintenance ?? 0,
+    combinedCapacity: totalCapacity,
+    contribution: money(transfers.reduce((s, t) => s + t.payment, 0))
+  };
   const nbgi = historicalNBGIStatus === "HISTORICAL_ENTERED" ? suppliedNBGI! : calculatedNBGI;
-  return { engineVersion: ENGINE_VERSION, normVersion: normSet.version, historicalCalculation, currentCalculation, historicalPeriod: historicalPeriod ? { ...historicalPeriod, nbgi: suppliedNBGI ?? undefined } : undefined, methodologyVersion: "KA-" + normYear + "-PRODUCTION", indexation: input.indexation ?? ({2024:0.062,2025:0.065,2026:0.046}[normYear] ?? 0.046), methodology: "Tremanormen " + normYear + " — behoefte, draagkrachtvergelijking, zorgkorting en bijdrage", normYear, nbgi, totalNeed: money(totalNeed), totalCapacity: money(totalCapacity), capacityDeficit: money(Math.max(0, totalNeed - totalCapacity)), capacitySurplus: money(Math.max(0, totalCapacity - totalNeed)), capacitySufficient, parentResults: parentResults.map((p, i) => ({ ...p, sharePct: totalCapacity ? Math.round((p.capacity / totalCapacity) * 1000) / 10 : 0, allocatedNeed: money(childAllocations.reduce((s, c) => s + c.parentShares[i], 0)), totalCareDiscount: money(transfers.reduce((s, t) => s + (t.payerIndex === i ? t.careDiscount : 0), 0)), paymentTotal: paymentTotals[i] })), childResults: childResults.map((c, i) => ({ ...c, parentShares: childAllocations[i].parentShares, careDiscountByParent: childAllocations[i].careDiscounts, grossCareDiscountByParent: childAllocations[i].careDiscounts, payments: transfers[i] })), transfers, careDiscount: { grossCareDiscount, shortfall, shortfallAdjustment, verifiableCareDiscount: appliedCareDiscount, appliedCareDiscount }, partnerReview, calculationSteps: [{ step: 1, title: "Behoefte", value: money(totalNeed), formula: historicalNBGIStatus === "HISTORICAL_ENTERED" ? normYear + " behoefte op basis van afzonderlijk vastgelegd historisch uitgangspunt" : historicalNeed !== undefined ? normYear + " historisch behoeftebedrag afzonderlijk ingevoerd; NBGI blijft indicatief" : normYear + " behoeftetabel/WSF met indicatief afgeleid NBGI" }, { step: 2, title: "Draagkracht", value: money(totalCapacity), formula: normYear + " draagkrachttabel/formule per ouder op basis van actuele gegevens" }, { step: 3, title: "Draagkrachtvergelijking", value: money(allocatable), formula: "eigen draagkracht / gezamenlijke draagkracht × behoefte" }, { step: 4, title: "Zorgkorting", value: money(appliedCareDiscount), formula: "bruto zorgkorting − helft tekort, begrensd op minimaal € 0; bij voldoende draagkracht is de bruto zorgkorting volledig verzilverbaar" }, { step: 5, title: "Bijdrage", value: money(transfers.reduce((s, t) => s + t.payment, 0)), formula: "aandeel ouder minus toepasselijke, verzilverbare zorgkorting" }], incomeResults, warnings, warning: "Indicatieve professionele rekenslag. De Expertgroep Alimentatie benadrukt dat de aanbevelingen geen wet zijn en dat individuele omstandigheden tot afwijkingen kunnen leiden.", audit: { roundedToWholeEuros: true, inputParents: input.parents.length, inputChildren: input.children.length, roundingPolicy: ROUNDING_POLICY, historicalNBGIStatus } };
+  return { engineVersion: ENGINE_VERSION, normVersion: normSet.version, historicalCalculation, currentCalculation, historicalPeriod: historicalPeriod ? { ...historicalPeriod, nbgi: suppliedNBGI ?? undefined } : undefined, methodologyVersion: "KA-" + normYear + "-PRODUCTION", indexation: input.indexation ?? ({2024:0.062,2025:0.065,2026:0.046}[normYear] ?? 0.046), methodology: "Tremanormen " + normYear + " — behoefte, draagkrachtvergelijking, zorgkorting en bijdrage", normYear, nbgi, totalNeed: money(totalNeed), totalCapacity: money(totalCapacity), capacityDeficit: money(Math.max(0, totalNeed - totalCapacity)), capacitySurplus: money(Math.max(0, totalCapacity - totalNeed)), capacitySufficient, parentResults: parentResults.map((p, i) => ({ ...p, sharePct: totalCapacity ? roundCurrency((p.capacity / totalCapacity) * 100) : 0, allocatedNeed: money(childAllocations.reduce((s, c) => s + c.parentShares[i], 0)), totalCareDiscount: money(transfers.reduce((s, t) => s + (t.payerIndex === i ? t.careDiscount : 0), 0)), paymentTotal: paymentTotals[i] })), childResults: childResults.map((c, i) => ({ ...c, parentShares: childAllocations[i].parentShares, careDiscountByParent: childAllocations[i].careDiscounts, grossCareDiscountByParent: childAllocations[i].careDiscounts, payments: transfers[i] })), transfers, careDiscount: { grossCareDiscount, shortfall, shortfallAdjustment, verifiableCareDiscount: appliedCareDiscount, appliedCareDiscount }, partnerReview, calculationSteps: [{ step: 1, title: "Behoefte", value: money(totalNeed), formula: historicalNBGIStatus === "HISTORICAL_ENTERED" ? normYear + " behoefte op basis van afzonderlijk vastgelegd historisch uitgangspunt" : historicalNeed !== undefined ? normYear + " historisch behoeftebedrag afzonderlijk ingevoerd; NBGI blijft indicatief" : normYear + " behoeftetabel/WSF met indicatief afgeleid NBGI" }, { step: 2, title: "Draagkracht", value: money(totalCapacity), formula: normYear + " draagkrachttabel/formule per ouder op basis van actuele gegevens" }, { step: 3, title: "Draagkrachtvergelijking", value: money(allocatable), formula: "eigen draagkracht / gezamenlijke draagkracht × behoefte" }, { step: 4, title: "Zorgkorting", value: money(appliedCareDiscount), formula: "bruto zorgkorting − helft tekort, begrensd op minimaal € 0; bij voldoende draagkracht is de bruto zorgkorting volledig verzilverbaar" }, { step: 5, title: "Bijdrage", value: money(transfers.reduce((s, t) => s + t.payment, 0)), formula: "aandeel ouder minus toepasselijke, verzilverbare zorgkorting" }], incomeResults, warnings, warning: "Indicatieve professionele rekenslag. De Expertgroep Alimentatie benadrukt dat de aanbevelingen geen wet zijn en dat individuele omstandigheden tot afwijkingen kunnen leiden.", audit: { roundedToWholeEuros: true, inputParents: input.parents.length, inputChildren: input.children.length, roundingPolicy: ROUNDING_POLICY, historicalNBGIStatus } };
 }
 export { NORM_VERSION };
