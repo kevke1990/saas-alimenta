@@ -4,7 +4,7 @@ import { passwordResetEmailTemplate, verificationEmailTemplate } from "./mail-te
 describe("authentication mail templates", () => {
   it("renders verification mail consistently", () => {
     const result = verificationEmailTemplate({ name: "Kevin", url: "https://example.test/verifieer-email?token=abc" });
-    expect(result.subject).toBe("Bevestig je e-mailadres voor Alimenta Pro");
+    expect(result.subject).toBe("Bevestig je e-mailadres voor Merelo");
     expect(result.textBody).toContain("Hoi Kevin,");
     expect(result.textBody).toContain("https://example.test/verifieer-email?token=abc");
     expect(result.htmlBody).toContain("E-mailadres bevestigen");
@@ -12,7 +12,7 @@ describe("authentication mail templates", () => {
 
   it("renders password reset mail with the one-hour lifetime", () => {
     const result = passwordResetEmailTemplate({ url: "https://example.test/wachtwoord-reset?token=abc" });
-    expect(result.subject).toBe("Wachtwoord resetten voor Alimenta Pro");
+    expect(result.subject).toBe("Wachtwoord resetten voor Merelo");
     expect(result.textBody).toContain("Deze link is 1 uur geldig.");
     expect(result.htmlBody).toContain("Wachtwoord resetten");
   });

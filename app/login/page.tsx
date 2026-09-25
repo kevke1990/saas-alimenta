@@ -28,7 +28,7 @@ export default function Login() {
   }
 
   return (
-    <AuthShell eyebrow="Veilige toegang" title="Welkom terug" description="Log in op je professionele Alimenta Pro-werkplek.">
+    <AuthShell eyebrow="Veilige toegang" title="Welkom terug" description="Log in op je professionele Merelo-werkplek.">
       {error ? <AuthStatus tone="error">{error}</AuthStatus> : null}
       <form onSubmit={submit} className="auth-form" aria-busy={busy}>
         <div className="auth-field">
@@ -44,7 +44,7 @@ export default function Login() {
         </div>
         <button className="auth-submit" disabled={busy} type="submit">{busy ? "Bezig met inloggen…" : "Inloggen"}<span aria-hidden="true">→</span></button>
       </form>
-      <div className="auth-divider"><span>Nieuw bij Alimenta Pro?</span></div>
+      <div className="auth-divider"><span>Nieuw bij Merelo?</span></div>
       <Link href="/register" className="auth-secondary-action">Account aanmaken</Link>
       <div className="auth-trust">Je gegevens worden verwerkt binnen je beveiligde werkplek.</div>
     </AuthShell>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PRICING } from "@/lib/pricing";
+import { MereloLogo } from "@/components/Brand";
 
 const featureItems = [
   ["01", "Één rekenkern, geen losse varianten", "Editor, onderbouwing en rapport vertrekken vanuit hetzelfde vastgelegde resultaat."],
@@ -18,9 +19,9 @@ const workflowItems = [
 ] as const;
 
 const faqItems = [
-  ["Welke berekeningen ondersteunt Alimenta?", "Alimenta ondersteunt kinder- en partneralimentatie binnen de bestaande rekenkern, inclusief de relevante onderbouwing en professionele rapportage."],
+  ["Welke berekeningen ondersteunt Merelo?", "Merelo ondersteunt kinder- en partneralimentatie binnen de bestaande rekenkern, inclusief de relevante onderbouwing en professionele rapportage."],
   ["Kan ik zien waar een bedrag vandaan komt?", "Ja. De publieke productbelofte is juist gericht op herleidbaarheid: invoer, afgeleide bedragen, professionele keuzes en versies worden afzonderlijk zichtbaar gemaakt waar de applicatie dat ondersteunt."],
-  ["Is Alimenta juridisch advies?", "Nee. Alimenta is rekensoftware. De gebruiker blijft verantwoordelijk voor de juridische beoordeling, gekozen uitgangspunten en toepassing van de uitkomst."],
+  ["Is Merelo juridisch advies?", "Nee. Merelo is rekensoftware. De gebruiker blijft verantwoordelijk voor de juridische beoordeling, gekozen uitgangspunten en toepassing van de uitkomst."],
   ["Wat gebeurt er met mijn berekening?", "Berekeningen blijven gekoppeld aan de bestaande server-side applicatie, autorisatie, tenant-isolatie en opslag. Deze publieke pagina introduceert daar geen nieuwe datalaag voor."],
 ] as const;
 
@@ -28,22 +29,12 @@ export default function Home() {
   return (
     <main className="al-public">
       <header className="al-nav">
-        <div className="al-container" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:24}}>
-          <Link href="/" className="al-brand" aria-label="Alimenta Pro home">
-            <span className="al-mark">A</span>
-            <span>Alimenta <span style={{color:"var(--al-gold)"}}>PRO</span></span>
-          </Link>
+        <div className="al-container al-nav-inner">
+          <MereloLogo />
           <nav className="al-navlinks" aria-label="Hoofdnavigatie">
-            <Link href="#functionaliteit">Functionaliteit</Link>
-            <Link href="#werkwijze">Werkwijze</Link>
-            <Link href="#ondernemers">Ondernemers</Link>
-            <Link href="#prijzen">Prijzen</Link>
-            <Link href="#faq">FAQ</Link>
+            <Link href="#functionaliteit">Functionaliteit</Link><Link href="#werkwijze">Werkwijze</Link><Link href="#ondernemers">Ondernemers</Link><Link href="#prijzen">Prijzen</Link><Link href="#faq">FAQ</Link>
           </nav>
-          <div className="al-nav-actions">
-            <Link href="/login" className="al-btn al-btn-secondary">Inloggen</Link>
-            <Link href="/register" className="al-btn al-btn-primary">Account aanmaken</Link>
-          </div>
+          <div className="al-nav-actions"><Link href="/login" className="al-btn al-btn-secondary">Inloggen</Link><Link href="/register" className="al-btn al-btn-primary">Account aanmaken</Link></div>
         </div>
       </header>
 
@@ -51,7 +42,7 @@ export default function Home() {
         <div className="al-container al-hero-grid">
           <div>
             <div className="al-eyebrow">Voor advocaten, mediators en financieel adviseurs</div>
-            <h1>Alimentatie berekenen met een <span className="al-gradient">onderbouwing die standhoudt.</span></h1>
+            <h1>Merelotie berekenen met een <span className="al-gradient">onderbouwing die standhoudt.</span></h1>
             <p className="al-lead">
               Eén bestaande rekenkern voor kinder- en partneralimentatie. Elke uitkomst is stap voor stap
               herleidbaar en rapportage blijft gekoppeld aan het vastgelegde resultaat.
@@ -219,7 +210,7 @@ export default function Home() {
         <div className="al-container al-faq-container">
           <div className="al-section-head">
             <div className="al-eyebrow">Veelgestelde vragen</div>
-            <h2>Wat je van Alimenta Pro kunt verwachten.</h2>
+            <h2>Wat je van Merelo kunt verwachten.</h2>
             <p>De software ondersteunt het rekenproces; de gebruiker blijft verantwoordelijk voor de juridische beoordeling.</p>
           </div>
           <div className="al-faq-list">
@@ -247,8 +238,8 @@ export default function Home() {
 
       <footer className="al-footer">
         <div className="al-container al-footer-grid">
-          <div>© {new Date().getFullYear()} Alimenta Pro · Professionele software voor alimentatie.</div>
-          <div className="al-disclaimer">Alimenta Pro is rekensoftware. De gebruiker blijft verantwoordelijk voor de juridische beoordeling en toepassing van de uitkomsten.</div>
+          <div>© {new Date().getFullYear()} Merelo · Professionele software voor alimentatie.</div>
+          <div className="al-disclaimer">Merelo is rekensoftware. De gebruiker blijft verantwoordelijk voor de juridische beoordeling en toepassing van de uitkomsten.</div>
         </div>
       </footer>
     </main>

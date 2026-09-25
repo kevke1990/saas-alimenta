@@ -44,7 +44,7 @@ function VerifyEmailContent() {
         <p className="auth-footer-link"><Link className="auth-text-link" href="/dashboard">Verder naar je werkplek</Link></p>
       </> : null}
       {state === "ok" ? <>
-        <AuthStatus tone="success">Je e-mailadres is bevestigd. Je kunt nu verder met Alimenta Pro.</AuthStatus>
+        <AuthStatus tone="success">Je e-mailadres is bevestigd. Je kunt nu verder met Merelo.</AuthStatus>
         <Link href="/dashboard" className="auth-submit">Naar je werkplek</Link>
       </> : null}
       {state === "error" ? <>
