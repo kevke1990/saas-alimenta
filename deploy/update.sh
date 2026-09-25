@@ -7,7 +7,7 @@ cd "$APP_DIR"
 # executable bit preserved by the deployment method/filesystem.
 bash ./deploy/backup.sh
 CURRENT_TAG="$(grep -E '^ALIMENTA_IMAGE_TAG=' .env | cut -d= -f2- | tr -d '"' || true)"
-CURRENT_TAG="${CURRENT_TAG:-1.3.1-rc1}"
+CURRENT_TAG="${CURRENT_TAG:-1.0}"
 RELEASE_TAG="${ALIMENTA_IMAGE_TAG:-$CURRENT_TAG}"
 PREVIOUS_TAG="previous-$(date -u +%Y%m%d%H%M%S)"
 if docker image inspect "alimenta-pro:$CURRENT_TAG" >/dev/null 2>&1; then docker tag "alimenta-pro:$CURRENT_TAG" "alimenta-pro:$PREVIOUS_TAG"; fi
