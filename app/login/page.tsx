@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { AuthShell, AuthStatus } from "@/components/auth/AuthShell";
 
 function safeNext(value: string | null) {
@@ -11,7 +11,7 @@ function safeNext(value: string | null) {
   return value;
 }
 
-export default function Login() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -56,5 +56,13 @@ export default function Login() {
       <Link href="/register" className="auth-secondary-action">Account aanmaken</Link>
       <div className="auth-trust">Je gegevens worden verwerkt binnen je beveiligde werkplek.</div>
     </AuthShell>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={<AuthShell eyebrow="Veilige toegang" title="Welkom terug" description="Log in op je professionele Merelo-werkplek." />}>
+      <LoginForm />
+    </Suspense>
   );
 }
