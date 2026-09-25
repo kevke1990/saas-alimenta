@@ -1,6 +1,6 @@
 # Alimenta Pro
 
-> **v1.3.1-rc1 — Demo Release Candidate**
+> **v1.0 — Eerste stabiele release**
 >
 > Professionele alimentatie-werkplek voor kinderalimentatie en partneralimentatie.
 
@@ -334,7 +334,7 @@ Alimenta Pro bevat technische voorzieningen voor onder meer:
 - retention jobs;
 - PostgreSQL backup/restore.
 
-De huidige release is een gecontroleerde demo release candidate. Resource-level multi-tenant autorisatie, volledige WebAuthn browser ceremony en complexe juridische uitzonderingen moeten vóór productie verder worden gehard/gevalideerd.
+De v1.0-release is een gecontroleerde eerste productrelease. Resource-level multi-tenant autorisatie, volledige WebAuthn browser ceremony en complexe juridische uitzonderingen blijven vóór brede productie-uitrol punten die verder moeten worden gehard/gevalideerd.
 
 ## Review en goedkeuring
 
@@ -368,7 +368,7 @@ Bij APPROVED wordt bovendien een exacte calculation binding opgeslagen. Een nieu
 
 ## Release status
 
-**v1.3.1-rc1 — Demo Release Candidate**
+**v1.0 — Eerste stabiele release**
 
 ### Fase A — Demo MVP
 
