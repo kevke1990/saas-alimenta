@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { AuthShell, AuthStatus } from "@/components/auth/AuthShell";
@@ -25,7 +26,7 @@ export default function Login() {
     setBusy(true);
     try {
       const r = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
-      if (r.ok) router.push(next);
+      if (r.ok) router.push(next as Route);
       else setError(await r.text());
     } catch {
       setError("Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.");
