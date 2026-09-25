@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PRICING } from "@/lib/pricing";
+import { MereloLogo } from "@/components/Brand";
 
 const included = [
   {
@@ -17,7 +18,7 @@ const included = [
 ] as const;
 
 const faqItems = [
-  ["Wat kost Alimenta?", "Alimenta heeft momenteel twee productvormen. De actuele bedragen en btw-behandeling staan bij ieder plan vermeld."],
+  ["Wat kost Merelo?", "Merelo heeft momenteel twee productvormen. De actuele bedragen en btw-behandeling staan bij ieder plan vermeld."],
   ["Wat is inbegrepen?", "Beide productvormen gebruiken dezelfde kernfunctionaliteit voor berekeningen en rapportage. Het zakelijke plan bevat daarnaast meerdere actieve cliëntdossiers."],
   ["Is er een gratis plan?", "Nee. Er is geen gratis plan. Je kiest bij registratie voor Particulier of Zakelijk."],
   ["Kan ik mijn abonnement wijzigen?", "Een planwijziging is momenteel niet beschikbaar via deze publieke pagina. Kies bij een nieuwe registratie het gewenste plan."],
@@ -26,26 +27,7 @@ const faqItems = [
 export default function PricingPage() {
   return (
     <main className="al-public">
-      <header className="al-nav">
-        <div className="al-container" style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:24}}>
-          <Link href="/" className="al-brand" aria-label="Alimenta Pro home">
-            <span className="al-mark">A</span>
-            <span>Alimenta <span style={{color:"var(--al-gold)"}}>PRO</span></span>
-          </Link>
-          <nav className="al-navlinks" aria-label="Hoofdnavigatie">
-            <Link href="/">Home</Link>
-            <Link href="/#functionaliteit">Functionaliteit</Link>
-            <Link href="/#werkwijze">Werkwijze</Link>
-            <Link href="/#ondernemers">Ondernemers</Link>
-            <Link href="/pricing" aria-current="page">Prijzen</Link>
-            <Link href="/#faq">FAQ</Link>
-          </nav>
-          <div className="al-nav-actions">
-            <Link href="/login" className="al-btn al-btn-secondary">Inloggen</Link>
-            <Link href="/register" className="al-btn al-btn-primary">Account aanmaken</Link>
-          </div>
-        </div>
-      </header>
+      <header className="al-nav"><div className="al-container al-nav-inner"><MereloLogo /><nav className="al-navlinks" aria-label="Hoofdnavigatie"><Link href="/">Home</Link><Link href="/#functionaliteit">Functionaliteit</Link><Link href="/#werkwijze">Werkwijze</Link><Link href="/#ondernemers">Ondernemers</Link><Link href="/pricing" aria-current="page">Prijzen</Link><Link href="/#faq">FAQ</Link></nav><div className="al-nav-actions"><Link href="/login" className="al-btn al-btn-secondary">Inloggen</Link><Link href="/register" className="al-btn al-btn-primary">Account aanmaken</Link></div></div></header>
 
       <section className="al-hero al-pricing-hero">
         <div className="al-container al-pricing-hero-inner">
@@ -134,8 +116,8 @@ export default function PricingPage() {
 
       <footer className="al-footer">
         <div className="al-container al-footer-grid">
-          <div>© {new Date().getFullYear()} Alimenta Pro</div>
-          <div className="al-disclaimer">Alimenta Pro is rekensoftware. De gebruiker blijft verantwoordelijk voor de juridische beoordeling en toepassing van de uitkomsten.</div>
+          <div>© {new Date().getFullYear()} Merelo</div>
+          <div className="al-disclaimer">Merelo is rekensoftware. De gebruiker blijft verantwoordelijk voor de juridische beoordeling en toepassing van de uitkomsten.</div>
         </div>
       </footer>
     </main>
