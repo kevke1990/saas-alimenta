@@ -100,13 +100,13 @@ export function calculate(input: CaseInput) {
   });
   const grossCareDiscount = roundCurrency(childAllocations.reduce((sum, c) => sum + Math.max(...c.careDiscounts), 0));
   const shortfall = money(Math.max(0, totalNeed - totalCapacity));
-  const shortfallAdjustment = shortfall > 0 ? roundWholeEuro(shortfall / 2) : 0;
+  const shortfallAdjustment = shortfall > 0 ? roundCurrency(shortfall / 2) : 0;
   const appliedCareDiscount = shortfall > 0 ? roundCurrency(Math.max(0, grossCareDiscount - shortfallAdjustment)) : grossCareDiscount;
   const careMultiplier = grossCareDiscount > 0 ? appliedCareDiscount / grossCareDiscount : 1;
   const transfers = input.children.map((child, i) => {
     const allocation = childAllocations[i];
     const resident = residenceParent(child);
-    const effectiveCare = allocation.careDiscounts.map(v => roundCurrency(v * careMultiplier));
+    const effectiveCare = allocation.careDiscounts.map(v => money(v * careMultiplier));
     const afterCare = allocation.parentShares.map(share => Math.max(0, share));
     if (!capacitySufficient) {
       const payer = resident === 0 ? 1 : resident === 1 ? 0 : (allocation.parentShares[1] >= allocation.parentShares[0] ? 1 : 0);
