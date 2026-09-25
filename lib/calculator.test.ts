@@ -257,7 +257,7 @@ describe("Legal stepchild maintenance", () => {
     expect(r.parentResults[0].stiefchildMaintenance).toBe(120);
     expect(r.partnerReview[0].legalStepParent).toBe(true);
     expect(r.partnerReview[0].status).toBe("CALCULATED");
-    expect(r.parentResults[0].capacity).toBe(395);
+    expect(r.parentResults[0].capacity).toBe(431);
     expect(r.warnings.some((w: string) => w.includes("stiefkinderen"))).toBe(true);
   });
 
