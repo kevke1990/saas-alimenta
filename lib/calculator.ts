@@ -89,13 +89,33 @@ export function calculate(input: CaseInput) {
   const capacitySufficient = totalCapacity >= totalNeed;
   const allocatable = Math.min(totalNeed, totalCapacity);
   const childAllocations = childResults.map(child => {
-    const target = roundCurrency(allocatable * child.need / Math.max(totalNeed, 1));
-    const rawShares = parentResults.map(p => totalCapacity > 0 ? target * p.capacity / totalCapacity : 0);
+    // 2026-norm: when combined capacity is sufficient, each parent bears
+    // the proportionate share of each child's need. When capacity is
+    // insufficient, available capacity is divided equally over the children
+    // for whom the parents are maintenance-liable, unless a demonstrable
+    // difference in own share exists. This engine has no per-child
+    // differentiated-own-share input, so the equal-allocation rule applies.
+    const target = capacitySufficient
+      ? child.need
+      : roundCurrency(totalCapacity / Math.max(childCount, 1));
+    const rawShares = capacitySufficient
+      ? parentResults.map(p => totalCapacity > 0 ? target * p.capacity / totalCapacity : 0)
+      : parentResults.map(p => p.capacity > 0 ? p.capacity / Math.max(childCount, 1) : 0);
     const shares = rawShares.map(money);
     const delta = target - shares.reduce((a, b) => a + b, 0);
-    if (delta !== 0) { const largest = parentResults.reduce((best, p, i) => p.capacity > parentResults[best].capacity ? i : best, 0); shares[largest] = Math.max(0, shares[largest] + delta); }
+    if (delta !== 0) {
+      const largest = parentResults.reduce(
+        (best, p, i) => p.capacity > parentResults[best].capacity ? i : best,
+        0
+      );
+      shares[largest] = Math.max(0, shares[largest] + delta);
+    }
     const sourceChild = input.children[child.childIndex - 1];
-    const careDiscounts = parentResults.map((p, i) => careParentForChild(sourceChild, i) ? money(child.baseNeed * careDiscountPercentage(p.careDaysPerWeek)) : 0);
+    const careDiscounts = parentResults.map((p, i) =>
+      careParentForChild(sourceChild, i)
+        ? money(child.baseNeed * careDiscountPercentage(p.careDaysPerWeek))
+        : 0
+    );
     return { childIndex: child.childIndex, need: child.need, parentShares: shares, careDiscounts };
   });
   const grossCareDiscount = roundCurrency(childAllocations.reduce((sum, c) => sum + Math.max(...c.careDiscounts), 0));
@@ -111,7 +131,9 @@ export function calculate(input: CaseInput) {
     if (!capacitySufficient) {
       const payer = resident === 0 ? 1 : resident === 1 ? 0 : (allocation.parentShares[1] >= allocation.parentShares[0] ? 1 : 0);
       const receiver = payer === 0 ? 1 : 0;
-      const payerCapacityShare = totalCapacity > 0 ? roundCurrency(parentResults[payer].capacity * (childResults[i].need / Math.max(totalNeed, 1))) : 0;
+      const payerCapacityShare = totalCapacity > 0
+        ? money(parentResults[payer].capacity / Math.max(childCount, 1))
+        : 0;
       const care = effectiveCare[payer];
       return { childIndex: i + 1, direction: (payer === 0 ? "A" : "B") + "->" + (receiver === 0 ? "A" : "B"), payerIndex: payer, receiverIndex: receiver, grossShare: money(payerCapacityShare), grossCareDiscount: money(allocation.careDiscounts[payer] ?? 0), shortfallCareDiscountAdjustment: money(Math.max(0, (allocation.careDiscounts[payer] ?? 0) - care)), verifiableCareDiscount: money(care), appliedCareDiscount: money(care), careDiscount: money(care), payment: money(Math.max(0, payerCapacityShare - care)), note: careMultiplier === 0 ? "Gezamenlijke draagkracht is onvoldoende en de helft van het tekort is ten minste zo groot als de zorgkorting; de zorgkorting is niet verzilverbaar." : "Gezamenlijke draagkracht is onvoldoende; ieder draagt de helft van het tekort en alleen de resterende zorgkorting wordt toegepast." };
     }
