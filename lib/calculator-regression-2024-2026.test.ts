@@ -53,8 +53,8 @@ describe("Merelo regression calculations", () => {
     expect(result.historicalCalculation.historicalNBGI).toBeNull();
     expect(result.historicalCalculation.fallbackNBGI).toBe(5752);
     expect(result.historicalCalculation.status).toBe("DERIVED_INDICATIVE");
-    expect(result.warnings).toContain(expect.stringContaining("REVIEW_REQUIRED"));
-    expect(result.warnings).toContain(expect.stringContaining("geen vastgesteld historisch NBGI"));
+    expect(result.warnings.some(w => w.includes("REVIEW_REQUIRED"))).toBe(true);
+    expect(result.warnings.some(w => w.includes("geen vastgesteld historisch NBGI"))).toBe(true);
   });
 
   it("reproduces the 2024 mediator reference as a separate historical need with 2024 norms", () => {
@@ -62,8 +62,8 @@ describe("Merelo regression calculations", () => {
       historicalNBGI: 4683,
       historicalNeed: 1173,
       parents: [
-        { nbi: 3682, careDaysPerWeek: 0 },
-        { nbi: 2235, careDaysPerWeek: 1 },
+        { nbi: 3682, careDaysPerWeek: 1 },
+        { nbi: 2235, careDaysPerWeek: 0 },
       ],
       children: [
         { age: 7, residence: "B" },
