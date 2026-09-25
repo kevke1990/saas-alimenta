@@ -61,7 +61,7 @@ export function calculateSupportCapacity(
   const effectiveNBI = nbi + kgbIncluded;
   const aow = !!input.aow;
   const cfg = aow ? normSet.capacity.aow : normSet.capacity.underAow;
-  const housingBudget = effectiveNBI * cfg.housingPct;
+  const housingBudget = nbi * cfg.housingPct;
   const actualHousing = num(input.housingCosts);
   const housingDifference = Math.max(0, actualHousing - housingBudget);
   const special = num(input.specialNecessaryCosts);
