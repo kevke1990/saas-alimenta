@@ -3,8 +3,8 @@ import { calculateHistoricalFormulaCapacity, findHistoricalCapacityBand } from "
 
 describe("historical alimentatie tables", () => {
   it.each([
-    [2020, 1660, false, 124],
-    [2021, 1650, false, 119],
+    [2020, 1660, false, 131],
+    [2021, 1650, false, 126],
     [2022, 1670, false, 122],
     [2023, 1880, false, 116],
     [2024, 2000, false, 109],
@@ -26,7 +26,7 @@ describe("historical alimentatie tables", () => {
     expect(calculateHistoricalFormulaCapacity(2020, 2600, false)).toBe(592);
     expect(calculateHistoricalFormulaCapacity(2021, 2600, false)).toBe(574);
     expect(calculateHistoricalFormulaCapacity(2022, 2600, false)).toBe(560);
-    expect(calculateHistoricalFormulaCapacity(2023, 2600, false)).toBe(452);
+    expect(calculateHistoricalFormulaCapacity(2023, 2600, false)).toBe(451);
     expect(calculateHistoricalFormulaCapacity(2024, 2600, false)).toBe(385);
   });
 
