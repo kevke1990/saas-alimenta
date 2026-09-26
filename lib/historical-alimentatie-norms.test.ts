@@ -23,9 +23,10 @@ describe("historical alimentatie norm registry", () => {
     expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
   });
 
-  it("does not invent financial parameters for periods that are only catalogued", () => {
+  it("keeps catalogued historical sources non-executable until parameters are verified", () => {
     const period = resolveHistoricalNormPeriod("2009-06-01");
-    expect(period?.status).toBe("verified-source");
+    expect(period?.status).toBe("parameters-pending");
     expect(period?.sourceUrl).toMatch(/^https:\/\/www\.rechtspraak\.nl\//);
+    expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
   });
 });
