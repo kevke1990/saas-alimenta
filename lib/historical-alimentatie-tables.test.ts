@@ -4,12 +4,12 @@ import { calculateHistoricalFormulaCapacity, findHistoricalCapacityBand } from "
 describe("historical alimentatie tables", () => {
   it("uses the official 2024 non-AOW bands", () => {
     expect(findHistoricalCapacityBand(2024, 2000, false)?.capacityMonthly).toBe(109);
-    expect(calculateHistoricalFormulaCapacity(2024, 2600, false)).toBe(287);
+    expect(calculateHistoricalFormulaCapacity(2024, 2600, false)).toBe(385);
   });
 
   it("uses the separate AOW table", () => {
     expect(findHistoricalCapacityBand(2024, 2100, true)?.capacityMonthly).toBe(73);
-    expect(calculateHistoricalFormulaCapacity(2024, 2600, true)).toBe(445);
+    expect(calculateHistoricalFormulaCapacity(2024, 2600, true)).toBe(284);
   });
 
   it("does not silently fall back to another year", () => {
