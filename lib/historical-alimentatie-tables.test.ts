@@ -2,18 +2,36 @@ import { describe, expect, it } from "vitest";
 import { calculateHistoricalFormulaCapacity, findHistoricalCapacityBand } from "./historical-alimentatie-tables";
 
 describe("historical alimentatie tables", () => {
-  it("uses the official 2024 non-AOW bands", () => {
-    expect(findHistoricalCapacityBand(2024, 2000, false)?.capacityMonthly).toBe(109);
+  it.each([
+    [2020, 1660, false, 124],
+    [2021, 1650, false, 119],
+    [2022, 1670, false, 122],
+    [2023, 1880, false, 116],
+    [2024, 2000, false, 109],
+  ])("uses the official non-AOW table for %s", (year, nbi, aow, expected) => {
+    expect(findHistoricalCapacityBand(year, nbi, aow)?.capacityMonthly).toBe(expected);
+  });
+
+  it.each([
+    [2020, 1750, 105],
+    [2021, 1775, 103],
+    [2022, 1795, 99],
+    [2023, 2040, 97],
+    [2024, 2100, 73],
+  ])("uses the separate AOW table for %s", (year, nbi, expected) => {
+    expect(findHistoricalCapacityBand(year, nbi, true)?.capacityMonthly).toBe(expected);
+  });
+
+  it("uses each year's own formula above the final table band", () => {
+    expect(calculateHistoricalFormulaCapacity(2020, 2600, false)).toBe(437);
+    expect(calculateHistoricalFormulaCapacity(2021, 2600, false)).toBe(420);
+    expect(calculateHistoricalFormulaCapacity(2022, 2600, false)).toBe(406);
+    expect(calculateHistoricalFormulaCapacity(2023, 2600, false)).toBe(298);
     expect(calculateHistoricalFormulaCapacity(2024, 2600, false)).toBe(385);
   });
 
-  it("uses the separate AOW table", () => {
-    expect(findHistoricalCapacityBand(2024, 2100, true)?.capacityMonthly).toBe(73);
-    expect(calculateHistoricalFormulaCapacity(2024, 2600, true)).toBe(284);
-  });
-
   it("does not silently fall back to another year", () => {
-    expect(findHistoricalCapacityBand(2023, 2000, false)).toBeUndefined();
-    expect(calculateHistoricalFormulaCapacity(2023, 2600, false)).toBeUndefined();
+    expect(findHistoricalCapacityBand(2019, 2000, false)).toBeUndefined();
+    expect(calculateHistoricalFormulaCapacity(2019, 2600, false)).toBeUndefined();
   });
 });
