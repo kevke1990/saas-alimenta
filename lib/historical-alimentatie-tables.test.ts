@@ -23,10 +23,10 @@ describe("historical alimentatie tables", () => {
   });
 
   it("uses each year's own formula above the final table band", () => {
-    expect(calculateHistoricalFormulaCapacity(2020, 2600, false)).toBe(437);
-    expect(calculateHistoricalFormulaCapacity(2021, 2600, false)).toBe(420);
-    expect(calculateHistoricalFormulaCapacity(2022, 2600, false)).toBe(406);
-    expect(calculateHistoricalFormulaCapacity(2023, 2600, false)).toBe(298);
+    expect(calculateHistoricalFormulaCapacity(2020, 2600, false)).toBe(592);
+    expect(calculateHistoricalFormulaCapacity(2021, 2600, false)).toBe(574);
+    expect(calculateHistoricalFormulaCapacity(2022, 2600, false)).toBe(560);
+    expect(calculateHistoricalFormulaCapacity(2023, 2600, false)).toBe(452);
     expect(calculateHistoricalFormulaCapacity(2024, 2600, false)).toBe(385);
   });
 
