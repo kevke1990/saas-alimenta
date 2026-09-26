@@ -5,7 +5,7 @@
  * separate from calculation code so each period remains auditable.
  */
 
-export type HistoricalCapacityPeriod = "2024";
+export type HistoricalCapacityPeriod = "2020" | "2021" | "2022" | "2023" | "2024";
 
 export type HistoricalCapacityBand = {
   period: HistoricalCapacityPeriod;
@@ -19,27 +19,92 @@ export type HistoricalCapacityBand = {
   source: string;
 };
 
+const SOURCE_2020 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/archief";
+const SOURCE_2021 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2021";
+const SOURCE_2022 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2022";
+const SOURCE_2023 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2023";
 const SOURCE_2024 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2024";
 
-export const DRAAGKRACHT_2024: readonly HistoricalCapacityBand[] = [
+export const DRAAGKRACHT_HISTORICAL: readonly HistoricalCapacityBand[] = [
+  // 2020
+  { period: "2020", minNbi: 0, maxNbiExclusive: 1410, capacityMonthly: "25/50", aow: false, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1410, maxNbiExclusive: 1460, capacityMonthly: 62, aow: false, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1460, maxNbiExclusive: 1510, capacityMonthly: 87, aow: false, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1510, maxNbiExclusive: 1560, capacityMonthly: 106, aow: false, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1560, maxNbiExclusive: 1610, capacityMonthly: 117, aow: false, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1610, maxNbiExclusive: 1660, capacityMonthly: 124, aow: false, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1660, capacityMonthly: 131, aow: false, source: SOURCE_2020 },
+  { period: "2020", minNbi: 0, maxNbiExclusive: 1600, capacityMonthly: "25/50", aow: true, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1600, maxNbiExclusive: 1650, capacityMonthly: 63, aow: true, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1650, maxNbiExclusive: 1700, capacityMonthly: 84, aow: true, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1700, maxNbiExclusive: 1750, capacityMonthly: 98, aow: true, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1750, maxNbiExclusive: 1800, capacityMonthly: 105, aow: true, source: SOURCE_2020 },
+  { period: "2020", minNbi: 1800, capacityMonthly: 112, aow: true, source: SOURCE_2020 },
+
+  // 2021
+  { period: "2021", minNbi: 0, maxNbiExclusive: 1450, capacityMonthly: "25/50", aow: false, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1450, maxNbiExclusive: 1500, capacityMonthly: 65, aow: false, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1500, maxNbiExclusive: 1550, capacityMonthly: 90, aow: false, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1550, maxNbiExclusive: 1600, capacityMonthly: 108, aow: false, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1600, maxNbiExclusive: 1650, capacityMonthly: 119, aow: false, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1650, maxNbiExclusive: 1700, capacityMonthly: 126, aow: false, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1700, capacityMonthly: 133, aow: false, source: SOURCE_2021 },
+  { period: "2021", minNbi: 0, maxNbiExclusive: 1625, capacityMonthly: "25/50", aow: true, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1625, maxNbiExclusive: 1675, capacityMonthly: 61, aow: true, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1675, maxNbiExclusive: 1725, capacityMonthly: 82, aow: true, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1725, maxNbiExclusive: 1775, capacityMonthly: 96, aow: true, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1775, maxNbiExclusive: 1825, capacityMonthly: 103, aow: true, source: SOURCE_2021 },
+  { period: "2021", minNbi: 1825, capacityMonthly: 110, aow: true, source: SOURCE_2021 },
+
+  // 2022
+  { period: "2022", minNbi: 0, maxNbiExclusive: 1470, capacityMonthly: "25/50", aow: false, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1470, maxNbiExclusive: 1520, capacityMonthly: 59, aow: false, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1520, maxNbiExclusive: 1570, capacityMonthly: 85, aow: false, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1570, maxNbiExclusive: 1620, capacityMonthly: 103, aow: false, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1620, maxNbiExclusive: 1670, capacityMonthly: 115, aow: false, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1670, maxNbiExclusive: 1720, capacityMonthly: 122, aow: false, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1720, capacityMonthly: 129, aow: false, source: SOURCE_2022 },
+  { period: "2022", minNbi: 0, maxNbiExclusive: 1645, capacityMonthly: "25/50", aow: true, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1645, maxNbiExclusive: 1695, capacityMonthly: 55, aow: true, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1695, maxNbiExclusive: 1745, capacityMonthly: 77, aow: true, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1745, maxNbiExclusive: 1795, capacityMonthly: 92, aow: true, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1795, maxNbiExclusive: 1845, capacityMonthly: 99, aow: true, source: SOURCE_2022 },
+  { period: "2022", minNbi: 1845, capacityMonthly: 106, aow: true, source: SOURCE_2022 },
+
+  // 2023
+  { period: "2023", minNbi: 0, maxNbiExclusive: 1680, capacityMonthly: "25/50", aow: false, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1680, maxNbiExclusive: 1730, capacityMonthly: 51, aow: false, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1730, maxNbiExclusive: 1780, capacityMonthly: 77, aow: false, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1780, maxNbiExclusive: 1830, capacityMonthly: 97, aow: false, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1830, maxNbiExclusive: 1880, capacityMonthly: 109, aow: false, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1880, maxNbiExclusive: 1930, capacityMonthly: 116, aow: false, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1930, capacityMonthly: 123, aow: false, source: SOURCE_2023 },
+  { period: "2023", minNbi: 0, maxNbiExclusive: 1890, capacityMonthly: "25/50", aow: true, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1890, maxNbiExclusive: 1940, capacityMonthly: 52, aow: true, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1940, maxNbiExclusive: 1990, capacityMonthly: 74, aow: true, source: SOURCE_2023 },
+  { period: "2023", minNbi: 1990, maxNbiExclusive: 2040, capacityMonthly: 90, aow: true, source: SOURCE_2023 },
+  { period: "2023", minNbi: 2040, maxNbiExclusive: 2090, capacityMonthly: 97, aow: true, source: SOURCE_2023 },
+  { period: "2023", minNbi: 2090, capacityMonthly: 104, aow: true, source: SOURCE_2023 },
+
+  // 2024
   { period: "2024", minNbi: 0, maxNbiExclusive: 1815, capacityMonthly: "25/50", aow: false, source: SOURCE_2024 },
-  { period: "2024", minNbi: 1815, maxNbiExclusive: 1865, percentage: 100, housingBudgetMonthly: 545, necessaryCostsMonthly: 1220, capacityMonthly: 51, aow: false, source: SOURCE_2024 },
-  { period: "2024", minNbi: 1865, maxNbiExclusive: 1915, percentage: 90, housingBudgetMonthly: 560, necessaryCostsMonthly: 1220, capacityMonthly: 77, aow: false, source: SOURCE_2024 },
-  { period: "2024", minNbi: 1915, maxNbiExclusive: 1965, percentage: 80, housingBudgetMonthly: 575, necessaryCostsMonthly: 1220, capacityMonthly: 96, aow: false, source: SOURCE_2024 },
-  { period: "2024", minNbi: 1965, maxNbiExclusive: 2015, percentage: 70, housingBudgetMonthly: 590, necessaryCostsMonthly: 1220, capacityMonthly: 109, aow: false, source: SOURCE_2024 },
-  { period: "2024", minNbi: 2015, maxNbiExclusive: 2065, percentage: 70, housingBudgetMonthly: 605, necessaryCostsMonthly: 1245, capacityMonthly: 116, aow: false, source: SOURCE_2024 },
-  { period: "2024", minNbi: 2065, percentage: 70, housingBudgetMonthly: 620, necessaryCostsMonthly: 1270, capacityMonthly: 123, aow: false, source: SOURCE_2024 },
+  { period: "2024", minNbi: 1815, maxNbiExclusive: 1865, capacityMonthly: 51, aow: false, source: SOURCE_2024 },
+  { period: "2024", minNbi: 1865, maxNbiExclusive: 1915, capacityMonthly: 77, aow: false, source: SOURCE_2024 },
+  { period: "2024", minNbi: 1915, maxNbiExclusive: 1965, capacityMonthly: 96, aow: false, source: SOURCE_2024 },
+  { period: "2024", minNbi: 1965, maxNbiExclusive: 2015, capacityMonthly: 109, aow: false, source: SOURCE_2024 },
+  { period: "2024", minNbi: 2015, maxNbiExclusive: 2065, capacityMonthly: 116, aow: false, source: SOURCE_2024 },
+  { period: "2024", minNbi: 2065, capacityMonthly: 123, aow: false, source: SOURCE_2024 },
   { period: "2024", minNbi: 0, maxNbiExclusive: 2030, capacityMonthly: "25/50", aow: true, source: SOURCE_2024 },
-  { period: "2024", minNbi: 2030, maxNbiExclusive: 2080, percentage: 90, housingBudgetMonthly: 609, necessaryCostsMonthly: 1365, capacityMonthly: 50, aow: true, source: SOURCE_2024 },
-  { period: "2024", minNbi: 2080, maxNbiExclusive: 2130, percentage: 80, housingBudgetMonthly: 624, necessaryCostsMonthly: 1365, capacityMonthly: 73, aow: true, source: SOURCE_2024 },
-  { period: "2024", minNbi: 2130, maxNbiExclusive: 2180, percentage: 70, housingBudgetMonthly: 639, necessaryCostsMonthly: 1365, capacityMonthly: 88, aow: true, source: SOURCE_2024 },
-  { period: "2024", minNbi: 2180, maxNbiExclusive: 2230, percentage: 70, housingBudgetMonthly: 654, necessaryCostsMonthly: 1390, capacityMonthly: 95, aow: true, source: SOURCE_2024 },
-  { period: "2024", minNbi: 2230, percentage: 70, housingBudgetMonthly: 669, necessaryCostsMonthly: 1415, capacityMonthly: 102, aow: true, source: SOURCE_2024 },
+  { period: "2024", minNbi: 2030, maxNbiExclusive: 2080, capacityMonthly: 50, aow: true, source: SOURCE_2024 },
+  { period: "2024", minNbi: 2080, maxNbiExclusive: 2130, capacityMonthly: 73, aow: true, source: SOURCE_2024 },
+  { period: "2024", minNbi: 2130, maxNbiExclusive: 2180, capacityMonthly: 88, aow: true, source: SOURCE_2024 },
+  { period: "2024", minNbi: 2180, maxNbiExclusive: 2230, capacityMonthly: 95, aow: true, source: SOURCE_2024 },
+  { period: "2024", minNbi: 2230, capacityMonthly: 102, aow: true, source: SOURCE_2024 },
 ];
 
 export function findHistoricalCapacityBand(year: number, nbi: number, aow = false): HistoricalCapacityBand | undefined {
-  if (year !== 2024) return undefined;
-  return DRAAGKRACHT_2024.find((band) =>
+  return DRAAGKRACHT_HISTORICAL.find((band) =>
+    Number(band.period) === year &&
     band.aow === aow &&
     nbi >= band.minNbi &&
     (band.maxNbiExclusive === undefined || nbi < band.maxNbiExclusive)
@@ -49,7 +114,16 @@ export function findHistoricalCapacityBand(year: number, nbi: number, aow = fals
 export function calculateHistoricalFormulaCapacity(year: number, nbi: number, aow = false): number | undefined {
   const band = findHistoricalCapacityBand(year, nbi, aow);
   if (!band) return undefined;
-  if (typeof band.capacityMonthly === "number" && nbi < (aow ? 2230 : 2065)) return band.capacityMonthly;
-  const base = aow ? 1415 : 1270;
+  if (typeof band.capacityMonthly === "number") return band.capacityMonthly;
+
+  const formula = {
+    2020: aow ? 1100 : 975,
+    2021: aow ? 1120 : 1000,
+    2022: aow ? 1140 : 1020,
+    2023: aow ? 1315 : 1175,
+    2024: aow ? 1415 : 1270,
+  } as const;
+  const base = formula[year as keyof typeof formula];
+  if (base === undefined) return undefined;
   return Math.max(0, Math.round(0.7 * (nbi - (0.3 * nbi + base))));
 }
