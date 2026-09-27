@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateHistoricalFormulaCapacity, findHistoricalCapacityBand } from "./historical-alimentatie-tables";
 
+// Historical 2015 audit: source-derived regression coverage.
 describe("historical alimentatie tables", () => {
   it.each([
     [2020, 1660, false, 131],
