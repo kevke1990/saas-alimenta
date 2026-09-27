@@ -12,6 +12,13 @@ describe("historical alimentatie norm registry", () => {
     expect(HISTORICAL_NORM_PERIODS.some((period) => period.id === "2026-H2")).toBe(true);
   });
 
+  it("has deterministic, non-overlapping periods", () => {
+    const periods = [...HISTORICAL_NORM_PERIODS].sort((a, b) => a.validFrom.localeCompare(b.validFrom));
+    for (let index = 1; index < periods.length; index += 1) {
+      expect(periods[index - 1].validTo < periods[index].validFrom).toBe(true);
+    }
+  });
+
   it("resolves historical dates without silently falling back to 2026", () => {
     expect(resolveHistoricalNormPeriod("2008-08-01")?.id).toBe("2008");
     expect(resolveHistoricalNormPeriod("2015-08-01")?.id).toBe("2015-H2");
@@ -43,7 +50,8 @@ describe("historical alimentatie norm registry", () => {
   });
 
   it("keeps catalogued historical sources tied to official Rechtspraak provenance", () => {
-    const period = resolveHistoricalNormPeriod("2009-06-01");
-    expect(period?.sourceUrl).toMatch(/^https:\/\/www\.rechtspraak\.nl\//);
+    for (const period of HISTORICAL_NORM_PERIODS) {
+      expect(period.sourceUrl).toMatch(/^https:\/\/www\.rechtspraak\.nl\//);
+    }
   });
 });
