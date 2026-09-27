@@ -1,9 +1,12 @@
 /**
  * Versioned registry for historical Expertgroep Alimentatienormen.
  *
- * The registry stores provenance and validity metadata. A period is only
- * executable when its financial parameters have explicitly been verified.
+ * A period is executable only when its underlying parameter set is known to
+ * be executable. Current 2024-2026 norm sets are supplied by norms.ts;
+ * historical years remain fail-closed until independently verified.
  */
+
+import { isNormPeriodExecutable } from "./historical-norm-parameter-registry";
 
 export type HistoricalNormStatus = "parameters-pending" | "parameters-verified";
 
@@ -22,13 +25,6 @@ export type HistoricalNormPeriod = {
 const RP = "https://www.rechtspraak.nl";
 const ALIMENTATIENORMEN_PAGE = `${RP}/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/expertgroep-alimentatienormen`;
 
-/**
- * Period catalogue from 2006 onward.
- *
- * A `parameters-pending` period must produce REVIEW_REQUIRED. This is a hard
- * safety gate: Merelo must never silently substitute the current 2026 values
- * for a historical calculation.
- */
 export const HISTORICAL_NORM_PERIODS: readonly HistoricalNormPeriod[] = [
   { id: "2006", validFrom: "2006-01-01", validTo: "2006-12-31", reportYear: 2006, period: "full-year", reportTitle: "Rapport Alimentatienormen 2006", sourceUrl: `${RP}/SiteCollectionDocuments/Rapport-alimentatienormen-2006.pdf`, status: "parameters-pending" },
   { id: "2007", validFrom: "2007-01-01", validTo: "2007-12-31", reportYear: 2007, period: "full-year", reportTitle: "Rapport Alimentatienormen 2007", sourceUrl: `${RP}/SiteCollectionDocuments/Rapport-alimentatienormen-2007.pdf`, status: "parameters-pending" },
@@ -57,8 +53,8 @@ export const HISTORICAL_NORM_PERIODS: readonly HistoricalNormPeriod[] = [
   { id: "2023", validFrom: "2023-01-01", validTo: "2023-12-31", reportYear: 2023, period: "full-year", reportTitle: "Rapport Alimentatienormen 2023", sourceUrl: ALIMENTATIENORMEN_PAGE, status: "parameters-pending" },
   { id: "2024", validFrom: "2024-01-01", validTo: "2024-12-31", reportYear: 2024, period: "full-year", reportTitle: "Rapport Alimentatienormen 2024", sourceUrl: ALIMENTATIENORMEN_PAGE, status: "parameters-pending" },
   { id: "2025", validFrom: "2025-01-01", validTo: "2025-12-31", reportYear: 2025, period: "full-year", reportTitle: "Rapport Alimentatienormen 2025", sourceUrl: ALIMENTATIENORMEN_PAGE, status: "parameters-pending" },
-  { id: "2026-H1", validFrom: "2026-01-01", validTo: "2026-06-30", reportYear: 2026, period: "H1", reportTitle: "Rapport Alimentatienormen januari 2026", sourceUrl: ALIMENTATIENORMEN_PAGE, status: "parameters-verified", notes: "Executable 2026 parameters are already present in the current norm set." },
-  { id: "2026-H2", validFrom: "2026-07-01", validTo: "2026-12-31", reportYear: 2026, period: "H2", reportTitle: "Bijlage rapport Alimentatienormen juli 2026", sourceUrl: ALIMENTATIENORMEN_PAGE, status: "parameters-verified", notes: "Executable 2026 parameters are already present in the current norm set." },
+  { id: "2026-H1", validFrom: "2026-01-01", validTo: "2026-06-30", reportYear: 2026, period: "H1", reportTitle: "Rapport Alimentatienormen januari 2026", sourceUrl: ALIMENTATIENORMEN_PAGE, status: "parameters-verified", notes: "Executable via NORM_SETS[2026] already present in norms.ts." },
+  { id: "2026-H2", validFrom: "2026-07-01", validTo: "2026-12-31", reportYear: 2026, period: "H2", reportTitle: "Bijlage rapport Alimentatienormen juli 2026", sourceUrl: ALIMENTATIENORMEN_PAGE, status: "parameters-verified", notes: "Executable via NORM_SETS[2026] already present in norms.ts." },
 ];
 
 export function resolveHistoricalNormPeriod(calculationDate: string): HistoricalNormPeriod | null {
@@ -73,9 +69,9 @@ export function resolveHistoricalNormPeriod(calculationDate: string): Historical
 }
 
 export function assertHistoricalNormExecutable(period: HistoricalNormPeriod): void {
-  if (period.status !== "parameters-verified") {
+  if (!isNormPeriodExecutable(period.id)) {
     throw new Error(
-      `REVIEW_REQUIRED: historische normset ${period.id} is geregistreerd, maar de officiële parameters zijn nog niet als uitvoerbare normset geverifieerd. Er wordt niet teruggevallen op 2026.`
+      `REVIEW_REQUIRED: historische normset ${period.id} is geregistreerd, maar de officiële parameters zijn nog niet als uitvoerbare normset geverifieerd. Er wordt niet teruggevallen op 2026.`,
     );
   }
 }
