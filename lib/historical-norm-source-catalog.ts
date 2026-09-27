@@ -1,9 +1,9 @@
 /**
  * Official source catalog for historical Expertgroep Alimentatienormen.
  *
- * This is provenance metadata only. A period must not become executable until
- * every parameter used by the calculation adapter has been extracted and
- * independently verified against the cited source documents.
+ * Provenance metadata only. A period must not become executable until every
+ * parameter used by the calculation adapter has been extracted and independently
+ * verified against the cited source documents.
  */
 
 export type NormSourcePeriod = {
@@ -50,6 +50,34 @@ export const HISTORICAL_NORM_SOURCE_CATALOG: readonly NormSourcePeriod[] = [
     capacityTable: "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2021",
     appendixJanuary: "https://www.rechtspraak.nl/sitecollectiondocuments/bijlage-rapport-alimentatienormen-2021-januari.pdf",
     appendixJuly: "https://www.rechtspraak.nl/sitecollectiondocuments/bijlage-rapport-alimentatienormen-2021-juli.pdf",
+    status: "source_catalogued",
+  },
+  {
+    year: 2020,
+    effectiveFrom: "2020-01-01",
+    effectiveTo: "2020-12-31",
+    reportJanuary: "https://www.rechtspraak.nl/binaries/_rts_1768401096875/content/assets/lbvr/an/lbvr-an-tremarapport-versie-2020-januari.pdf",
+    status: "source_catalogued",
+  },
+  {
+    year: 2019,
+    effectiveFrom: "2019-01-01",
+    effectiveTo: "2019-12-31",
+    reportJanuary: "https://www.rechtspraak.nl/binaries/_rts_1768401095325/content/assets/lbvr/an/lbvr-an-tremarapport-versie-2019-januari.pdf",
+    status: "source_catalogued",
+  },
+  {
+    year: 2018,
+    effectiveFrom: "2018-01-01",
+    effectiveTo: "2018-12-31",
+    reportJanuary: "https://www.rechtspraak.nl/binaries/_rts_1768915116756/content/assets/lbvr/an/lbvr-an-tremarapport-2018-januari.pdf",
+    status: "source_catalogued",
+  },
+  {
+    year: 2017,
+    effectiveFrom: "2017-01-01",
+    effectiveTo: "2017-12-31",
+    reportJanuary: "https://www.rechtspraak.nl/binaries/_rts_1768896838166/content/assets/lbvr/an/lbvr-an-rapport-alimentatienormen-2017.pdf",
     status: "source_catalogued",
   },
 ] as const;
