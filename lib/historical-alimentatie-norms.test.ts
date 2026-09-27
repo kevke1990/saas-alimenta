@@ -39,14 +39,16 @@ describe("historical alimentatie norm registry", () => {
     expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
   });
 
+  it("allows the current 2026 period through the integrated execution gate", () => {
+    const current = resolveHistoricalNormPeriod("2026-09-26");
+    expect(current?.status).toBe("parameters-verified");
+    expect(() => assertHistoricalNormExecutable(current!)).not.toThrow();
+  });
+
   it("does not confuse source verification with executable parameters", () => {
     const historical = resolveHistoricalNormPeriod("2025-06-01");
     expect(historical?.status).toBe("parameters-pending");
     expect(() => assertHistoricalNormExecutable(historical!)).toThrow(/REVIEW_REQUIRED/);
-
-    const current = resolveHistoricalNormPeriod("2026-09-26");
-    expect(current?.status).toBe("parameters-verified");
-    expect(() => assertHistoricalNormExecutable(current!)).not.toThrow();
   });
 
   it("keeps catalogued historical sources tied to official Rechtspraak provenance", () => {
