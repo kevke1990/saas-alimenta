@@ -5,7 +5,7 @@
  * separate from calculation code so each period remains auditable.
  */
 
-export type HistoricalCapacityPeriod = "2020" | "2021" | "2022" | "2023" | "2024";
+export type HistoricalCapacityPeriod = "2015" | "2020" | "2021" | "2022" | "2023" | "2024";
 
 export type HistoricalCapacityBand = {
   period: HistoricalCapacityPeriod;
@@ -19,6 +19,7 @@ export type HistoricalCapacityBand = {
   source: string;
 };
 
+const SOURCE_2015 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/draagkrachttabel-2015";
 const SOURCE_2020 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/archief";
 const SOURCE_2021 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2021";
 const SOURCE_2022 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2022";
@@ -26,6 +27,19 @@ const SOURCE_2023 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/regle
 const SOURCE_2024 = "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2024";
 
 export const DRAAGKRACHT_HISTORICAL: readonly HistoricalCapacityBand[] = [
+  { period: "2015", minNbi: 0, maxNbiExclusive: 1275, capacityMonthly: "25/50", aow: false, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1275, maxNbiExclusive: 1325, capacityMonthly: 67, aow: false, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1325, maxNbiExclusive: 1375, capacityMonthly: 92, aow: false, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1375, maxNbiExclusive: 1425, capacityMonthly: 110, aow: false, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1425, maxNbiExclusive: 1475, capacityMonthly: 120, aow: false, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1475, maxNbiExclusive: 1525, capacityMonthly: 127, aow: false, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1525, capacityMonthly: 134, aow: false, source: SOURCE_2015 },
+  { period: "2015", minNbi: 0, maxNbiExclusive: 1450, capacityMonthly: "25/50", aow: true, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1450, maxNbiExclusive: 1500, capacityMonthly: 66, aow: true, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1500, maxNbiExclusive: 1550, capacityMonthly: 86, aow: true, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1550, maxNbiExclusive: 1600, capacityMonthly: 100, aow: true, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1600, maxNbiExclusive: 1650, capacityMonthly: 107, aow: true, source: SOURCE_2015 },
+  { period: "2015", minNbi: 1650, capacityMonthly: 114, aow: true, source: SOURCE_2015 },
   { period: "2020", minNbi: 0, maxNbiExclusive: 1410, capacityMonthly: "25/50", aow: false, source: SOURCE_2020 },
   { period: "2020", minNbi: 1410, maxNbiExclusive: 1460, capacityMonthly: 62, aow: false, source: SOURCE_2020 },
   { period: "2020", minNbi: 1460, maxNbiExclusive: 1510, capacityMonthly: 87, aow: false, source: SOURCE_2020 },
@@ -94,6 +108,7 @@ export const DRAAGKRACHT_HISTORICAL: readonly HistoricalCapacityBand[] = [
 ];
 
 const FORMULA_BASE: Record<HistoricalCapacityPeriod, { aow: number; nonAow: number }> = {
+  "2015": { aow: 992, nonAow: 875 },
   "2020": { aow: 1100, nonAow: 975 },
   "2021": { aow: 1120, nonAow: 1000 },
   "2022": { aow: 1140, nonAow: 1020 },
@@ -102,6 +117,7 @@ const FORMULA_BASE: Record<HistoricalCapacityPeriod, { aow: number; nonAow: numb
 };
 
 const FORMULA_THRESHOLD: Record<HistoricalCapacityPeriod, { aow: number; nonAow: number }> = {
+  "2015": { aow: 1650, nonAow: 1525 },
   "2020": { aow: 1800, nonAow: 1660 },
   "2021": { aow: 1825, nonAow: 1700 },
   "2022": { aow: 1845, nonAow: 1720 },
