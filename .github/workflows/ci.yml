@@ -5,11 +5,16 @@ on:
     branches:
       - main
       - 'audit/**'
+      - 'feat/**'
   pull_request:
     branches:
       - main
       - 'audit/**'
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-and-build:
@@ -43,14 +48,12 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 22
-          package-manager-cache: false
       - name: Cache Next.js build
         uses: actions/cache@v5
         with:
           path: .next/cache
-          key: ${{ runner.os }}-next-${{ hashFiles('**/package.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', 'next.config.ts') }}
+          key: ${{ runner.os }}-next-${{ hashFiles('package.json', '**/*.ts', '**/*.tsx', 'next.config.ts') }}
           restore-keys: |
-            ${{ runner.os }}-next-${{ hashFiles('**/package.json') }}-
             ${{ runner.os }}-next-
       - name: Verify repository hygiene
         run: |
@@ -64,7 +67,7 @@ jobs:
           test "$migration_count" -gt 0
           echo "Verified $migration_count Prisma migration files."
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
       - name: Security audit
         run: npm audit --audit-level=high
       - name: Validate Prisma schema
