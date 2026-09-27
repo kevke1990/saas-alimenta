@@ -1,11 +1,13 @@
 /** Adapter boundary between Alimenta form payloads and the audited Trema 2026 core. */
 import type { CapacityInput, ParentCalculationInput, Trema2026Input } from "@/lib/alimentatie-engine-trema-2026";
+import { resolveHistoricalNormPeriod, assertHistoricalNormExecutable } from "./historical-alimentatie-norms";
 
 type NumericLike = number | string | null | undefined;
 type RawParent = Record<string, unknown>;
 
 export type AlimentaFormPayload = {
   referenceYear?: NumericLike;
+  calculationDate?: string;
   need?: { ownShareMonthly?: NumericLike; exceptionalCostsMonthly?: NumericLike; alreadyIncludedExceptionalCostsMonthly?: NumericLike };
   payer?: RawParent;
   recipient?: RawParent;
@@ -59,9 +61,32 @@ function resolveParent(payload: AlimentaFormPayload, index: number): RawParent |
   return payload.parents?.[index] ?? (index === 0 ? payload.payer : payload.recipient);
 }
 
+export function assertCalculationPeriodSupported(payload: Pick<AlimentaFormPayload, "calculationDate" | "referenceYear">): void {
+  const calculationDate = payload.calculationDate;
+  if (!calculationDate) {
+    if (Number(payload.referenceYear ?? 2026) === 2026) return;
+    throw new Error("REVIEW_REQUIRED: voor een niet-2026 peiljaar is een exacte berekeningsdatum verplicht.");
+  }
+
+  const period = resolveHistoricalNormPeriod(calculationDate);
+  if (!period) {
+    throw new Error(`REVIEW_REQUIRED: geen geldige normperiode gevonden voor berekeningsdatum ${calculationDate}.`);
+  }
+
+  assertHistoricalNormExecutable(period);
+
+  if (period.reportYear !== 2026) {
+    throw new Error(
+      `REVIEW_REQUIRED: normperiode ${period.id} is wel geregistreerd, maar de historische berekeningsengine is nog niet geactiveerd voor ${period.reportYear}. Er wordt niet teruggevallen op de 2026-engine.`,
+    );
+  }
+}
+
 export function adaptAlimentaForm(payload: AlimentaFormPayload): Trema2026Input {
+  assertCalculationPeriodSupported(payload);
+
   const referenceYear = money(payload.referenceYear, "peiljaar", 2026);
-  if (referenceYear !== 2026) throw new Error("De huidige adapter ondersteunt uitsluitend peiljaar 2026.");
+  if (referenceYear !== 2026) throw new Error("REVIEW_REQUIRED: de huidige berekeningsengine ondersteunt uitsluitend de 2026-normset.");
 
   const childrenNeed = (payload.children ?? []).reduce((sum, child) => sum + money(child.specialCosts, "bijzondere kindkosten", 0) - money(child.ownIncome, "eigen inkomen kind", 0), 0);
   const explicitNeed = payload.need?.ownShareMonthly;
