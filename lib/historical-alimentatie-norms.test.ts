@@ -12,22 +12,38 @@ describe("historical alimentatie norm registry", () => {
     expect(HISTORICAL_NORM_PERIODS.some((period) => period.id === "2026-H2")).toBe(true);
   });
 
-  it("resolves a historical date to its period without falling back to 2026", () => {
+  it("resolves historical dates without silently falling back to 2026", () => {
     expect(resolveHistoricalNormPeriod("2008-08-01")?.id).toBe("2008");
     expect(resolveHistoricalNormPeriod("2015-08-01")?.id).toBe("2015-H2");
     expect(resolveHistoricalNormPeriod("2026-09-26")?.id).toBe("2026-H2");
+    expect(resolveHistoricalNormPeriod("2011-06-30")).toBeNull();
   });
 
-  it("requires explicit verification before a historical period is executable", () => {
+  it("rejects invalid calendar dates instead of normalizing them", () => {
+    expect(resolveHistoricalNormPeriod("2026-02-31")).toBeNull();
+    expect(resolveHistoricalNormPeriod("2026-2-01")).toBeNull();
+    expect(resolveHistoricalNormPeriod("not-a-date")).toBeNull();
+  });
+
+  it("requires explicit parameter verification before a historical period is executable", () => {
     const period = resolveHistoricalNormPeriod("2006-06-01");
     expect(period).not.toBeNull();
+    expect(period?.status).toBe("parameters-pending");
     expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
   });
 
-  it("keeps catalogued historical sources non-executable until parameters are verified", () => {
+  it("does not confuse source verification with executable parameters", () => {
+    const historical = resolveHistoricalNormPeriod("2025-06-01");
+    expect(historical?.status).toBe("parameters-pending");
+    expect(() => assertHistoricalNormExecutable(historical!)).toThrow(/REVIEW_REQUIRED/);
+
+    const current = resolveHistoricalNormPeriod("2026-09-26");
+    expect(current?.status).toBe("parameters-verified");
+    expect(() => assertHistoricalNormExecutable(current!)).not.toThrow();
+  });
+
+  it("keeps catalogued historical sources tied to official Rechtspraak provenance", () => {
     const period = resolveHistoricalNormPeriod("2009-06-01");
-    expect(period?.status).toBe("parameters-pending");
     expect(period?.sourceUrl).toMatch(/^https:\/\/www\.rechtspraak\.nl\//);
-    expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
   });
 });
