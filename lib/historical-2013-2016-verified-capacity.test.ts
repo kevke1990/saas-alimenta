@@ -22,11 +22,11 @@ describe("historical 2013-2016 capacity parameters", () => {
     expect(getHistoricalCapacityParameters("2016-12-31")?.year).toBe(2016);
   });
 
-  it("uses the published 2015 formula at the formula start", () => {
+  it("matches a published 2015 formula example", () => {
     const parameters = getHistoricalCapacityParameters("2015-01-01");
     expect(parameters).not.toBeNull();
     expect(parameters?.formulaStartNbi).toBe(1525);
-    expect(calculateHistoricalCapacity(2321, parameters!)).toBe(521);
+    expect(calculateHistoricalCapacity(2312, parameters!)).toBe(520);
   });
 
   it("uses the published 2016 formula parameters", () => {
