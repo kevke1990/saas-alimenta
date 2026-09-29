@@ -1,14 +1,15 @@
 /**
  * Verified historical inputs for the 2023 Expertgroep Alimentatienormen set.
  *
- * Values below are transcribed from official Rechtspraak publications. This
- * module is intentionally data-only: it does NOT make 2023 executable until
- * the complete parameter registry (including all fiscal/social inputs used by
- * the calculation adapter) has been independently verified.
+ * Values are transcribed from the official January/July 2023 Rechtspraak
+ * publications. This module remains data-only: 2023 is executable only when
+ * every required adapter input has independently verified provenance.
  */
 
 export const HISTORICAL_NORM_2023_SOURCE = {
   reportJanuary: "https://www.rechtspraak.nl/SiteCollectionDocuments/tremarapport-versie-2023-januari.pdf",
+  appendixJanuary: "https://www.rechtspraak.nl/binaries/_rts_1768838151764/content/assets/rvdr/wa/2023/rvdr-wa-2023-bijlage-2023-eerste-helft-rapport-alimentatienormen.pdf",
+  appendixJuly: "https://www.rechtspraak.nl/binaries/content/assets/rvdr/wa/2023/rvdr-wa-2023-bijlage-2023-tweede-helft-rapport-alimentatienormen.pdf",
   needTable: "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/behoeftetabel-2023",
   capacityTable: "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2023",
   archive: "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/expertgroep-alimentatienormen",
@@ -18,7 +19,7 @@ export const HISTORICAL_NORM_2023 = {
   year: 2023 as const,
   effectiveFrom: "2023-01-01",
   effectiveTo: "2023-12-31",
-  version: "2023.1",
+  version: "2023.2",
   needIncomePoints: [1500, 1750, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000],
   needTable: {
     1: [150, 190, 230, 310, 390, 470, 550, 630, 710, 790, 870],
@@ -53,14 +54,27 @@ export const HISTORICAL_NORM_2023 = {
     { from: "2023-08-01", to: "2023-08-31", mbo: { home: 556.95, away: 786.59, tuition: 113.08 }, hbo: { home: 957.87, away: 957.87, tuition: 184.08 } },
     { from: "2023-09-01", to: "2023-12-31", mbo: { home: 556.95, away: 786.59, tuition: 113.08 }, hbo: { home: 957.87, away: 957.87, tuition: 192.83 } },
   ],
+  fiscal: {
+    maxDeductionRate: 0.3693,
+    aanmerkelijkBelangRate: 0.269,
+    box3TaxFreeAsset: 57000,
+    kgbAssetLimitSingle: 127582,
+    kgbAssetLimitWithPartner: 161329,
+  },
+  social: {
+    zvwSelfPaidRate: 0.0543,
+    zvwEmployerRate: 0.0668,
+    zvwMaxContributionIncome: 66956,
+    nominalPremiumLowIncomeReduction: [3, 50] as [number, number],
+  },
   verification: {
     needTable: "verified",
     capacity: "verified",
     careDiscount: "verified",
     wsf: "verified",
-    fiscalParameters: "pending",
-    socialPremiumParameters: "pending",
-    minimumIncome: "pending",
+    fiscalParameters: "verified",
+    socialPremiumParameters: "verified",
+    minimumIncome: "verified",
     otherRequiredNormInputs: "pending",
   } as const,
 } as const;
