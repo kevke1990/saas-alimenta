@@ -25,10 +25,12 @@ describe("historical 2023 norm inputs", () => {
     expect(HISTORICAL_NORM_2023.wsfPeriods.map((period) => period.hbo.tuition)).toEqual([184.08, 184.08, 192.83]);
   });
 
-  it("never represents the partially verified set as fully verified", () => {
+  it("keeps the remaining 2023 verification gap explicit", () => {
     expect(Object.values(HISTORICAL_NORM_2023.verification)).toContain("pending");
-    expect(HISTORICAL_NORM_2023.verification.fiscalParameters).toBe("pending");
-    expect(HISTORICAL_NORM_2023.verification.socialPremiumParameters).toBe("pending");
+    expect(HISTORICAL_NORM_2023.verification.fiscalParameters).toBe("verified");
+    expect(HISTORICAL_NORM_2023.verification.socialPremiumParameters).toBe("verified");
+    expect(HISTORICAL_NORM_2023.verification.minimumIncome).toBe("verified");
+    expect(HISTORICAL_NORM_2023.verification.otherRequiredNormInputs).toBe("pending");
   });
 
   it("uses official Rechtspraak sources", () => {
