@@ -67,6 +67,45 @@ export const HISTORICAL_NORM_2023 = {
     zvwMaxContributionIncome: 66956,
     nominalPremiumLowIncomeReduction: [3, 50] as [number, number],
   },
+  otherNormInputs: {
+    taxCredits: {
+      generalMaxUnderAow: 3070,
+      generalMaxAow: 1583,
+      employmentMaxUnderAow: 5052,
+      employmentMaxAow: 2604,
+      incomeDependentCombinationMaxUnderAow: 2694,
+      incomeDependentCombinationMaxAow: 1389,
+      youngDisabled: 820,
+      elderlyUnderIncome: 1835,
+      elderlyUpperIncome: 0,
+      singleElderly: 478,
+      greenInvestmentPct: 0.007,
+      aowAgeBoundaryMonths: 10,
+    },
+    subsistenceBenefit: {
+      underAow: {
+        january: { married: 1708, single: 1196 },
+        july: { married: 1738, single: 1217 },
+      },
+      aow: {
+        january: { married: 1807, single: 1331 },
+        july: { married: 1844, single: 1358 },
+      },
+    },
+    holidayVoucherTaxablePct: 0.99,
+    holidayVoucherUntaxedPct: 0.01,
+    box3DeemedReturns: {
+      savingsPct: 0.0036,
+      otherAssetsPct: 0.0617,
+      debtsPct: 0.0257,
+    },
+    box3BridgingLegislationYears: [2023, 2024, 2025],
+    minimumIncomeFormula: {
+      standardNecessaryCosts: 1175,
+      housingPct: 0.30,
+      capacityPct: 0.70,
+    },
+  },
   verification: {
     needTable: "verified",
     capacity: "verified",
@@ -75,7 +114,7 @@ export const HISTORICAL_NORM_2023 = {
     fiscalParameters: "verified",
     socialPremiumParameters: "verified",
     minimumIncome: "verified",
-    otherRequiredNormInputs: "pending",
+    otherRequiredNormInputs: "verified",
   } as const,
 } as const;
 
