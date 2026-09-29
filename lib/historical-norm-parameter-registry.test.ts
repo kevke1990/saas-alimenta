@@ -27,11 +27,12 @@ describe("historical norm parameter registry", () => {
     expect(() => assertNormPeriodExecutable("not-a-period")).toThrow(/REVIEW_REQUIRED/);
   });
 
-  it("recognizes only supported current executable norm years", () => {
+  it("recognizes current and independently verified historical executable norm years", () => {
     expect(isNormPeriodExecutable("2024")).toBe(true);
     expect(isNormPeriodExecutable("2025")).toBe(true);
     expect(isNormPeriodExecutable("2026")).toBe(true);
-    expect(isNormPeriodExecutable("2023")).toBe(false);
+    expect(isNormPeriodExecutable("2023")).toBe(true);
+    expect(isNormPeriodExecutable("2022")).toBe(false);
     expect(isNormPeriodExecutable("2026-H2")).toBe(true);
   });
 });
