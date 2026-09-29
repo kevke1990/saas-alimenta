@@ -5,10 +5,8 @@ import {
 } from "./historical-norms-2023-verification";
 
 describe("historical 2023 verification gate", () => {
-  it("keeps the partially verified 2023 set non-executable", () => {
-    expect(isHistoricalNorm2023Verified()).toBe(false);
-    expect(() => assertHistoricalNorm2023Executable()).toThrow(
-      /otherRequiredNormInputs/,
-    );
+  it("marks the fully sourced 2023 set executable", () => {
+    expect(isHistoricalNorm2023Verified()).toBe(true);
+    expect(() => assertHistoricalNorm2023Executable()).not.toThrow();
   });
 });
