@@ -43,8 +43,8 @@ describe("historical capacity batch 2017-2022", () => {
   });
 
   it("applies the 70% formula with the year-specific DKL offset", () => {
-    expect(calculateHistoricalCapacity(2018, 2000)).toBe(154);
-    expect(calculateHistoricalCapacity(2020, 2000)).toBe(140);
-    expect(calculateHistoricalCapacity(2022, 2000)).toBe(126);
+    expect(calculateHistoricalCapacity(2018, 2000)).toBe(336);
+    expect(calculateHistoricalCapacity(2020, 2000)).toBe(298);
+    expect(calculateHistoricalCapacity(2022, 2000)).toBe(266);
   });
 });
