@@ -171,10 +171,15 @@ export function getHistoricalCapacityTable(year: HistoricalCapacityYear): Histor
   return table;
 }
 
+/**
+ * Calculates standard table capacity, or applies the published formula instead
+ * of fixed low-income table amounts when additional costs are asserted.
+ */
 export function calculateHistoricalCapacity(
   year: HistoricalCapacityYear,
   nbi: number,
   childCount: number,
+  options: { hasAdditionalCosts?: boolean } = {},
 ): number {
   if (!Number.isFinite(nbi) || nbi < 0) throw new Error("REVIEW_REQUIRED: ongeldig NBI");
   if (!Number.isInteger(childCount) || childCount < 1) {
@@ -182,10 +187,24 @@ export function calculateHistoricalCapacity(
   }
 
   const table = getHistoricalCapacityTable(year);
-  if (nbi < table.minimumNbi) {
+  if (options.hasAdditionalCosts && nbi < table.minimumNbi) {
+    throw new Error("REVIEW_REQUIRED: formuleband voor extra lasten ontbreekt onder de minimum-NBI-drempel");
+  }
+
+  if (!options.hasAdditionalCosts && nbi < table.minimumNbi) {
     return childCount === 1
       ? table.minimumCapacity.oneChild
       : table.minimumCapacity.twoOrMoreChildren;
+  }
+
+  const formulaBand = [...table.bands].reverse().find((candidate) => nbi >= candidate.fromNbi);
+  if (!formulaBand) throw new Error("REVIEW_REQUIRED: formuleband ontbreekt voor " + year);
+
+  if (options.hasAdditionalCosts) {
+    return Math.max(
+      0,
+      Math.round((formulaBand.percentage / 100) * (nbi - (0.3 * nbi + formulaBand.fixedOffset))),
+    );
   }
 
   if (nbi < table.formulaStartNbi) {
@@ -196,7 +215,8 @@ export function calculateHistoricalCapacity(
     return fixedBand.capacity;
   }
 
-  const band = [...table.bands].reverse().find((candidate) => nbi >= candidate.fromNbi);
-  if (!band) throw new Error("REVIEW_REQUIRED: formuleband ontbreekt voor " + year);
-  return Math.max(0, Math.round((band.percentage / 100) * (nbi - (0.3 * nbi + band.fixedOffset))));
+  return Math.max(
+    0,
+    Math.round((formulaBand.percentage / 100) * (nbi - (0.3 * nbi + formulaBand.fixedOffset))),
+  );
 }
