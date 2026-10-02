@@ -70,6 +70,16 @@ describe("historical capacity batch 2017-2022", () => {
     expect(() => calculateHistoricalCapacity(2022, 1800, 1.5)).toThrow(/REVIEW_REQUIRED/);
   });
 
+  it("uses the formula instead of fixed amounts when additional costs apply", () => {
+    expect(calculateHistoricalCapacity(2017, 1400, 1)).toBe(97);
+    expect(calculateHistoricalCapacity(2017, 1400, 1, { hasAdditionalCosts: true })).toBe(113);
+    expect(calculateHistoricalCapacity(2022, 1500, 2)).toBe(59);
+    expect(calculateHistoricalCapacity(2022, 1500, 2, { hasAdditionalCosts: true })).toBe(80);
+    expect(() =>
+      calculateHistoricalCapacity(2017, 1200, 1, { hasAdditionalCosts: true }),
+    ).toThrow(/REVIEW_REQUIRED/);
+  });
+
   it("applies the 70% formula with the year-specific DKL offset", () => {
     expect(calculateHistoricalCapacity(2018, 2000, 1)).toBe(336);
     expect(calculateHistoricalCapacity(2020, 2000, 1)).toBe(298);
