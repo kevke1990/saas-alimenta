@@ -55,11 +55,20 @@ describe("historical capacity batch 2017-2022", () => {
     expect(calculateHistoricalCapacity(2022, 1400, 4)).toBe(50);
   });
 
-  it("switches to the formula at the published threshold", () => {
-    expect(calculateHistoricalCapacity(2017, 1549, 1)).toBe(131);
-    expect(calculateHistoricalCapacity(2017, 1550, 1)).toBe(144);
-    expect(calculateHistoricalCapacity(2018, 1600, 1)).toBe(140);
-    expect(calculateHistoricalCapacity(2022, 1720, 1)).toBe(129);
+  it("switches from each final fixed amount to the formula at the published threshold", () => {
+    const boundaries = [
+      { year: 2017, threshold: 1550, fixed: 131, atThreshold: 144 },
+      { year: 2018, threshold: 1600, fixed: 133, atThreshold: 140 },
+      { year: 2019, threshold: 1625, fixed: 124, atThreshold: 131 },
+      { year: 2020, threshold: 1660, fixed: 124, atThreshold: 131 },
+      { year: 2021, threshold: 1700, fixed: 126, atThreshold: 133 },
+      { year: 2022, threshold: 1720, fixed: 122, atThreshold: 129 },
+    ] as const;
+
+    for (const boundary of boundaries) {
+      expect(calculateHistoricalCapacity(boundary.year, boundary.threshold - 1, 1)).toBe(boundary.fixed);
+      expect(calculateHistoricalCapacity(boundary.year, boundary.threshold, 1)).toBe(boundary.atThreshold);
+    }
   });
 
   it("fails closed for an unsupported year, invalid NBI, or invalid child count", () => {
@@ -80,9 +89,18 @@ describe("historical capacity batch 2017-2022", () => {
     ).toThrow(/REVIEW_REQUIRED/);
   });
 
-  it("applies the 70% formula with the year-specific DKL offset", () => {
-    expect(calculateHistoricalCapacity(2018, 2000, 1)).toBe(336);
-    expect(calculateHistoricalCapacity(2020, 2000, 1)).toBe(298);
-    expect(calculateHistoricalCapacity(2022, 2000, 1)).toBe(266);
+  it("applies the 70% formula with the year-specific DKL offset for every year", () => {
+    const expectedAtNbi2000: Record<number, number> = {
+      2017: 347,
+      2018: 336,
+      2019: 315,
+      2020: 298,
+      2021: 280,
+      2022: 266,
+    };
+
+    for (const table of HISTORICAL_CAPACITY_TABLES_2017_2022) {
+      expect(calculateHistoricalCapacity(table.year, 2000, 1)).toBe(expectedAtNbi2000[table.year]);
+    }
   });
 });
