@@ -33,7 +33,7 @@ export type HistoricalCapacityTable = {
 export const HISTORICAL_CAPACITY_TABLES_2017_2022: readonly HistoricalCapacityTable[] = [
   {
     year: 2017,
-    sourceUrl: "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/expertgroep-alimentatienormen",
+    sourceUrl: "https://www.rechtspraak.nl/binaries/content/assets/lbvr/an/lbvr-an-draagkrachttabel-2017.pdf",
     minimumNbi: 1325,
     formulaStartNbi: 1550,
     minimumCapacity: { oneChild: 25, twoOrMoreChildren: 50 },
@@ -55,7 +55,7 @@ export const HISTORICAL_CAPACITY_TABLES_2017_2022: readonly HistoricalCapacityTa
   },
   {
     year: 2018,
-    sourceUrl: "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/expertgroep-alimentatienormen",
+    sourceUrl: "https://www.rechtspraak.nl/binaries/content/assets/lbvr/an/lbvr-an-draagkrachttabel-alimentatie-2018.pdf",
     minimumNbi: 1350,
     formulaStartNbi: 1600,
     minimumCapacity: { oneChild: 25, twoOrMoreChildren: 50 },
