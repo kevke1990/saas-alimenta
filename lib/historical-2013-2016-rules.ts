@@ -7,7 +7,13 @@ export const HISTORICAL_2013_2016_RULES = {
 } as const;
 
 export function historicalRulesFor2013_2016(date: string) {
-  if (date < "2013-04-01") return { ...HISTORICAL_2013_2016_RULES, regime: "pre-2013-guidelines" as const };
+  if (date < "2013-04-01") {
+    return {
+      ...HISTORICAL_2013_2016_RULES,
+      regime: "pre-2013-guidelines" as const,
+      kgbTreatment: undefined as undefined,
+    };
+  }
   if (date < "2015-01-01") return { ...HISTORICAL_2013_2016_RULES, regime: "2013-guidelines" as const, kgbTreatment: "child-need" as const };
   return { ...HISTORICAL_2013_2016_RULES, regime: "whk" as const, kgbTreatment: "child-need-including-single-parent-head" as const };
 }
