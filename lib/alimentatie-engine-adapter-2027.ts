@@ -2,7 +2,20 @@ import type { Trema2027Input } from "./alimentatie-engine-trema-2027";
 import { calculateTrema2027 } from "./alimentatie-engine-trema-2027";
 
 type NumericLike = number | string | null | undefined;
-type RawParent = Record<string, unknown>;
+type RawParent = {
+  monthlyNbi?: NumericLike;
+  nbi?: NumericLike;
+  monthlyKgb?: NumericLike;
+  kgb?: NumericLike;
+  kgbVerified?: boolean;
+  officialCapacityMonthly?: NumericLike;
+};
+
+type RawCare = {
+  carePercentage?: NumericLike;
+  careDiscountBaseMonthly?: NumericLike;
+  careDiscountOverrideMonthly?: NumericLike;
+};
 
 function money(value: NumericLike, field: string, fallback?: number): number {
   if (value === null || value === undefined || value === "") {
@@ -31,11 +44,15 @@ function parent(id: "A" | "B", raw: RawParent | undefined) {
  */
 export function adaptAlimentaForm2027(payload: {
   referenceYear?: NumericLike;
-  need?: { ownShareMonthly?: NumericLike; exceptionalCostsMonthly?: NumericLike; alreadyIncludedExceptionalCostsMonthly?: NumericLike };
+  need?: {
+    ownShareMonthly?: NumericLike;
+    exceptionalCostsMonthly?: NumericLike;
+    alreadyIncludedExceptionalCostsMonthly?: NumericLike;
+  };
   payer?: RawParent;
   recipient?: RawParent;
-  parents?: RawParent[];
-  care?: { carePercentage?: NumericLike; careDiscountBaseMonthly?: NumericLike; careDiscountOverrideMonthly?: NumericLike };
+  parents?: [RawParent, RawParent] | RawParent[];
+  care?: RawCare;
   nonVerzilverbareKgbCorrectionMonthly?: NumericLike;
 }): Trema2027Input {
   if (Number(payload.referenceYear ?? 2027) !== 2027) {
@@ -46,19 +63,31 @@ export function adaptAlimentaForm2027(payload: {
   if (ownShare <= 0) throw new Error("Het eigen aandeel/behoefte moet groter zijn dan nul.");
 
   const parents = payload.parents ?? [payload.payer, payload.recipient];
-  const carePercentage = payload.care?.carePercentage === undefined ? undefined : money(payload.care.carePercentage, "zorgpercentage");
+  const payer = parent("A", parents[0]);
+  const recipient = parent("B", parents[1]);
+  const carePercentage = payload.care?.carePercentage === undefined
+    ? undefined
+    : money(payload.care.carePercentage, "zorgpercentage");
 
   return {
     referenceYear: 2027,
     ownShareMonthly: ownShare,
     exceptionalCostsMonthly: money(payload.need?.exceptionalCostsMonthly, "bijzondere kosten", 0),
     alreadyIncludedExceptionalCostsMonthly: money(payload.need?.alreadyIncludedExceptionalCostsMonthly, "reeds opgenomen bijzondere kosten", 0),
-    payer: parent("A", parents[0]),
-    recipient: parent("B", parents[1]),
+    payer,
+    recipient,
     carePercentage,
-    careDiscountBaseMonthly: payload.care?.careDiscountBaseMonthly === undefined ? undefined : money(payload.care.careDiscountBaseMonthly, "zorgkortingsgrondslag"),
-    careDiscountOverrideMonthly: payload.care?.careDiscountOverrideMonthly === undefined ? undefined : money(payload.care.careDiscountOverrideMonthly, "zorgkorting"),
-    nonVerzilverbareKgbCorrectionMonthly: money(payload.nonVerzilverbareKgbCorrectionMonthly, "niet-verzilverbare KGB-correctie", 0),
+    careDiscountBaseMonthly: payload.care?.careDiscountBaseMonthly === undefined
+      ? undefined
+      : money(payload.care.careDiscountBaseMonthly, "zorgkortingsgrondslag"),
+    careDiscountOverrideMonthly: payload.care?.careDiscountOverrideMonthly === undefined
+      ? undefined
+      : money(payload.care.careDiscountOverrideMonthly, "zorgkorting"),
+    nonVerzilverbareKgbCorrectionMonthly: money(
+      payload.nonVerzilverbareKgbCorrectionMonthly,
+      "niet-verzilverbare KGB-correctie",
+      0,
+    ),
   };
 }
 
