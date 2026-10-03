@@ -7,9 +7,11 @@ describe("2013-2016 historical rules", () => {
     expect(historicalRulesFor2013_2016("2013-04-01").regime).toBe("2013-guidelines");
   });
   it("applies KGB to child need from 2013", () => {
-    expect(historicalRulesFor2013_2016("2014-12-31").kgbTreatment).toBe("child-need");
+    expect(historicalRulesFor2013_2016("2014-12-31")).toMatchObject({ kgbTreatment: "child-need" });
   });
   it("applies WHK treatment from 2015", () => {
-    expect(historicalRulesFor2013_2016("2015-01-01").kgbTreatment).toBe("child-need-including-single-parent-head");
+    expect(historicalRulesFor2013_2016("2015-01-01")).toMatchObject({
+      kgbTreatment: "child-need-including-single-parent-head",
+    });
   });
 });
