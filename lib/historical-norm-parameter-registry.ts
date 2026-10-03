@@ -49,11 +49,55 @@ const RECHTSPRAAK_2023_NEED =
 const RECHTSPRAAK_2023_CAPACITY =
   "https://www.rechtspraak.nl/voor-advocaten-en-juristen/reglementen-procedures-en-formulieren/civiel/familie-en-jeugdrecht/alimentatie-draagkrachttabel/alimentatie-draagkrachttabel-2023";
 
+const RECHTSPRAAK_2012_REPORT =
+  "https://www.rechtspraak.nl/binaries/_rts_1768896833188/content/assets/lbvr/an/lbvr-an-rapport-alimentatienormen-2012.pdf";
+const RECHTSPRAAK_2012_H1 =
+  "https://www.rechtspraak.nl/binaries/_rts_1769091268416/content/assets/lbvr/an/lbvr-an-bijlage-2012-eerste-helft.pdf";
+const RECHTSPRAAK_2012_H2 =
+  "https://www.rechtspraak.nl/binaries/_rts_1769091269183/content/assets/lbvr/an/lbvr-an-bijlage-2012-tweede-helft.pdf";
+
 /**
- * Verified 2023 values. This is intentionally limited to 2023 until the
- * corresponding historical periods have the same level of source review.
+ * Verified historical parameter records. A period becomes executable only
+ * after all required keys are present and verified; partial historical data
+ * therefore remains fail-closed by design.
  */
 export const HISTORICAL_NORM_PARAMETER_RECORDS: readonly HistoricalNormParameterRecord[] = [
+  {
+    periodId: "2012-H1",
+    key: "tableAmount",
+    status: "verified",
+    sourceUrl: RECHTSPRAAK_2012_H1,
+    sourceLocator: "Paragraaf 28, tabellen 1 en 2, pp. 13-15: eigen aandeel kosten kinderen",
+    sourceDate: "2012-01-01",
+    notes: "Values transcribed into historical-2012-norm-data.ts; January and July 2012 tables match for this section.",
+  },
+  {
+    periodId: "2012-H2",
+    key: "tableAmount",
+    status: "verified",
+    sourceUrl: RECHTSPRAAK_2012_H2,
+    sourceLocator: "Paragraaf 28, tabellen 1 en 2, pp. 13-15: eigen aandeel kosten kinderen",
+    sourceDate: "2012-07-01",
+    notes: "Values transcribed into historical-2012-norm-data.ts; January and July 2012 tables match for this section.",
+  },
+  {
+    periodId: "2012-H1",
+    key: "minimumIncome",
+    status: "verified",
+    sourceUrl: RECHTSPRAAK_2012_H1,
+    sourceLocator: "Paragraaf 9: bijstandsnorm inclusief vakantietoeslag; paragraaf 10: gemiddelde basishuur",
+    sourceDate: "2012-01-01",
+    notes: "January 2012: married €1,336; single parent €1,203; single €935; average basic rent €213.",
+  },
+  {
+    periodId: "2012-H2",
+    key: "minimumIncome",
+    status: "verified",
+    sourceUrl: RECHTSPRAAK_2012_H2,
+    sourceLocator: "Paragraaf 9: bijstandsnorm inclusief vakantietoeslag; paragraaf 10: gemiddelde basishuur",
+    sourceDate: "2012-07-01",
+    notes: "July 2012: married €1,337; single parent €1,203; single €936; average basic rent €213.",
+  },
   {
     periodId: "2023",
     key: "tableAmount",
