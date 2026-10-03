@@ -23,7 +23,7 @@ describe("Trema 2027 calculation module", () => {
   });
 
   it("rejects a non-2027 input", () => {
-    expect(() => calculateTrema2027({ ...base, referenceYear: 2026 as 2027 })).toThrow(/uitsluitend bedoeld/);
+    expect(() => calculateTrema2027({ ...base, referenceYear: 2026 as never })).toThrow(/uitsluitend bedoeld/);
   });
 
   it("rejects missing official capacity instead of falling back to 2026", () => {
