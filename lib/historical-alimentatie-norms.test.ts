@@ -28,6 +28,10 @@ describe("historical alimentatie norm registry", () => {
     expect(resolveHistoricalNormPeriod("2009-07-01")?.id).toBe("2009-H2");
     expect(resolveHistoricalNormPeriod("2010-06-30")?.id).toBe("2010-H1");
     expect(resolveHistoricalNormPeriod("2010-07-01")?.id).toBe("2010-H2");
+    expect(resolveHistoricalNormPeriod("2013-03-31")?.id).toBe("2013-H1");
+    expect(resolveHistoricalNormPeriod("2013-04-01")?.id).toBe("2013-APR");
+    expect(resolveHistoricalNormPeriod("2013-06-30")?.id).toBe("2013-APR");
+    expect(resolveHistoricalNormPeriod("2013-07-01")?.id).toBe("2013-H2");
     expect(resolveHistoricalNormPeriod("2015-08-01")?.id).toBe("2015-H2");
     expect(resolveHistoricalNormPeriod("2026-09-26")?.id).toBe("2026-H2");
     expect(resolveHistoricalNormPeriod("2011-06-30")?.id).toBe("2011-H1");
@@ -48,6 +52,15 @@ describe("historical alimentatie norm registry", () => {
     expect(period?.status).toBe("parameters-pending");
     expect(period?.notes).toMatch(/locate the January 2011 source/);
     expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
+  });
+
+  it("keeps the April 2013 calculation-method transition distinct and pending", () => {
+    const january = resolveHistoricalNormPeriod("2013-03-31");
+    const april = resolveHistoricalNormPeriod("2013-04-01");
+    expect(january?.status).toBe("parameters-pending");
+    expect(april?.status).toBe("parameters-pending");
+    expect(april?.notes).toMatch(/1 April 2013/);
+    expect(() => assertHistoricalNormExecutable(april!)).toThrow(/REVIEW_REQUIRED/);
   });
 
   it("rejects invalid calendar dates instead of normalizing them", () => {
