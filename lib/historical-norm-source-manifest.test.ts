@@ -31,6 +31,12 @@ describe("historical norm source manifest", () => {
     expect(sources.get("2007-H2")?.sourceDocumentUrls?.[0]).toContain("Bijlage-2007-tweede-helft.pdf");
   });
 
+  it("keeps the unresolved 2011 first-half source gap explicit", () => {
+    const source = HISTORICAL_NORM_SOURCE_MANIFEST.find((record) => record.periodId === "2011-H1");
+    expect(source?.sourceDocumentUrls).toBeUndefined();
+    expect(source?.transitionNote).toMatch(/remains non-executable/);
+  });
+
   it("records every discovered 2008-2010 half-year source and transition", () => {
     const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
     for (const year of [2008, 2009, 2010]) {
@@ -57,6 +63,7 @@ describe("historical norm source manifest", () => {
       expect(ids.has(`${year}-H1`)).toBe(true);
       expect(ids.has(`${year}-H2`)).toBe(true);
     }
+    expect(ids.has("2011-H1")).toBe(true);
     expect(ids.has("2011-H2")).toBe(true);
     expect(ids.has("2013-H1")).toBe(true);
     expect(ids.has("2013-H2")).toBe(true);
