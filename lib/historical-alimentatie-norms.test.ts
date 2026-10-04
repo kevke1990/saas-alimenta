@@ -22,7 +22,12 @@ describe("historical alimentatie norm registry", () => {
   it("resolves historical dates without silently falling back to 2026", () => {
     expect(resolveHistoricalNormPeriod("2007-06-30")?.id).toBe("2007-H1");
     expect(resolveHistoricalNormPeriod("2007-07-01")?.id).toBe("2007-H2");
-    expect(resolveHistoricalNormPeriod("2008-08-01")?.id).toBe("2008");
+    expect(resolveHistoricalNormPeriod("2008-06-30")?.id).toBe("2008-H1");
+    expect(resolveHistoricalNormPeriod("2008-07-01")?.id).toBe("2008-H2");
+    expect(resolveHistoricalNormPeriod("2009-06-30")?.id).toBe("2009-H1");
+    expect(resolveHistoricalNormPeriod("2009-07-01")?.id).toBe("2009-H2");
+    expect(resolveHistoricalNormPeriod("2010-06-30")?.id).toBe("2010-H1");
+    expect(resolveHistoricalNormPeriod("2010-07-01")?.id).toBe("2010-H2");
     expect(resolveHistoricalNormPeriod("2015-08-01")?.id).toBe("2015-H2");
     expect(resolveHistoricalNormPeriod("2026-09-26")?.id).toBe("2026-H2");
     expect(resolveHistoricalNormPeriod("2011-06-30")).toBeNull();
