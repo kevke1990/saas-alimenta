@@ -30,7 +30,8 @@ describe("historical alimentatie norm registry", () => {
     expect(resolveHistoricalNormPeriod("2010-07-01")?.id).toBe("2010-H2");
     expect(resolveHistoricalNormPeriod("2015-08-01")?.id).toBe("2015-H2");
     expect(resolveHistoricalNormPeriod("2026-09-26")?.id).toBe("2026-H2");
-    expect(resolveHistoricalNormPeriod("2011-06-30")).toBeNull();
+    expect(resolveHistoricalNormPeriod("2011-06-30")?.id).toBe("2011-H1");
+    expect(resolveHistoricalNormPeriod("2011-07-01")?.id).toBe("2011-H2");
   });
 
   it("keeps the 2007 half-year periods non-executable until their full parameter sets are verified", () => {
@@ -40,6 +41,13 @@ describe("historical alimentatie norm registry", () => {
       expect(period?.status).toBe("parameters-pending");
       expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
     }
+  });
+
+  it("routes the unresolved 2011 first half to review instead of leaving a silent coverage gap", () => {
+    const period = resolveHistoricalNormPeriod("2011-06-30");
+    expect(period?.status).toBe("parameters-pending");
+    expect(period?.notes).toMatch(/locate the January 2011 source/);
+    expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
   });
 
   it("rejects invalid calendar dates instead of normalizing them", () => {
