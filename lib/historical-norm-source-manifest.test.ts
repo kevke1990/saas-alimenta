@@ -22,7 +22,7 @@ describe("historical norm source manifest", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("records the 2006 and 2007 source limitations and verified 2007 transition sources", () => {
+  it("records the 2006 source limitation and the directly linked 2007 transition sources", () => {
     const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
     expect(sources.get("2006")?.transitionNote).toMatch(/full Tremarapport/);
     expect(sources.get("2007-H1")?.effectiveFrom).toBe("2007-01-01");
@@ -31,11 +31,32 @@ describe("historical norm source manifest", () => {
     expect(sources.get("2007-H2")?.sourceDocumentUrls?.[0]).toContain("Bijlage-2007-tweede-helft.pdf");
   });
 
-  it("covers the documented transition points from 2006 through 2026", () =>
+  it("records every discovered 2008-2010 half-year source and transition", () => {
+    const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
+    for (const year of [2008, 2009, 2010]) {
+      for (const half of ["H1", "H2"]) {
+        const source = sources.get(`${year}-${half}`);
+        expect(source).toBeDefined();
+        expect(source?.sourceDocumentUrls?.[0]).toMatch(/^https:\/\/www\.rechtspraak\.nl\/SiteCollectionDocuments\//);
+      }
+    }
+    expect(sources.get("2008-H1")?.effectiveTo).toBe("2008-06-30");
+    expect(sources.get("2008-H2")?.effectiveFrom).toBe("2008-07-01");
+    expect(sources.get("2009-H1")?.effectiveTo).toBe("2009-06-30");
+    expect(sources.get("2009-H2")?.effectiveFrom).toBe("2009-07-01");
+    expect(sources.get("2010-H1")?.effectiveTo).toBe("2010-06-30");
+    expect(sources.get("2010-H2")?.effectiveFrom).toBe("2010-07-01");
+  });
+
+  it("covers the documented transition points from 2006 through 2026", () => {
     const ids = new Set(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => source.periodId));
     expect(ids.has("2006")).toBe(true);
     expect(ids.has("2007-H1")).toBe(true);
     expect(ids.has("2007-H2")).toBe(true);
+    for (const year of [2008, 2009, 2010]) {
+      expect(ids.has(`${year}-H1`)).toBe(true);
+      expect(ids.has(`${year}-H2`)).toBe(true);
+    }
     expect(ids.has("2011-H2")).toBe(true);
     expect(ids.has("2013-H1")).toBe(true);
     expect(ids.has("2013-H2")).toBe(true);
