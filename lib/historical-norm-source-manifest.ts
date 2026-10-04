@@ -15,10 +15,44 @@ export type HistoricalNormSource = {
   sourceTitle: string;
   sourcePage: string;
   parameterDocuments: readonly string[];
+  sourceDocumentUrls?: readonly string[];
   transitionNote?: string;
 };
 
 export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = [
+  {
+    periodId: "2006",
+    effectiveFrom: "2006-01-01",
+    effectiveTo: "2006-12-31",
+    sourceTitle: "Rapport Alimentatienormen (versie september 2006)",
+    sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
+    parameterDocuments: [
+      "Rapport versie september 2006 (cited by the 2007 first- and second-half appendices)",
+      "Kosten van kinderen ten behoeve van vaststelling kinderalimentatie (september 2006)",
+    ],
+    sourceDocumentUrls: ["https://www.rechtspraak.nl/SiteCollectionDocuments/rapport-kosten-kkn-sept-2006.pdf"],
+    transitionNote: "The direct official URL currently found is the September 2006 child-cost report, not the full Tremarapport. The full report and exact applicable parameter tables still require source recovery and verification.",
+  },
+  {
+    periodId: "2007-H1",
+    effectiveFrom: "2007-01-01",
+    effectiveTo: "2007-06-30",
+    sourceTitle: "Bijlage 2007, eerste helft (januari 2007)",
+    sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
+    parameterDocuments: ["Bijlage januari 2007 bij het Rapport Alimentatienormen versie september 2006"],
+    sourceDocumentUrls: ["https://www.rechtspraak.nl/SiteCollectionDocuments/Bijlage-2007-eerste-helft.pdf"],
+    transitionNote: "The appendix describes changes effective 1 January 2007, including changes to the child-cost table and income-tax parameters. Parameter extraction is pending.",
+  },
+  {
+    periodId: "2007-H2",
+    effectiveFrom: "2007-07-01",
+    effectiveTo: "2007-12-31",
+    sourceTitle: "Bijlage 2007, tweede helft (juli 2007)",
+    sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
+    parameterDocuments: ["Bijlage juli 2007 bij het Rapport Alimentatienormen versie september 2006"],
+    sourceDocumentUrls: ["https://www.rechtspraak.nl/SiteCollectionDocuments/Bijlage-2007-tweede-helft.pdf"],
+    transitionNote: "The appendix describes changes effective 1 July 2007, including the minimum-income assistance norms. Parameter extraction is pending.",
+  },
   {
     periodId: "2011-H2",
     effectiveFrom: "2011-07-01",
