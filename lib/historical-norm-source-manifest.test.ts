@@ -61,6 +61,18 @@ describe("historical norm source manifest", () => {
     expect(sources.get("2010-H2")?.effectiveFrom).toBe("2010-07-01");
   });
 
+  it("records separate official first- and second-half sources for 2018-2025", () => {
+    const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
+    for (const year of [2018, 2019, 2021, 2022, 2023, 2024, 2025]) {
+      for (const half of ["H1", "H2"]) {
+        const source = sources.get(`${year}-${half}`);
+        expect(source).toBeDefined();
+        expect(source?.sourceDocumentUrls?.[0]).toMatch(/^https:\/\/www\.rechtspraak\.nl\/binaries\//);
+        expect(source?.effectiveFrom).toBe(half === "H1" ? `${year}-01-01` : `${year}-07-01`);
+      }
+    }
+  });
+
   it("covers the documented transition points from 2006 through 2026", () => {
     const ids = new Set(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => source.periodId));
     expect(ids.has("2006")).toBe(true);
@@ -77,6 +89,10 @@ describe("historical norm source manifest", () => {
     expect(ids.has("2013-H2")).toBe(true);
     expect(ids.has("2020-H1")).toBe(true);
     expect(ids.has("2020-H2")).toBe(true);
+    for (const year of [2018, 2019, 2021, 2022, 2023, 2024, 2025]) {
+      expect(ids.has(`${year}-H1`)).toBe(true);
+      expect(ids.has(`${year}-H2`)).toBe(true);
+    }
     expect(ids.has("2026-H1")).toBe(true);
     expect(ids.has("2026-H2")).toBe(true);
   });
