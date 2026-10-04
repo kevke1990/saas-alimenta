@@ -20,10 +20,21 @@ describe("historical alimentatie norm registry", () => {
   });
 
   it("resolves historical dates without silently falling back to 2026", () => {
+    expect(resolveHistoricalNormPeriod("2007-06-30")?.id).toBe("2007-H1");
+    expect(resolveHistoricalNormPeriod("2007-07-01")?.id).toBe("2007-H2");
     expect(resolveHistoricalNormPeriod("2008-08-01")?.id).toBe("2008");
     expect(resolveHistoricalNormPeriod("2015-08-01")?.id).toBe("2015-H2");
     expect(resolveHistoricalNormPeriod("2026-09-26")?.id).toBe("2026-H2");
     expect(resolveHistoricalNormPeriod("2011-06-30")).toBeNull();
+  });
+
+  it("keeps the 2007 half-year periods non-executable until their full parameter sets are verified", () => {
+    for (const date of ["2007-01-01", "2007-06-30", "2007-07-01", "2007-12-31"]) {
+      const period = resolveHistoricalNormPeriod(date);
+      expect(period?.id).toMatch(/^2007-H[12]$/);
+      expect(period?.status).toBe("parameters-pending");
+      expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
+    }
   });
 
   it("rejects invalid calendar dates instead of normalizing them", () => {
