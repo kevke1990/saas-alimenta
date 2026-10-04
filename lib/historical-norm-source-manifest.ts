@@ -114,6 +114,15 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     transitionNote: "Official appendix describes changes effective 1 July 2010, including assistance norms and the Recofa child-support rule. Full parameter extraction is pending.",
   },
   {
+    periodId: "2011-H1",
+    effectiveFrom: "2011-01-01",
+    effectiveTo: "2011-06-30",
+    sourceTitle: "2011 first-half period (source document unresolved)",
+    sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
+    parameterDocuments: ["Confirm the applicability of the July 2010 appendix or locate the January 2011 appendix"],
+    transitionNote: "The official archive currently lists a second-half 2011 appendix only. This period is catalogued as a provenance gap and remains non-executable.",
+  },
+  {
     periodId: "2011-H2",
     effectiveFrom: "2011-07-01",
     effectiveTo: "2011-12-31",
