@@ -22,9 +22,10 @@ describe("historical norm source manifest", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("records the 2006 source limitation and the directly linked 2007 transition sources", () => {
+  it("records the 2006 consolidated source and the directly linked 2007 transition sources", () => {
     const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
-    expect(sources.get("2006")?.transitionNote).toMatch(/full Tremarapport/);
+    expect(sources.get("2006")?.sourceDocumentUrls?.[0]).toContain("Trema-rapportversie-2008-publicatie-exemplaar.pdf");
+    expect(sources.get("2006")?.transitionNote).toMatch(/tables and fiscal parameters/);
     expect(sources.get("2007-H1")?.effectiveFrom).toBe("2007-01-01");
     expect(sources.get("2007-H1")?.sourceDocumentUrls?.[0]).toContain("Bijlage-2007-eerste-helft.pdf");
     expect(sources.get("2007-H2")?.effectiveFrom).toBe("2007-07-01");
