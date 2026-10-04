@@ -28,6 +28,10 @@ describe("historical alimentatie norm registry", () => {
     expect(resolveHistoricalNormPeriod("2009-07-01")?.id).toBe("2009-H2");
     expect(resolveHistoricalNormPeriod("2010-06-30")?.id).toBe("2010-H1");
     expect(resolveHistoricalNormPeriod("2010-07-01")?.id).toBe("2010-H2");
+    for (const year of [2018, 2019, 2021, 2022, 2023, 2024, 2025]) {
+      expect(resolveHistoricalNormPeriod(`${year}-06-30`)?.id).toBe(`${year}-H1`);
+      expect(resolveHistoricalNormPeriod(`${year}-07-01`)?.id).toBe(`${year}-H2`);
+    }
     expect(resolveHistoricalNormPeriod("2013-03-31")?.id).toBe("2013-H1");
     expect(resolveHistoricalNormPeriod("2013-04-01")?.id).toBe("2013-APR");
     expect(resolveHistoricalNormPeriod("2013-06-30")?.id).toBe("2013-APR");
@@ -52,6 +56,14 @@ describe("historical alimentatie norm registry", () => {
     expect(period?.status).toBe("parameters-pending");
     expect(period?.notes).toMatch(/locate the January 2011 source/);
     expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
+  });
+
+  it("keeps newly split 2018-2023 periods pending until period-specific data are verified", () => {
+    for (const date of ["2018-01-01", "2018-07-01", "2019-01-01", "2019-07-01", "2021-01-01", "2021-07-01", "2022-01-01", "2022-07-01", "2023-01-01", "2023-07-01"]) {
+      const period = resolveHistoricalNormPeriod(date);
+      expect(period?.status).toBe("parameters-pending");
+      expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
+    }
   });
 
   it("keeps the April 2013 calculation-method transition distinct and pending", () => {
