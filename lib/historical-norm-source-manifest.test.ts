@@ -31,6 +31,13 @@ describe("historical norm source manifest", () => {
     expect(sources.get("2007-H2")?.sourceDocumentUrls?.[0]).toContain("Bijlage-2007-tweede-helft.pdf");
   });
 
+  it("records the 1 April 2013 rules transition from the official report", () => {
+    const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
+    expect(sources.get("2013-H1")?.effectiveTo).toBe("2013-03-31");
+    expect(sources.get("2013-APR")?.effectiveFrom).toBe("2013-04-01");
+    expect(sources.get("2013-APR")?.sourceDocumentUrls?.[0]).toContain("rapport-alimentatienormen-2013.pdf");
+  });
+
   it("keeps the unresolved 2011 first-half source gap explicit", () => {
     const source = HISTORICAL_NORM_SOURCE_MANIFEST.find((record) => record.periodId === "2011-H1");
     expect(source?.sourceDocumentUrls).toBeUndefined();
@@ -66,6 +73,7 @@ describe("historical norm source manifest", () => {
     expect(ids.has("2011-H1")).toBe(true);
     expect(ids.has("2011-H2")).toBe(true);
     expect(ids.has("2013-H1")).toBe(true);
+    expect(ids.has("2013-APR")).toBe(true);
     expect(ids.has("2013-H2")).toBe(true);
     expect(ids.has("2020-H1")).toBe(true);
     expect(ids.has("2020-H2")).toBe(true);
