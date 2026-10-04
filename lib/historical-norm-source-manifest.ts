@@ -24,14 +24,17 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     periodId: "2006",
     effectiveFrom: "2006-01-01",
     effectiveTo: "2006-12-31",
-    sourceTitle: "Rapport Alimentatienormen (versie september 2006)",
+    sourceTitle: "Geconsolideerd Rapport Alimentatienormen (augustus 2008; laatste volledige herziening 2006)",
     sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
     parameterDocuments: [
       "Rapport versie september 2006 (cited by the 2007 first- and second-half appendices)",
       "Kosten van kinderen ten behoeve van vaststelling kinderalimentatie (september 2006)",
     ],
-    sourceDocumentUrls: ["https://www.rechtspraak.nl/SiteCollectionDocuments/rapport-kosten-kkn-sept-2006.pdf"],
-    transitionNote: "The direct official URL currently found is the September 2006 child-cost report, not the full Tremarapport. The full report and exact applicable parameter tables still require source recovery and verification.",
+    sourceDocumentUrls: [
+      "https://www.rechtspraak.nl/SiteCollectionDocuments/Trema-rapportversie-2008-publicatie-exemplaar.pdf",
+      "https://www.rechtspraak.nl/SiteCollectionDocuments/rapport-kosten-kkn-sept-2006.pdf",
+    ],
+    transitionNote: "The official 2008 consolidated report states that the prior full revision was published in 2006; the September 2006 child-cost report is separately linked. Extracting and verifying the 2006 applicable tables and fiscal parameters is still pending.",
   },
   {
     periodId: "2007-H1",
