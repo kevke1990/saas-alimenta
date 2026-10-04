@@ -149,14 +149,24 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
   {
     periodId: "2013-H1",
     effectiveFrom: "2013-01-01",
-    effectiveTo: "2013-06-30",
-    sourceTitle: "Rapport/bijlagen 2013",
+    effectiveTo: "2013-03-31",
+    sourceTitle: "Rapport Alimentatienormen versie januari 2013",
     sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
-    parameterDocuments: [
-      "Rapport Alimentatienormen, versie april 2013",
-      "Bijlage 2013, eerste helft",
+    parameterDocuments: ["Rapport/bijlage 2013-I; January-to-March transition rules"],
+    transitionNote: "The official April report describes January–March 2013 as a transition period: new need method and old capacity method. Full parameters remain pending.",
+  },
+  {
+    periodId: "2013-APR",
+    effectiveFrom: "2013-04-01",
+    effectiveTo: "2013-06-30",
+    sourceTitle: "Rapport Alimentatienormen versie april 2013",
+    sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
+    parameterDocuments: ["Rapport april 2013; Aanpassing richtlijn kinderalimentatie effective 1 April 2013"],
+    sourceDocumentUrls: [
+      "https://www.rechtspraak.nl/binaries/_rts_1768562463923/content/assets/gharl/rv/gharl-rv-rapport-alimentatienormen-2013.pdf",
+      "https://www.rechtspraak.nl/binaries/_rts_1768923224501/content/assets/lbvr/an/lbvr-an-wijziging-16-november-2012-richtlijn.pdf",
     ],
-    transitionNote: "The official archive lists an April 2013 report and a first-half attachment; exact parameter effective dates must be verified before activation.",
+    transitionNote: "The official report says the new child-support calculation method applies from 1 April 2013. Full parameter extraction and validation remain pending.",
   },
   {
     periodId: "2013-H2",
