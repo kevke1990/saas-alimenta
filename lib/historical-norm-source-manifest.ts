@@ -241,7 +241,6 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     parameterDocuments: ["Behoeftetabel 2017", "Bijlage 2017 tweede helft", "Draagkrachttabel 2017"],
   },
   {
-  {
     periodId: "2018-H1",
     effectiveFrom: "2018-01-01",
     effectiveTo: "2018-06-30",
@@ -261,7 +260,6 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     sourceDocumentUrls: ["https://www.rechtspraak.nl/binaries/_rts_1769091279153/content/assets/lbvr/an/lbvr-an-bijlage-2018-tweede-helft.pdf"],
     transitionNote: "The July appendix identifies changes effective 1 July 2018. Full parameter extraction remains pending.",
   },
-  {
   {
     periodId: "2019-H1",
     effectiveFrom: "2019-01-01",
@@ -299,7 +297,6 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     parameterDocuments: ["Bijlage rapport alimentatienormen versie juli 2020", "Draagkrachttabel alimentatie 2020"],
   },
   {
-  {
     periodId: "2021-H1",
     effectiveFrom: "2021-01-01",
     effectiveTo: "2021-06-30",
@@ -319,7 +316,6 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     sourceDocumentUrls: ["https://www.rechtspraak.nl/binaries/_rts_1768838073165/content/assets/rvdr/wa/2021/rvdr-wa-2021-bijlage-2021-tweede-helft-rapport-alimentatienormen.pdf"],
     transitionNote: "The July appendix identifies changes effective 1 July 2021. Full parameter extraction remains pending.",
   },
-  {
   {
     periodId: "2022-H1",
     effectiveFrom: "2022-01-01",
@@ -341,7 +337,6 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     transitionNote: "The July appendix identifies changes effective 1 July 2022. Full parameter extraction remains pending.",
   },
   {
-  {
     periodId: "2023-H1",
     effectiveFrom: "2023-01-01",
     effectiveTo: "2023-06-30",
@@ -362,7 +357,6 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     transitionNote: "The separate July appendix confirms period-specific source material. Full parameter extraction remains pending.",
   },
   {
-  {
     periodId: "2024-H1",
     effectiveFrom: "2024-01-01",
     effectiveTo: "2024-06-30",
@@ -382,7 +376,6 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     sourceDocumentUrls: ["https://www.rechtspraak.nl/binaries/_rts_1768838195483/content/assets/rvdr/wa/2024/rvdr-wa-2024-bijlagen-rapport-alimentatienormen-tweede-helft.pdf"],
     transitionNote: "The second-half appendix uses July tariffs; exact reconciliation and independent reference cases remain required.",
   },
-  {
   {
     periodId: "2025-H1",
     effectiveFrom: "2025-01-01",
