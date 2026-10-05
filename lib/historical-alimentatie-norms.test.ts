@@ -7,7 +7,8 @@ import {
 
 describe("historical alimentatie norm registry", () => {
   it("covers the requested start year 2006 and current 2026 periods", () => {
-    expect(HISTORICAL_NORM_PERIODS.some((period) => period.validFrom === "2006-01-01")).toBe(true);
+    expect(HISTORICAL_NORM_PERIODS.some((period) => period.id === "2006-H1" && period.validFrom === "2006-01-01")).toBe(true);
+    expect(HISTORICAL_NORM_PERIODS.some((period) => period.id === "2006-H2" && period.validFrom === "2006-07-01")).toBe(true);
     expect(HISTORICAL_NORM_PERIODS.some((period) => period.id === "2026-H1")).toBe(true);
     expect(HISTORICAL_NORM_PERIODS.some((period) => period.id === "2026-H2")).toBe(true);
   });
@@ -20,6 +21,8 @@ describe("historical alimentatie norm registry", () => {
   });
 
   it("resolves historical dates without silently falling back to 2026", () => {
+    expect(resolveHistoricalNormPeriod("2006-06-30")?.id).toBe("2006-H1");
+    expect(resolveHistoricalNormPeriod("2006-07-01")?.id).toBe("2006-H2");
     expect(resolveHistoricalNormPeriod("2007-06-30")?.id).toBe("2007-H1");
     expect(resolveHistoricalNormPeriod("2007-07-01")?.id).toBe("2007-H2");
     expect(resolveHistoricalNormPeriod("2008-06-30")?.id).toBe("2008-H1");
