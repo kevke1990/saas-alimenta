@@ -84,11 +84,18 @@ describe("historical alimentatie norm registry", () => {
     expect(resolveHistoricalNormPeriod("not-a-date")).toBeNull();
   });
 
-  it("requires explicit parameter verification before a historical period is executable", () => {
-    const period = resolveHistoricalNormPeriod("2006-06-01");
-    expect(period).not.toBeNull();
-    expect(period?.status).toBe("parameters-pending");
-    expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
+  it("keeps both 2006 half-years blocked until every required parameter is verified", () => {
+    for (const [date, expectedId] of [
+      ["2006-01-01", "2006-H1"],
+      ["2006-06-30", "2006-H1"],
+      ["2006-07-01", "2006-H2"],
+      ["2006-12-31", "2006-H2"],
+    ]) {
+      const period = resolveHistoricalNormPeriod(date);
+      expect(period?.id).toBe(expectedId);
+      expect(period?.status).toBe("parameters-pending");
+      expect(() => assertHistoricalNormExecutable(period!)).toThrow(/REVIEW_REQUIRED/);
+    }
   });
 
   it("allows the current 2026 period through the integrated execution gate", () => {
