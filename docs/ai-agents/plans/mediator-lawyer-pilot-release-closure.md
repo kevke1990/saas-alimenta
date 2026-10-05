@@ -13,6 +13,8 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 - The README calls the product “Alimenta Pro” and “v1.0 — Eerste stabiele release”, while repository governance calls it Merelo, sets 1 January 2027 as the first public production target, and describes the repository as a demo/development basis. Resolve this before pilot invitations.
 - Release-gate evidence is not yet recorded for tenant/resource isolation, staging, restore drills, TLS/monitoring, legal/privacy review or pilot operations.
 - Production and Homey were not accessed or changed for this plan.
+- Preliminary source inventory at current `main`: all 83 API route handlers were scanned. Public auth, health/readiness/release and signed-webhook handlers are intentional; the remaining handlers contain recognizable authentication mechanisms, and all four `/api/v1` handlers use API-token authentication plus user-scoped lookups.
+- This inventory is not an end-to-end authorization proof. `tests/api-authorization.test.ts` checks explicit authentication markers, while `lib/authorization-hardening.test.ts` exercises tenant helper behavior in isolation. The README itself still lists resource-level multi-tenant authorization as unfinished. No complete route-by-route, role-by-role practice-isolation evidence is recorded.
 
 ## Constraints / invariants
 
@@ -50,8 +52,8 @@ Historical norms are a separate calculation-integrity track. They are not a prer
 9. Record all unresolved norm/source gaps by period and parameter family. Keep them excluded from pilot scope unless separately completed and reviewed.
 
 ### Batch 2 — pilot security and privacy controls
-10. Map every protected resource and route to authorization checks; test cross-user and cross-practice access denial at resource level.
-11. Decide and implement an explicitly supported pilot tenancy model. If tenant isolation is not proven, use a separate isolated instance per pilot practice and prohibit shared datasets.
+10. Produce a route-by-route authorization matrix for all 83 API handlers, including read, update, delete, export, document, task, portal, report and calculation operations; test cross-user and cross-practice access denial for each protected resource class. The preliminary source inventory above is not sufficient proof.
+11. Decide and implement an explicitly supported pilot tenancy model. Until route-level tenant isolation is proven, do not enable shared practice accounts or cross-user case access; any single-user pilot boundary must itself be demonstrated in staging.
 12. Review session lifecycle, MFA, password/reset flows, role boundaries, audit coverage, rate limits, document storage, AI-provider transfer/retention and sensitive log output.
 13. Define data minimization, lawful basis/consent where applicable, retention/deletion, export, breach response and processor/subprocessor documentation with the privacy owner and counsel. Do not have an agent infer legal sufficiency.
 14. Remove pilot-blocking high-severity dependency/security findings or document an accepted, bounded mitigation with owner and expiry.
