@@ -40,7 +40,9 @@ describe("historical release readiness", () => {
   });
 
   it("keeps the required historical coverage explicit", () => {
-    expect(REQUIRED_HISTORICAL_COVERAGE).toContain("2006-01-01/2006-12-31");
+    expect(REQUIRED_HISTORICAL_COVERAGE).toContain("2006-01-01/2006-06-30");
+    expect(REQUIRED_HISTORICAL_COVERAGE).toContain("2006-07-01/2006-12-31");
+    expect(REQUIRED_HISTORICAL_COVERAGE).not.toContain("2006-01-01/2006-12-31");
     expect(REQUIRED_HISTORICAL_COVERAGE).toContain("2013-04-01/2013-06-30");
     expect(REQUIRED_HISTORICAL_COVERAGE).toContain("2023-07-01/2023-12-31");
   });
