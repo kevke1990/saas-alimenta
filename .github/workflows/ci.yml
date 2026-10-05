@@ -53,8 +53,8 @@ jobs:
         with:
           path: .next/cache
           key: ${{ runner.os }}-next-${{ hashFiles('package.json', '**/*.ts', '**/*.tsx', 'next.config.ts') }}
-          restore-keys: |
-            ${{ runner.os }}-next-
+        restore-keys: |
+          ${{ runner.os }}-next-
       - name: Verify repository hygiene
         run: |
           set -eu
@@ -156,11 +156,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Run staging smoke test when configured
+      - name: Require configured staging candidate and run smoke test
         run: |
           set -eu
           if [ -z "${STAGING_URL:-}" ]; then
-            echo "STAGING_URL is not configured; skipping external staging smoke test."
-            exit 0
+            echo "::error::STAGING_URL is required for the staging smoke test."
+            exit 1
+          fi
+          if [ -z "${EXPECTED_RELEASE_VERSION:-}" ]; then
+            echo "::error::STAGING_RELEASE_VERSION is required to verify the exact staging candidate."
+            exit 1
           fi
           bash ./deploy/staging-smoke.sh
