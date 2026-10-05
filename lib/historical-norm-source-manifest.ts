@@ -146,6 +146,7 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     sourceTitle: "Bijlage 2012, eerste helft",
     sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
     parameterDocuments: ["Bijlage 2012, eerste helft"],
+    sourceDocumentUrls: ["https://www.rechtspraak.nl/binaries/_rts_1769091268416/content/assets/lbvr/an/lbvr-an-bijlage-2012-eerste-helft.pdf"],
   },
   {
     periodId: "2012-H2",
@@ -154,6 +155,7 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     sourceTitle: "Bijlage 2012, tweede helft",
     sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
     parameterDocuments: ["Bijlage 2012, tweede helft"],
+    sourceDocumentUrls: ["https://www.rechtspraak.nl/binaries/_rts_1769091269183/content/assets/lbvr/an/lbvr-an-bijlage-2012-tweede-helft.pdf"],
   },
   {
     periodId: "2013-H1",
