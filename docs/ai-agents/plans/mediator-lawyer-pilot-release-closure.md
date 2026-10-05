@@ -24,6 +24,13 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 - PR #62 is a 44-commit draft that adds 2006 source data and updates historical manifests/registries, but its own description leaves the January 2006 child-cost table and other parameter families/reference calculations incomplete. Its exact head CI was reported green earlier; that does not complete its source gaps.
 - Keep the historical objective (complete verified coverage through 2006 and onward) as a separate workstream. It need not block a narrowly declared current-norm pilot, provided historical requests remain blocked and the pilot wording does not imply historical support.
 
+### Preliminary calculation evidence review
+
+- Current regression suites cover deterministic outputs and selected current-norm details in `lib/calculator-regression-2024-2026.test.ts`, `lib/calculation-engine-audit.test.ts` and `lib/alimentatie-engine-trema-2026.test.ts`.
+- Some full-case tests explicitly call examples “illustrative” and avoid treating an example payment as a target. The Trema suite includes a published corrected-assistance-norm example, but that alone is not an independently reconstructed end-to-end reference dossier for each pilot workflow.
+- The current `lib/norms.ts` records January and July 2026 source versions and the 2026 table values. A spot-check of the official July 2026 appendix confirms the stated 2026 capacity bands/formula and KGB inputs. The source set is [official Rechtspraak July 2026 appendix](https://www.rechtspraak.nl/binaries/_rts_1782891587557/content/assets/lbvr/an/lbvr-an-bijlagen-rapport-alimentatienormen-versie-juli-2026.pdf). This spot-check does not independently validate the complete engine, tax calculation, case workflow or all edge conditions.
+- Batch 1 therefore remains open: construct professionally reviewed, source-located end-to-end reference dossiers for the exact pilot scope and compare all intermediate amounts, warnings and final results.
+
 ## Constraints / invariants
 
 - No guessed legal rule, norm value, source locator, or historical financial input.
