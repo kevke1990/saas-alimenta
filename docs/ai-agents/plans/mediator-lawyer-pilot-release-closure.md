@@ -16,6 +16,14 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 - Preliminary source inventory at current `main`: all 83 API route handlers were scanned. Public auth, health/readiness/release and signed-webhook handlers are intentional; the remaining handlers contain recognizable authentication mechanisms, and all four `/api/v1` handlers use API-token authentication plus user-scoped lookups.
 - This inventory is not an end-to-end authorization proof. `tests/api-authorization.test.ts` checks explicit authentication markers, verifies token-auth markers on all `/api/v1` handlers, and checks for a static ownership/RBAC predicate marker on dynamic resource routes. `lib/authorization-hardening.test.ts` exercises tenant helper behavior in isolation. These checks do not execute every route against foreign-user/foreign-practice resources or establish role behavior end-to-end. The README itself still lists resource-level multi-tenant authorization as unfinished. No complete route-by-route, role-by-role practice-isolation evidence is recorded.
 
+### Open historical PR reconciliation (GitHub compare against current main)
+
+- PR #52 is 5 commits ahead and 67 behind its merge base; it reintroduces the old `lib/historical-alimentatie-norms.ts` and test files and is marked not mergeable.
+- PR #53 is 7 commits ahead and 67 behind, changing those same two old files. Current `main` already has a newer registry, parameter-readiness gate, invalid-date checks, and tests for fail-closed behavior. These two PRs are stale branches; do not merge or rebase them as-is. Closing them is a separate GitHub state change and has not been done.
+- PR #61 is one documentation commit for an incomplete 2011 source manifest. Its own description leaves parameter families and independent calculations open.
+- PR #62 is a 44-commit draft that adds 2006 source data and updates historical manifests/registries, but its own description leaves the January 2006 child-cost table and other parameter families/reference calculations incomplete. Its exact head CI was reported green earlier; that does not complete its source gaps.
+- Keep the historical objective (complete verified coverage through 2006 and onward) as a separate workstream. It need not block a narrowly declared current-norm pilot, provided historical requests remain blocked and the pilot wording does not imply historical support.
+
 ## Constraints / invariants
 
 - No guessed legal rule, norm value, source locator, or historical financial input.
