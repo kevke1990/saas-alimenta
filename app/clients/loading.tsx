@@ -1,6 +1,9 @@
+import AppShell from "@/components/AppShell";
+
 export default function ClientsLoading() {
   return (
-    <div className="clients-page" aria-busy="true" aria-label="Cliënten laden">
+    <AppShell>
+      <div className="clients-page" aria-busy="true" aria-label="Cliënten laden">
       <div className="clients-loading-head">
         <span className="clients-skeleton clients-skeleton-kicker" />
         <span className="clients-skeleton clients-skeleton-title" />
@@ -11,6 +14,7 @@ export default function ClientsLoading() {
         <div className="clients-loading-rows">{Array.from({ length: 5 }, (_, index) => <span className="clients-skeleton clients-skeleton-row" key={index} />)}</div>
       </section>
       <span className="sr-only" role="status">Cliënten worden geladen…</span>
-    </div>
+      </div>
+    </AppShell>
   );
 }
