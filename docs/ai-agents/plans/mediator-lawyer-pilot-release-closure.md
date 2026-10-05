@@ -64,7 +64,7 @@ Historical norms are a separate calculation-integrity track. They are not a prer
 19. Run full CI on the exact candidate commit, then a staging smoke test with synthetic cases, including auth/access boundaries, calculation/report flow, health/readiness and recovery checks.
 
 ### Batch 4 — bounded professional pilot
-20. Obtain written approvals from product owner, security/privacy reviewer, hosting operator and participating professionals. Document cohort, duration, supported scope, prohibited use, support hours, incident path and exit/deletion procedure.
+20. Record the user-authorized pilot audience: mediators and lawyers. Before any pilot launch, obtain written security/privacy and hosting approval, plus participant agreement. Document cohort, duration, supported scope, prohibited use, support hours, incident path and exit/deletion procedure.
 21. Start with synthetic or de-identified cases unless and until privacy counsel and the data owner approve personal-data processing and all required safeguards.
 22. Record pilot feedback and incidents without copying personal or case-identifying data into GitHub. Triage defects by severity; calculation/security BLOCKER or HIGH findings stop the pilot.
 23. Review evidence and pilot outcomes; either extend/fix, close the pilot and delete data, or submit a public-release decision. A passing pilot does not automatically authorize a public release.
@@ -100,7 +100,7 @@ For pilot readiness, also require:
 - Resource-level tenant isolation, full browser WebAuthn, privacy/legal review and tested backup/restore are listed as unfinished in current documentation.
 - Historical source and parameter completeness varies by effective period; the 2006 and 2011 PRs explicitly list open gaps. Do not promise all history in the pilot.
 - Product identity and v1.0 wording are inconsistent.
-- The request for the “soonest possible” pilot must be reconciled with documented privacy/security obligations and the existing 1 January 2027 public-release target. The product owner must approve any revised public target; pilot preparation can proceed without changing it.
+- The user has requested a mediator/lawyer pilot as soon as safely possible. Treat this as authorization to prepare the pilot, not as authorization to deploy, process production data or waive privacy/security evidence. A closed pilot is a separate decision from the existing 1 January 2027 public-release target; changing that public target requires an explicit product decision.
 
 ## Completion evidence
 
