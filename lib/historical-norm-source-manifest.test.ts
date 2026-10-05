@@ -46,6 +46,9 @@ describe("historical norm source manifest", () => {
     const source = HISTORICAL_NORM_SOURCE_MANIFEST.find((record) => record.periodId === "2011-H1");
     expect(source?.sourceDocumentUrls).toBeUndefined();
     expect(source?.transitionNote).toMatch(/remains non-executable/);
+    const secondHalf = HISTORICAL_NORM_SOURCE_MANIFEST.find((record) => record.periodId === "2011-H2");
+    expect(secondHalf?.sourceDocumentUrls?.[0]).toContain("lbvr-an-bijlage-2011-tweede-helft.pdf");
+    expect(secondHalf?.transitionNote).toMatch(/reference calculations remain pending/);
   });
 
   it("records every discovered 2008-2010 half-year source and transition", () => {
