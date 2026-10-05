@@ -53,8 +53,8 @@ jobs:
         with:
           path: .next/cache
           key: ${{ runner.os }}-next-${{ hashFiles('package.json', '**/*.ts', '**/*.tsx', 'next.config.ts') }}
-        restore-keys: |
-          ${{ runner.os }}-next-
+          restore-keys: |
+            ${{ runner.os }}-next-
       - name: Verify repository hygiene
         run: |
           set -eu
