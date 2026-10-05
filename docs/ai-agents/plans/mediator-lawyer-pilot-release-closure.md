@@ -14,7 +14,7 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 - Release-gate evidence is not yet recorded for tenant/resource isolation, staging, restore drills, TLS/monitoring, legal/privacy review or pilot operations.
 - Production and Homey were not accessed or changed for this plan.
 - Preliminary source inventory at current `main`: all 83 API route handlers were scanned. Public auth, health/readiness/release and signed-webhook handlers are intentional; the remaining handlers contain recognizable authentication mechanisms, and all four `/api/v1` handlers use API-token authentication plus user-scoped lookups.
-- This inventory is not an end-to-end authorization proof. `tests/api-authorization.test.ts` checks explicit authentication markers, while `lib/authorization-hardening.test.ts` exercises tenant helper behavior in isolation. The README itself still lists resource-level multi-tenant authorization as unfinished. No complete route-by-route, role-by-role practice-isolation evidence is recorded.
+- This inventory is not an end-to-end authorization proof. `tests/api-authorization.test.ts` checks explicit authentication markers, verifies token-auth markers on all `/api/v1` handlers, and checks for a static ownership/RBAC predicate marker on dynamic resource routes. `lib/authorization-hardening.test.ts` exercises tenant helper behavior in isolation. These checks do not execute every route against foreign-user/foreign-practice resources or establish role behavior end-to-end. The README itself still lists resource-level multi-tenant authorization as unfinished. No complete route-by-route, role-by-role practice-isolation evidence is recorded.
 
 ## Constraints / invariants
 
