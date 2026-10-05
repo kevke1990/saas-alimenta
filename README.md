@@ -1,12 +1,12 @@
-# Alimenta Pro
+# Merelo
 
-> **v1.0 — Eerste stabiele release**
+> **Pre-release — gecontroleerde demo- en ontwikkelbasis**
 >
 > Professionele alimentatie-werkplek voor kinderalimentatie en partneralimentatie.
 
-Alimenta Pro is een professionele SaaS-werkplek voor alimentatieprofessionals. De applicatie is opgezet rondom één centraal dossier waarin een gezin/familie, beide ouders/partners, kinderen, inkomensgegevens, woonlasten, nieuwe partners, eventuele kinderen van nieuwe partners, documenten, berekeningen, scenario's, professionele overrides, review en rapportage samenkomen.
+Merelo is een professionele SaaS-werkplek voor alimentatieprofessionals. De applicatie is opgezet rondom één centraal dossier waarin een gezin/familie, beide ouders/partners, kinderen, inkomensgegevens, woonlasten, nieuwe partners, eventuele kinderen van nieuwe partners, documenten, berekeningen, scenario's, professionele overrides, review en rapportage samenkomen.
 
-> **Belangrijk:** Alimenta Pro is een softwaretool voor ondersteuning van professionele alimentatieberekeningen. De uitkomst is geen juridisch advies en de applicatie claimt geen juridische certificering. Complexe juridische uitzonderingen, interpretaties en professionele afwijkingen moeten door een bevoegde professional worden beoordeeld.
+> **Belangrijk:** Merelo is een softwaretool voor ondersteuning van professionele alimentatieberekeningen. De uitkomst is geen juridisch advies en de applicatie claimt geen juridische certificering. Complexe juridische uitzonderingen, interpretaties en professionele afwijkingen moeten door een bevoegde professional worden beoordeeld.
 
 ## Kernprincipes
 
@@ -321,7 +321,7 @@ Optionele integraties:
 
 ## Security en privacy
 
-Alimenta Pro bevat technische voorzieningen voor onder meer:
+Merelo bevat technische voorzieningen voor onder meer:
 
 - encryptie van documentopslag;
 - SHA-256 documentintegriteit;
@@ -334,7 +334,7 @@ Alimenta Pro bevat technische voorzieningen voor onder meer:
 - retention jobs;
 - PostgreSQL backup/restore.
 
-De v1.0-release is een gecontroleerde eerste productrelease. Resource-level multi-tenant autorisatie, volledige WebAuthn browser ceremony en complexe juridische uitzonderingen blijven vóór brede productie-uitrol punten die verder moeten worden gehard/gevalideerd.
+Merelo is nog niet als v1.0-productrelease vrijgegeven; deze repository blijft een gecontroleerde demo- en ontwikkelbasis totdat de release-gate aantoonbaar is gehaald. Resource-level multi-tenant autorisatie, volledige WebAuthn browser ceremony en complexe juridische uitzonderingen blijven vóór brede productie-uitrol punten die verder moeten worden gehard/gevalideerd.
 
 ## Review en goedkeuring
 
@@ -368,7 +368,7 @@ Bij APPROVED wordt bovendien een exacte calculation binding opgeslagen. Een nieu
 
 ## Release status
 
-**v1.0 — Eerste stabiele release**
+**Pre-release — gecontroleerde demo- en ontwikkelbasis**
 
 ### Fase A — Demo MVP
 
