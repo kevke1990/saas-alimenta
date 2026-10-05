@@ -21,20 +21,24 @@ export type HistoricalNormSource = {
 
 export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = [
   {
-    periodId: "2006",
+    periodId: "2006-H1",
     effectiveFrom: "2006-01-01",
-    effectiveTo: "2006-12-31",
-    sourceTitle: "Geconsolideerd Rapport Alimentatienormen (augustus 2008; laatste volledige herziening 2006)",
+    effectiveTo: "2006-06-30",
+    sourceTitle: "Bijlage 2006, eerste helft (januari)",
     sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
-    parameterDocuments: [
-      "Rapport versie september 2006 (cited by the 2007 first- and second-half appendices)",
-      "Kosten van kinderen ten behoeve van vaststelling kinderalimentatie (september 2006)",
-    ],
-    sourceDocumentUrls: [
-      "https://www.rechtspraak.nl/SiteCollectionDocuments/Trema-rapportversie-2008-publicatie-exemplaar.pdf",
-      "https://www.rechtspraak.nl/SiteCollectionDocuments/rapport-kosten-kkn-sept-2006.pdf",
-    ],
-    transitionNote: "The official 2008 consolidated report states that the prior full revision was published in 2006; the September 2006 child-cost report is separately linked. Extracting and verifying the 2006 applicable tables and fiscal parameters is still pending.",
+    parameterDocuments: ["Rapport Alimentatienormen 2006", "Bijlage januari 2006", "Kosten van kinderen ten behoeve van vaststelling kinderalimentatie (september 2006)"],
+    sourceDocumentUrls: ["https://www.rechtspraak.nl/SiteCollectionDocuments/Bijlage-2006-eerste-helft.pdf", "https://www.rechtspraak.nl/SiteCollectionDocuments/rapport-kosten-kkn-sept-2006.pdf"],
+    transitionNote: "The January appendix is period-specific. Its exact tables and fiscal parameters still require extraction and independent verification.",
+  },
+  {
+    periodId: "2006-H2",
+    effectiveFrom: "2006-07-01",
+    effectiveTo: "2006-12-31",
+    sourceTitle: "Bijlage 2006, tweede helft (juli)",
+    sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
+    parameterDocuments: ["Rapport Alimentatienormen 2006", "Bijlage juli 2006", "Kosten van kinderen ten behoeve van vaststelling kinderalimentatie (september 2006)"],
+    sourceDocumentUrls: ["https://www.rechtspraak.nl/SiteCollectionDocuments/Bijlage-2006-tweede-helft.pdf", "https://www.rechtspraak.nl/SiteCollectionDocuments/rapport-kosten-kkn-sept-2006.pdf"],
+    transitionNote: "The July appendix is period-specific. Its exact tables and fiscal parameters still require extraction and independent verification.",
   },
   {
     periodId: "2007-H1",
