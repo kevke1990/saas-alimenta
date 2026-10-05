@@ -22,10 +22,13 @@ describe("historical norm source manifest", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("records the 2006 consolidated source and the directly linked 2007 transition sources", () => {
+  it("records official first- and second-half 2006 sources and the 2007 transition sources", () => {
     const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
-    expect(sources.get("2006")?.sourceDocumentUrls?.[0]).toContain("Trema-rapportversie-2008-publicatie-exemplaar.pdf");
-    expect(sources.get("2006")?.transitionNote).toMatch(/tables and fiscal parameters/);
+    expect(sources.get("2006-H1")?.effectiveTo).toBe("2006-06-30");
+    expect(sources.get("2006-H1")?.sourceDocumentUrls?.[0]).toContain("Bijlage-2006-eerste-helft.pdf");
+    expect(sources.get("2006-H2")?.effectiveFrom).toBe("2006-07-01");
+    expect(sources.get("2006-H2")?.sourceDocumentUrls?.[0]).toContain("Bijlage-2006-tweede-helft.pdf");
+    expect(sources.get("2006-H1")?.transitionNote).toMatch(/still require extraction/);
     expect(sources.get("2007-H1")?.effectiveFrom).toBe("2007-01-01");
     expect(sources.get("2007-H1")?.sourceDocumentUrls?.[0]).toContain("Bijlage-2007-eerste-helft.pdf");
     expect(sources.get("2007-H2")?.effectiveFrom).toBe("2007-07-01");
@@ -76,7 +79,8 @@ describe("historical norm source manifest", () => {
 
   it("covers the documented transition points from 2006 through 2026", () => {
     const ids = new Set(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => source.periodId));
-    expect(ids.has("2006")).toBe(true);
+    expect(ids.has("2006-H1")).toBe(true);
+    expect(ids.has("2006-H2")).toBe(true);
     expect(ids.has("2007-H1")).toBe(true);
     expect(ids.has("2007-H2")).toBe(true);
     for (const year of [2008, 2009, 2010]) {
