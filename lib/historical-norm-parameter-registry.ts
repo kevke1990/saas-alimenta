@@ -180,7 +180,7 @@ export const HISTORICAL_NORM_PARAMETER_RECORDS: readonly HistoricalNormParameter
     sourceUrl: "https://www.rechtspraak.nl/SiteCollectionDocuments/Bijlage-2006-tweede-helft.pdf",
     sourceLocator: "Paragraaf 28, tabellen 1 en 2, p. 11: kinderbijslagpunten en eigen aandeel kosten van kinderen",
     sourceDate: "2006-07-01",
-    notes: "Official July 2006 table located; the complete table is not yet transcribed into runtime data and other required parameter groups remain pending.",
+    notes: "Official July 2006 tables 1-4 were transcribed into historical-2006-norm-data.ts; other required parameter groups and independent reference calculations remain pending.",
   },
 ];
 
