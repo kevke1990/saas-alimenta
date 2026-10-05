@@ -133,9 +133,11 @@ export const HISTORICAL_NORM_SOURCE_MANIFEST: readonly HistoricalNormSource[] = 
     periodId: "2011-H2",
     effectiveFrom: "2011-07-01",
     effectiveTo: "2011-12-31",
-    sourceTitle: "Bijlage 2011, tweede helft",
+    sourceTitle: "Bijlage 2011, tweede helft (juli 2011)",
     sourcePage: RECHTSPRAAK_ALIMENTATIENORMEN_ARCHIVE,
-    parameterDocuments: ["Bijlage 2011, tweede helft",],
+    parameterDocuments: ["Bijlage juli 2011; historical net-method inputs"],
+    sourceDocumentUrls: ["https://www.rechtspraak.nl/binaries/_rts_1769091122481/content/assets/lbvr/an/lbvr-an-bijlage-2011-tweede-helft.pdf"],
+    transitionNote: "The appendix records assistance norms, average basic rent, nominal ZVW, mandatory excess and capacity percentages. The complete period dataset and reference calculations remain pending.",
   },
   {
     periodId: "2012-H1",
