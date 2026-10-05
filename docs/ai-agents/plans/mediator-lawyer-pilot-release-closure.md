@@ -8,7 +8,7 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 
 - Current `main` is `5f95e4a89fd55b2409055080dea9ac306cd432f7`; GitHub Actions push run #1290 is in progress and must finish green before the merged baseline is called validated.
 - No published GitHub Release or tag exists.
-- PRs #52, #53 and #26 were closed as superseded after comparison with current `main`; their rationales are recorded in GitHub. #26’s only remaining useful detail is isolated in PR #65. Open PRs are #61 and #62 for incomplete historical data, #63 for this coordination plan, #64 for the README correction, #65 for the loading-shell fix, and #66 for the fail-closed staging smoke gate. #62, #63 and #66 are drafts. CI passed on the exact current heads of #61–65; #66's current run must be checked before this plan is treated as validated.
+- PRs #52, #53 and #26 were closed as superseded after comparison with current `main`; their rationales are recorded in GitHub. The useful loading-shell change from #26 was merged via #65. PRs #64 (README status correction), #65 (loading-shell fix), and #66 (fail-closed staging gate) are merged. Open PRs are #61 (2011 source manifest), #62 (historical data), and #63 (this plan); #62 and #63 are drafts. PR #62 exact-head CI #1287 passed, PR #63 exact-head CI #1282 passed, and main push CI #1290 is validating the merged baseline.
 - Historical periods without complete verified parameters are designed to return `REVIEW_REQUIRED`; preserve this fail-closed behavior.
 - The README on `main` now identifies Merelo as a pre-release/demo and development basis and removes the unsupported “v1.0 — Eerste stabiele release” claim. PR #64's exact-head CI run #1270 passed and the change is merged; the exact merged baseline is still being verified by main run #1290.
 - Release-gate evidence is not yet recorded for tenant/resource isolation, staging, restore drills, TLS/monitoring, legal/privacy review or pilot operations.
@@ -55,8 +55,8 @@ Historical norms are a separate calculation-integrity track. They are not a prer
 ## Steps
 
 ### Batch 0 — establish one truthful pilot baseline
-1. Reconcile the four open historical PRs: inspect all diffs and CI on exact heads, identify duplicate/conflicting changes, and choose a single dependency order. Do not merge merely to clear the PR list.
-2. Replace contradictory README release wording with an accurate Merelo product identity, development/pilot status, current-period calculation scope, known limitations and a clear “not for production / no real client data” warning until the relevant gates are evidenced.
+1. Reconcile open historical PRs #61–62: inspect their exact diffs and CI, check for overlap, and choose a dependency order. Keep incomplete periods fail-closed; do not merge merely to clear the PR list.
+2. Completed on `main` by PR #64: README now identifies Merelo as a pre-release/demo and development basis and removes the unsupported stable-v1.0 claim. Confirm the exact merged baseline remains CI-green.
 3. Record a versioned pilot scope: supported calculation dates/norms, excluded cases, user roles, pilot cohort size, data policy, support contact/process, feedback and incident escalation.
 4. Link this plan and a release evidence register from the existing release-gate document. Keep every gate item open until evidence is linked.
 
