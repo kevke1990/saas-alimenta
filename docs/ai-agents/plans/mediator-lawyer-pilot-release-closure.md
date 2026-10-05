@@ -18,8 +18,8 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 
 ### Open historical PR reconciliation (GitHub compare against current main)
 
-- PR #52 is 5 commits ahead and 67 behind its merge base; it reintroduces the old `lib/historical-alimentatie-norms.ts` and test files and is marked not mergeable.
-- PR #53 is 7 commits ahead and 67 behind, changing those same two old files. Current `main` already has a newer registry, parameter-readiness gate, invalid-date checks, and tests for fail-closed behavior. These two PRs are stale branches; do not merge or rebase them as-is. Closing them is a separate GitHub state change and has not been done.
+- PR #52 was 5 commits ahead and 67 behind its merge base; it reintroduced older `lib/historical-alimentatie-norms.ts` and test files and was marked not mergeable. It was closed on 5 October 2026 as superseded after diff comparison; the rationale is recorded in the PR.
+- PR #53 was 7 commits ahead and 67 behind, changing those same two old files. Current `main` already has a newer registry, parameter-readiness gate, invalid-date checks, and tests for fail-closed behavior. It was closed on 5 October 2026 as superseded after diff comparison; the rationale is recorded in the PR.
 - PR #61 is one documentation commit for an incomplete 2011 source manifest. Its own description leaves parameter families and independent calculations open.
 - PR #62 is a 44-commit draft that adds 2006 source data and updates historical manifests/registries, but its own description leaves the January 2006 child-cost table and other parameter families/reference calculations incomplete. Its exact head CI was reported green earlier; that does not complete its source gaps.
 - Keep the historical objective (complete verified coverage through 2006 and onward) as a separate workstream. It need not block a narrowly declared current-norm pilot, provided historical requests remain blocked and the pilot wording does not imply historical support.
