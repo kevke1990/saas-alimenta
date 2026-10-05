@@ -6,13 +6,10 @@ The target is executable, source-traceable data for every supported period from 
 ## Required periods
 
 - 2006–2010: January/July appendices; gate each effective half-year separately
-- 2011–2017: H1/H2 periods where applicable
-- 2018–2019: annual reports
-- 2020: H1/H2
-- 2021–2022: annual reports
-- 2023: annual norm set
-- 2024–2025: annual norm sets
-- 2026: January + July norm periods
+- 2011: H1 is an unresolved source gap; H2 has an official July appendix
+- 2012: January and July appendices
+- 2013: January–March transition, April method change, and July appendix
+- 2014–2026: gate each official January/July period separately, including annual reports and appendices that supply the effective parameters
 - 2027: separate engine contract; activate only after official publication
 
 ## Required parameter families per executable period
