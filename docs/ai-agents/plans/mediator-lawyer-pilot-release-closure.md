@@ -8,9 +8,9 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 
 - Current `main` is `09c8c3adec9bb06e6d18de36fe05bd8aaa7eee6b`; its GitHub Actions CI run #1187 succeeded.
 - No published GitHub Release or tag exists.
-- Open PRs #52, #53, #61 and #62 cover overlapping historical-norm work. PR #62 is draft. The historical PR descriptions explicitly leave parameter sets/reference calculations incomplete.
+- PRs #52, #53 and #26 were closed as superseded after comparison with current `main`; their rationales are recorded in GitHub. #26’s only remaining useful detail is isolated in PR #65. Open PRs are #61 and #62 for incomplete historical data, #63 for this coordination plan, #64 for the README correction, and #65 for the loading-shell fix. #62 and #63 are drafts.
 - Historical periods without complete verified parameters are designed to return `REVIEW_REQUIRED`; preserve this fail-closed behavior.
-- The README calls the product “Alimenta Pro” and “v1.0 — Eerste stabiele release”, while repository governance calls it Merelo, sets 1 January 2027 as the first public production target, and describes the repository as a demo/development basis. Resolve this before pilot invitations.
+- On `main`, the README still calls the product “Alimenta Pro” and “v1.0 — Eerste stabiele release”, while repository governance calls it Merelo and describes a demo/development basis. PR #64 corrects this contradiction; its exact-head CI run #1270 passed. The correction is not on `main` until that PR is merged.
 - Release-gate evidence is not yet recorded for tenant/resource isolation, staging, restore drills, TLS/monitoring, legal/privacy review or pilot operations.
 - Production and Homey were not accessed or changed for this plan.
 - Preliminary source inventory at current `main`: all 83 API route handlers were scanned. Public auth, health/readiness/release and signed-webhook handlers are intentional; the remaining handlers contain recognizable authentication mechanisms, and all four `/api/v1` handlers use API-token authentication plus user-scoped lookups.
@@ -18,6 +18,7 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 
 ### Open historical PR reconciliation (GitHub compare against current main)
 
+- PR #26 was 6 commits ahead and 90 behind its merge base. Its current `app/clients/page.tsx` exactly matches `main`; all 137 CSS selectors in its branch are already in `main`. The unique AppShell wrapper from its loading skeleton is isolated in PR #65. PR #26 was closed as superseded, with rationale recorded in its description.
 - PR #52 was 5 commits ahead and 67 behind its merge base; it reintroduced older `lib/historical-alimentatie-norms.ts` and test files and was marked not mergeable. It was closed on 5 October 2026 as superseded after diff comparison; the rationale is recorded in the PR.
 - PR #53 was 7 commits ahead and 67 behind, changing those same two old files. Current `main` already has a newer registry, parameter-readiness gate, invalid-date checks, and tests for fail-closed behavior. It was closed on 5 October 2026 as superseded after diff comparison; the rationale is recorded in the PR.
 - PR #61 is one documentation commit for an incomplete 2011 source manifest. Its own description leaves parameter families and independent calculations open.
