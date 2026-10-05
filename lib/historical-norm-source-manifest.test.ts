@@ -35,6 +35,12 @@ describe("historical norm source manifest", () => {
     expect(sources.get("2007-H2")?.sourceDocumentUrls?.[0]).toContain("Bijlage-2007-tweede-helft.pdf");
   });
 
+  it("records direct official source URLs for both 2012 appendices", () => {
+    const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
+    expect(sources.get("2012-H1")?.sourceDocumentUrls?.[0]).toBe("https://www.rechtspraak.nl/binaries/_rts_1769091268416/content/assets/lbvr/an/lbvr-an-bijlage-2012-eerste-helft.pdf");
+    expect(sources.get("2012-H2")?.sourceDocumentUrls?.[0]).toBe("https://www.rechtspraak.nl/binaries/_rts_1769091269183/content/assets/lbvr/an/lbvr-an-bijlage-2012-tweede-helft.pdf");
+  });
+
   it("records the 1 April 2013 rules transition from the official report", () => {
     const sources = new Map(HISTORICAL_NORM_SOURCE_MANIFEST.map((source) => [source.periodId, source]));
     expect(sources.get("2013-H1")?.effectiveTo).toBe("2013-03-31");
