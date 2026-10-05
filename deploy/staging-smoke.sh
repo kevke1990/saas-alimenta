@@ -8,6 +8,7 @@ TIMEOUT="${SMOKE_TIMEOUT:-15}"
 [[ -n "$BASE_URL" ]] || { echo "Usage: $0 https://staging.example.nl" >&2; exit 2; }
 BASE_URL="${BASE_URL%/}"
 case "$BASE_URL" in https://*) ;; *) echo "Staging smoke test requires HTTPS." >&2; exit 2 ;; esac
+[[ -n "$EXPECTED_VERSION" ]] || { echo "EXPECTED_RELEASE_VERSION is required to validate the release candidate." >&2; exit 2; }
 
 get() { curl --fail --silent --show-error --location --max-time "$TIMEOUT" "$1"; }
 
@@ -18,11 +19,9 @@ printf '%s\n' "$health" | grep -q '"status":"ok"' || { echo "[FAIL] health: $hea
 printf '%s\n' "$ready" | grep -q '"ready":true' || { echo "[FAIL] ready: $ready"; exit 1; }
 printf '%s\n' "$release" | grep -q '"service":"alimenta-pro"' || { echo "[FAIL] release: $release"; exit 1; }
 
-if [[ -n "$EXPECTED_VERSION" ]]; then
-  printf '%s\n' "$release" | grep -Fq "\"version\":\"$EXPECTED_VERSION\"" || {
-    echo "[FAIL] expected release version $EXPECTED_VERSION, got: $release"; exit 1;
-  }
-fi
+printf '%s\n' "$release" | grep -Fq "\"version\":\"$EXPECTED_VERSION\"" || {
+  echo "[FAIL] expected release version $EXPECTED_VERSION, got: $release"; exit 1;
+}
 
 headers="$(curl --fail --silent --show-error --location --max-time "$TIMEOUT" -D - -o /dev/null "$BASE_URL/api/health")"
 lower="$(printf '%s\n' "$headers" | tr '[:upper:]' '[:lower:]')"
@@ -34,6 +33,6 @@ for header in \
   printf '%s\n' "$lower" | grep -Fq "$header" || { echo "[FAIL] missing header: $header"; exit 1; }
 done
 
-printf '%s\n' '[OK] HTTPS' '[OK] health' '[OK] readiness' '[OK] release' '[OK] security headers'
+printf '%s\n' '[OK] HTTPS' '[OK] health' '[OK] readiness' '[OK] release version' '[OK] security headers'
 echo "STAGING GO: $BASE_URL"
 printf '%s\n' "$release"
