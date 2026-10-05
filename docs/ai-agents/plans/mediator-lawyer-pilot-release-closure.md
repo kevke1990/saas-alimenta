@@ -6,11 +6,11 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 
 ## Current state
 
-- Current `main` is `09c8c3adec9bb06e6d18de36fe05bd8aaa7eee6b`; its GitHub Actions CI run #1187 succeeded.
+- Current `main` is `5f95e4a89fd55b2409055080dea9ac306cd432f7`; GitHub Actions push run #1290 is in progress and must finish green before the merged baseline is called validated.
 - No published GitHub Release or tag exists.
 - PRs #52, #53 and #26 were closed as superseded after comparison with current `main`; their rationales are recorded in GitHub. #26’s only remaining useful detail is isolated in PR #65. Open PRs are #61 and #62 for incomplete historical data, #63 for this coordination plan, #64 for the README correction, #65 for the loading-shell fix, and #66 for the fail-closed staging smoke gate. #62, #63 and #66 are drafts. CI passed on the exact current heads of #61–65; #66's current run must be checked before this plan is treated as validated.
 - Historical periods without complete verified parameters are designed to return `REVIEW_REQUIRED`; preserve this fail-closed behavior.
-- On `main`, the README still calls the product “Alimenta Pro” and “v1.0 — Eerste stabiele release”, while repository governance calls it Merelo and describes a demo/development basis. PR #64 corrects this contradiction; its exact-head CI run #1270 passed. The correction is not on `main` until that PR is merged.
+- The README on `main` now identifies Merelo as a pre-release/demo and development basis and removes the unsupported “v1.0 — Eerste stabiele release” claim. PR #64's exact-head CI run #1270 passed and the change is merged; the exact merged baseline is still being verified by main run #1290.
 - Release-gate evidence is not yet recorded for tenant/resource isolation, staging, restore drills, TLS/monitoring, legal/privacy review or pilot operations.
 - Production and Homey were not accessed or changed for this plan.
 - Preliminary source inventory at current `main`: all 83 API route handlers were scanned. Public auth, health/readiness/release and signed-webhook handlers are intentional; the remaining handlers contain recognizable authentication mechanisms, and all four `/api/v1` handlers use API-token authentication plus user-scoped lookups.
@@ -22,7 +22,7 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 - PR #52 was 5 commits ahead and 67 behind its merge base; it reintroduced older `lib/historical-alimentatie-norms.ts` and test files and was marked not mergeable. It was closed on 5 October 2026 as superseded after diff comparison; the rationale is recorded in the PR.
 - PR #53 was 7 commits ahead and 67 behind, changing those same two old files. Current `main` already has a newer registry, parameter-readiness gate, invalid-date checks, and tests for fail-closed behavior. It was closed on 5 October 2026 as superseded after diff comparison; the rationale is recorded in the PR.
 - PR #61 is one documentation commit for an incomplete 2011 source manifest. Its own description leaves parameter families and independent calculations open.
-- PR #62 is a 44-commit draft that adds 2006 source data and updates historical manifests/registries, but its own description leaves the January 2006 child-cost table and other parameter families/reference calculations incomplete. Its exact head CI was reported green earlier; that does not complete its source gaps.
+- PR #62 is a 47-commit draft that adds July 2006 child-cost data and updates historical manifests/registries. It now explicitly gates both 2006 half-years and the period-coverage list runs through 2026. Its latest exact-head CI run #1287 passed. The January 2006 child-cost table and other parameter families/reference calculations remain incomplete; a green CI run does not complete those source gaps.
 - Keep the historical objective (complete verified coverage through 2006 and onward) as a separate workstream. It need not block a narrowly declared current-norm pilot, provided historical requests remain blocked and the pilot wording does not imply historical support.
 
 ### Preliminary calculation evidence review
