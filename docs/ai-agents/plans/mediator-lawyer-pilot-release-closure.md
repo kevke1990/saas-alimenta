@@ -8,7 +8,7 @@ Prepare Merelo for a controlled, time-bounded pilot with a small number of media
 
 - Current `main` is `09c8c3adec9bb06e6d18de36fe05bd8aaa7eee6b`; its GitHub Actions CI run #1187 succeeded.
 - No published GitHub Release or tag exists.
-- PRs #52, #53 and #26 were closed as superseded after comparison with current `main`; their rationales are recorded in GitHub. #26’s only remaining useful detail is isolated in PR #65. Open PRs are #61 and #62 for incomplete historical data, #63 for this coordination plan, #64 for the README correction, and #65 for the loading-shell fix. #62 and #63 are drafts.
+- PRs #52, #53 and #26 were closed as superseded after comparison with current `main`; their rationales are recorded in GitHub. #26’s only remaining useful detail is isolated in PR #65. Open PRs are #61 and #62 for incomplete historical data, #63 for this coordination plan, #64 for the README correction, #65 for the loading-shell fix, and #66 for the fail-closed staging smoke gate. #62, #63 and #66 are drafts. CI passed on the exact current heads of #61–65; #66's current run must be checked before this plan is treated as validated.
 - Historical periods without complete verified parameters are designed to return `REVIEW_REQUIRED`; preserve this fail-closed behavior.
 - On `main`, the README still calls the product “Alimenta Pro” and “v1.0 — Eerste stabiele release”, while repository governance calls it Merelo and describes a demo/development basis. PR #64 corrects this contradiction; its exact-head CI run #1270 passed. The correction is not on `main` until that PR is merged.
 - Release-gate evidence is not yet recorded for tenant/resource isolation, staging, restore drills, TLS/monitoring, legal/privacy review or pilot operations.
@@ -79,19 +79,20 @@ Historical norms are a separate calculation-integrity track. They are not a prer
 16. Apply migrations to a clean database and exercise the supported upgrade path. Verify encrypted/off-host backup, backup integrity and a restore drill in a non-production environment.
 17. Verify TLS/reverse proxy, health/readiness monitoring, redacted logs, alert routing, capacity limits, update/rollback instructions and incident contacts.
 18. Build and run the exact candidate image as the documented non-root user; capture artifact digest and environment/configuration record.
-19. Run full CI on the exact candidate commit, then a staging smoke test with synthetic cases, including auth/access boundaries, calculation/report flow, health/readiness and recovery checks.
+19. Run full CI on the exact candidate commit, then a staging smoke test with synthetic cases, including auth/access boundaries, calculation/report flow, health/readiness and recovery checks. The staging gate must require the exact expected release version.
+20. Once a versioned 1.0 pilot candidate exists in an accessible review environment, conduct a professional visual quality review across the key mediator/lawyer workflows: hierarchy and consistency, typography, spacing, responsive layouts, loading/empty/error states, accessibility, trust cues and report/export presentation. Record concrete findings and fix release-blocking issues in a focused PR; do not infer visual readiness from code review alone.
 
 ### Batch 4 — bounded professional pilot
-20. Record the user-authorized pilot audience: mediators and lawyers. Before any pilot launch, obtain written security/privacy and hosting approval, plus participant agreement. Document cohort, duration, supported scope, prohibited use, support hours, incident path and exit/deletion procedure.
-21. Start with synthetic or de-identified cases unless and until privacy counsel and the data owner approve personal-data processing and all required safeguards.
-22. Record pilot feedback and incidents without copying personal or case-identifying data into GitHub. Triage defects by severity; calculation/security BLOCKER or HIGH findings stop the pilot.
-23. Review evidence and pilot outcomes; either extend/fix, close the pilot and delete data, or submit a public-release decision. A passing pilot does not automatically authorize a public release.
+21. Record the user-authorized pilot audience: mediators and lawyers. Before any pilot launch, obtain written security/privacy and hosting approval, plus participant agreement. Document cohort, duration, supported scope, prohibited use, support hours, incident path and exit/deletion procedure.
+22. Start with synthetic or de-identified cases unless and until privacy counsel and the data owner approve personal-data processing and all required safeguards.
+23. Record pilot feedback and incidents without copying personal or case-identifying data into GitHub. Triage defects by severity; calculation/security BLOCKER or HIGH findings stop the pilot.
+24. Review evidence and pilot outcomes; either extend/fix, close the pilot and delete data, or submit a public-release decision. A passing pilot does not automatically authorize a public release.
 
 ### Batch 5 — public release decision
-24. Complete every item in `docs/ai-agents/RELEASE-GATE.md`; explicitly defer only with named owner, rationale and date.
-25. Reconcile product name, version metadata, release notes, limitations and privacy/legal wording.
-26. Independently review the final diff, migrations, security posture and evidence; require complete green CI on the exact release commit.
-27. Present the verified candidate commit and evidence to the product owner for a release decision. Tagging, publishing and deploying require separate explicit authorization.
+25. Complete every item in `docs/ai-agents/RELEASE-GATE.md`; explicitly defer only with named owner, rationale and date.
+26. Reconcile product name, version metadata, release notes, limitations and privacy/legal wording.
+27. Independently review the final diff, migrations, security posture and evidence; require complete green CI on the exact release commit.
+28. Present the verified candidate commit and evidence to the product owner for a release decision. Tagging, publishing and deploying require separate explicit authorization.
 
 ## Validation
 
