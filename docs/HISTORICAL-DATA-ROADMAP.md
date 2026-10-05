@@ -5,7 +5,7 @@ The target is executable, source-traceable data for every supported period from 
 
 ## Required periods
 
-- 2006–2010: annual reports
+- 2006–2010: January/July appendices; gate each effective half-year separately
 - 2011–2017: H1/H2 periods where applicable
 - 2018–2019: annual reports
 - 2020: H1/H2
