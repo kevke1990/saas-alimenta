@@ -13,7 +13,7 @@ This is a target date, not permission to waive unresolved blockers. If a blocker
 - [ ] Child-support calculation workflow works end-to-end.
 - [ ] Partner-support workflow is clearly scoped and professionally reviewable.
 - [ ] Results explain inputs, intermediate steps, assumptions, warnings and final obligations.
-- [x] Reports/PDF use the latest approved calculation snapshot.
+- [ ] Reports/PDF use the latest approved calculation snapshot.
 - [ ] Demo mode is clearly separated from production behavior.
 
 ## Gate 2 — Calculation integrity
@@ -32,7 +32,7 @@ This is a target date, not permission to waive unresolved blockers. If a blocker
 
 - [ ] Authentication and session behavior verified.
 - [ ] Authorization/RBAC paths verified for every protected resource class.
-- [x] Tenant isolation tested at resource level.
+- [ ] Tenant isolation tested at resource level.
 - [ ] Secrets absent from Git and logs.
 - [ ] Document storage and AI extraction boundaries verified.
 - [ ] Audit trail covers security-sensitive and professional review actions.

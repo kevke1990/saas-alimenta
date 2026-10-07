@@ -30,7 +30,7 @@ function pageContent(lines: PdfLine[], pageNumber: number, pageCount: number) {
     }
   }
   out.push("/F1 8 Tf");
-  out.push(`50 28 Td (Alimenta Pro · pagina ${pageNumber} van ${pageCount}) Tj`);
+  out.push(`50 28 Td (Merelo · pagina ${pageNumber} van ${pageCount}) Tj`);
   out.push("ET");
   return out.join("\\n");
 }
@@ -81,7 +81,7 @@ export function createCalculationPdf(input: {
 }) {
   const r = input.result as Record<string, any>;
   const lines: PdfLine[] = [
-    { text: input.draft ? "CONCEPT / NIET GOEDGEKEURD" : (input.title || "Alimenta Pro – Alimentatieberekening"), size: 18, bold: true },
+    { text: input.draft ? "CONCEPT / NIET GOEDGEKEURD" : (input.title || "Merelo – Alimentatieberekening"), size: 18, bold: true },
 
     { text: input.practiceName || "", size: 10, bold: true },
     { text: `Cliënt: ${input.clientName || "Onbekend"}` },
@@ -110,7 +110,7 @@ export function createCalculationPdf(input: {
   }
   lines.push({ text: "" }, { text: "Methodiek en aandachtspunten", size: 14, bold: true });
   if (Array.isArray(r.warnings)) for (const warning of r.warnings as string[]) lines.push({ text: `• ${warning}` });
-  lines.push({ text: "" }, { text: `Opgesteld door: ${input.professionalName || "Alimenta Pro"}` }, { text: "Dit rapport is een rekenkundige uitwerking en geen juridisch advies." }, { text: "Bron: Rapport Alimentatienormen 2026, Expertgroep Alimentatie." });
+  lines.push({ text: "" }, { text: `Opgesteld door: ${input.professionalName || "Merelo"}` }, { text: "Dit rapport is een rekenkundige uitwerking en geen juridisch advies." }, { text: "Bron: Rapport Alimentatienormen 2026, Expertgroep Alimentatie." });
 
   const pages: PdfLine[][] = [];
   let page: PdfLine[] = [];

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { adaptAlimentaForm } from "../lib/alimentatie-engine-adapter";
 
-describe("2026 Reference Calculation Tests", () => {
+describe("2026 Adapter Input Mapping Tests", () => {
   it("processes a standard 2026 child support case correctly", () => {
     // Note: this uses the adapter to ensure the inputs map correctly to the 2026 Trema engine format.
     const payload = {

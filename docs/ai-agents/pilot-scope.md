@@ -3,8 +3,8 @@
 This document defines the functional scope of the Merelo pilot release, focused exclusively on synthetic data.
 
 ## Supported Workflows
-- **2026 Child Support Calculation:** Fully supported based on the 2026 norm guidelines. Includes standard capacity, NBI/NBGI/KGB integrations, and care discounts.
-- **2026 Partner Support Calculation:** Supported with explicit scope and professional reviewability.
+- **2026 Child Support Calculation:** Core support implemented based on 2026 norm guidelines, pending full external professional verification. Includes standard capacity, NBI/NBGI/KGB integrations, and care discounts.
+- **2026 Partner Support Calculation:** Scope implemented, pending full external professional verification.
 - **Dossier Management:** Core workflow for creating and managing cases and clients works end-to-end.
 - **Reports:** Generation of PDF reports reflecting the *latest approved* calculation snapshot. Unapproved or stale calculations yield "CONCEPT" reports.
 
