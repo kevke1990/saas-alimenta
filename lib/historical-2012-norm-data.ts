@@ -57,12 +57,22 @@ export const HISTORICAL_2012_TAX = {
 } as const;
 
 export const HISTORICAL_2012_KGB = {
-  incomeThresholdFull: 28897,
-  noRightFromIncome: 41880,
-  baseByChildren: { 1: 1017, 2: 1478, 3: 1661 },
-  additionalPerChildFromFourth: 106,
-  ageIncrease12to15: 226,
-  ageIncrease16to17: 290,
+  january2012: {
+    incomeThresholdFull: 28897,
+    noRightFromIncomeByChildren: { 1: 41880, 2: 47870, 3: 52610 },
+    baseByChildren: { 1: 1017, 2: 1478, 3: 1661 },
+    additionalPerChildFromFourth: 106,
+    ageIncrease12to15: 231,
+    ageIncrease16to17: 296,
+  },
+  july2012: {
+    incomeThresholdFull: 28897,
+    noRightFromIncomeByChildren: { 1: 41880, 2: 47870, 3: 52610 },
+    baseByChildren: { 1: 1017, 2: 1478, 3: 1661 },
+    additionalPerChildFromFourth: 106,
+    ageIncrease12to15: 226,
+    ageIncrease16to17: 290,
+  },
 } as const;
 
 export const HISTORICAL_2012_HEALTH = {
