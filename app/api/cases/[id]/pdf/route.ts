@@ -19,8 +19,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   });
   if (!record) return NextResponse.json({ error: "Dossier niet gevonden" }, { status: 404 });
   const calculation = record.calculations[0];
+  const isDraft = !record.approvedAt || record.calculationVersion !== calculation?.engineVersion || record.status !== "FINAL";
   const result = (calculation?.result || record.result || {}) as Record<string, unknown>;
   const pdf = createCalculationPdf({
+    draft: isDraft,
     title: "Alimenta Pro – Alimentatieberekening",
     clientName: record.client?.name || undefined,
     caseName: record.name,

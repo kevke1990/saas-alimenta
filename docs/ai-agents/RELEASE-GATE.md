@@ -13,15 +13,15 @@ This is a target date, not permission to waive unresolved blockers. If a blocker
 - [ ] Child-support calculation workflow works end-to-end.
 - [ ] Partner-support workflow is clearly scoped and professionally reviewable.
 - [ ] Results explain inputs, intermediate steps, assumptions, warnings and final obligations.
-- [ ] Reports/PDF use the latest approved calculation snapshot.
+- [x] Reports/PDF use the latest approved calculation snapshot.
 - [ ] Demo mode is clearly separated from production behavior.
 
 ## Gate 2 — Calculation integrity
 
 - [ ] Current executable norm set is source-backed and versioned.
-- [ ] Historical periods execute only when their complete parameters are verified.
-- [ ] Unsupported/incomplete periods fail closed with `REVIEW_REQUIRED`.
-- [ ] No silent current-norm fallback for historical requests.
+- [x] Historical periods execute only when their complete parameters are verified.
+- [x] Unsupported/incomplete periods fail closed with `REVIEW_REQUIRED`.
+- [x] No silent current-norm fallback for historical requests.
 - [ ] Calculation engine/version and norm/version are persisted with snapshots.
 - [ ] Regression/reference cases cover supported rules and known edge cases.
 - [ ] Indexation, capacity, NBI/NBGI/KGB, care discount, mixed-child and young-adult behavior are covered where applicable.
@@ -32,7 +32,7 @@ This is a target date, not permission to waive unresolved blockers. If a blocker
 
 - [ ] Authentication and session behavior verified.
 - [ ] Authorization/RBAC paths verified for every protected resource class.
-- [ ] Tenant isolation tested at resource level.
+- [x] Tenant isolation tested at resource level.
 - [ ] Secrets absent from Git and logs.
 - [ ] Document storage and AI extraction boundaries verified.
 - [ ] Audit trail covers security-sensitive and professional review actions.
