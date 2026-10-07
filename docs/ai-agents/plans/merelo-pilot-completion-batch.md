@@ -12,12 +12,12 @@ A green CI run is necessary but does not by itself make Merelo pilot-ready. Do n
 
 ## First: repair the delivery problem
 
-The currently open PR #67 does not contain the implementation claimed by its description. Its diff contains only a gitlink named `saas-alimenta` pointing to an unavailable subproject commit.
+PR #67 has since merged on 7 October 2026. The current evidence and the actual merged diff are recorded in [merelo-pilot-status-after-pr67-merge.md](./merelo-pilot-status-after-pr67-merge.md). That diff contains only a gitlink named `saas-alimenta`; the pilot documents claimed in the PR description are absent from `main`.
 
-1. Do not build on or preserve that gitlink.
-2. Work in the root of `kevke1990/saas-alimenta`, based on the latest `main`.
-3. Use a clean branch and produce a real PR whose changed files are visible in GitHub. If replacing PR #67, leave the old PR open until the replacement is reviewable; report which PR the owner should close.
-4. Keep the PR in draft until implementation and exact-head CI are complete. Do not merge it.
+1. Treat the merged PR #67 as a delivery failure, not as completion of the pilot batch.
+2. Work in the root of `kevke1990/saas-alimenta` from the latest `main`; inspect and remove the unintended gitlink unless a documented submodule design is proven.
+3. Deliver actual tracked files and code changes in a clean, reviewable PR. The repository owner performs the merge.
+4. CI #1298 succeeded on PR #67 head `3967fe7...`, but only validates the parent repository workflow; it does not validate files inside the gitlink. Confirm CI on each future exact PR head.
 
 ## Repository work to complete in the batch
 
