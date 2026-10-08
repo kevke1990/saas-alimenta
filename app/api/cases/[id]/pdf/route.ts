@@ -29,7 +29,13 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     });
 
     if (approvalAudit && approvalAudit.metadata) {
-      const binding = (approvalAudit.metadata as any).calculationBinding;
+      let binding = null;
+      if (typeof approvalAudit.metadata === 'string') {
+        try { binding = JSON.parse(approvalAudit.metadata).calculationBinding; } catch (e) {}
+      } else if (typeof approvalAudit.metadata === 'object') {
+        binding = (approvalAudit.metadata as any).calculationBinding;
+      }
+
       const currentBinding = buildReviewCalculationBinding(calculation as any);
       if (isReviewBindingCurrent(binding, currentBinding)) {
         isDraft = false;
