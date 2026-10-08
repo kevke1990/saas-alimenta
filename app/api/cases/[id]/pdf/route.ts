@@ -3,6 +3,7 @@ import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { createCalculationPdf } from "@/lib/pdf-report";
+import { buildReviewCalculationBinding, isReviewBindingCurrent } from "@/lib/review-binding";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   let user;
@@ -19,16 +20,40 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   });
   if (!record) return NextResponse.json({ error: "Dossier niet gevonden" }, { status: 404 });
   const calculation = record.calculations[0];
+
+  let isDraft = true;
+  if (record.approvedAt && calculation) {
+    const approvalAudit = await db.auditLog.findFirst({
+      where: { entityType: "CASE", entityId: id, action: "CASE_APPROVED" },
+      orderBy: { createdAt: "desc" }
+    });
+
+    if (approvalAudit && approvalAudit.metadata) {
+      let binding = null;
+      if (typeof approvalAudit.metadata === 'string') {
+        try { binding = JSON.parse(approvalAudit.metadata).calculationBinding; } catch (e) {}
+      } else if (typeof approvalAudit.metadata === 'object') {
+        binding = (approvalAudit.metadata as any).calculationBinding;
+      }
+
+      const currentBinding = buildReviewCalculationBinding(calculation as any);
+      if (isReviewBindingCurrent(binding, currentBinding)) {
+        isDraft = false;
+      }
+    }
+  }
+
   const result = (calculation?.result || record.result || {}) as Record<string, unknown>;
   const pdf = createCalculationPdf({
-    title: "Alimenta Pro – Alimentatieberekening",
+    draft: isDraft,
+    title: "Merelo – Alimentatieberekening",
     clientName: record.client?.name || undefined,
     caseName: record.name,
     calculationVersion: calculation?.engineVersion || record.calculationVersion,
     normVersion: calculation?.normVersion || "2026.1",
     result,
     professionalName: user.name || user.email,
-    practiceName: user.companyName || undefined,
+    practiceName: user.companyName || "Merelo",
   });
   return new NextResponse(pdf as BodyInit, {
     status: 200,

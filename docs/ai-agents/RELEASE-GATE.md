@@ -19,9 +19,9 @@ This is a target date, not permission to waive unresolved blockers. If a blocker
 ## Gate 2 — Calculation integrity
 
 - [ ] Current executable norm set is source-backed and versioned.
-- [ ] Historical periods execute only when their complete parameters are verified.
-- [ ] Unsupported/incomplete periods fail closed with `REVIEW_REQUIRED`.
-- [ ] No silent current-norm fallback for historical requests.
+- [x] Historical periods execute only when their complete parameters are verified.
+- [x] Unsupported/incomplete periods fail closed with `REVIEW_REQUIRED`.
+- [x] No silent current-norm fallback for historical requests.
 - [ ] Calculation engine/version and norm/version are persisted with snapshots.
 - [ ] Regression/reference cases cover supported rules and known edge cases.
 - [ ] Indexation, capacity, NBI/NBGI/KGB, care discount, mixed-child and young-adult behavior are covered where applicable.

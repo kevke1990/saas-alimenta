@@ -30,7 +30,7 @@ function pageContent(lines: PdfLine[], pageNumber: number, pageCount: number) {
     }
   }
   out.push("/F1 8 Tf");
-  out.push(`50 28 Td (Alimenta Pro · pagina ${pageNumber} van ${pageCount}) Tj`);
+  out.push(`50 28 Td (Merelo · pagina ${pageNumber} van ${pageCount}) Tj`);
   out.push("ET");
   return out.join("\\n");
 }
@@ -69,6 +69,7 @@ function buildPdf(pages: PdfLine[][]) {
 }
 
 export function createCalculationPdf(input: {
+  draft?: boolean;
   title?: string;
   clientName?: string;
   caseName?: string;
@@ -80,7 +81,8 @@ export function createCalculationPdf(input: {
 }) {
   const r = input.result as Record<string, any>;
   const lines: PdfLine[] = [
-    { text: input.title || "Alimenta Pro – Alimentatieberekening", size: 18, bold: true },
+    { text: input.draft ? "CONCEPT / NIET GOEDGEKEURD" : (input.title || "Merelo – Alimentatieberekening"), size: 18, bold: true },
+
     { text: input.practiceName || "", size: 10, bold: true },
     { text: `Cliënt: ${input.clientName || "Onbekend"}` },
     { text: `Dossier: ${input.caseName || "Onbekend"}` },
@@ -103,9 +105,12 @@ export function createCalculationPdf(input: {
   if (Array.isArray(r.transfers)) for (const t of r.transfers as any[]) lines.push({ text: `Kind ${t.childIndex}: ${t.direction}, bijdrage € ${Math.round(t.payment)} p/m, bruto zorgkorting € ${Math.round(t.grossCareDiscount ?? t.careDiscount ?? 0)}, tekortcorrectie € ${Math.round(t.shortfallCareDiscountAdjustment ?? 0)}, verzilverbaar/toegepast € ${Math.round(t.appliedCareDiscount ?? t.careDiscount ?? 0)}` });
   if (typeof r.netPartnerSupport === "number") lines.push({ text: `Partneralimentatie: € ${Math.round(r.netPartnerSupport)} netto per maand` });
   if (typeof r.additionalNeed === "number") lines.push({ text: `Aanvullende behoefte partner: € ${Math.round(r.additionalNeed)} netto per maand` });
+  if (input.draft) {
+    lines.push({ text: "" }, { text: "LET OP: Deze berekening is een CONCEPT en is NIET GOEDGEKEURD. Gebruik dit rapport niet als professioneel of juridisch advies.", bold: true });
+  }
   lines.push({ text: "" }, { text: "Methodiek en aandachtspunten", size: 14, bold: true });
   if (Array.isArray(r.warnings)) for (const warning of r.warnings as string[]) lines.push({ text: `• ${warning}` });
-  lines.push({ text: "" }, { text: `Opgesteld door: ${input.professionalName || "Alimenta Pro"}` }, { text: "Dit rapport is een rekenkundige uitwerking en geen juridisch advies." }, { text: "Bron: Rapport Alimentatienormen 2026, Expertgroep Alimentatie." });
+  lines.push({ text: "" }, { text: `Opgesteld door: ${input.professionalName || "Merelo"}` }, { text: "Dit rapport is een rekenkundige uitwerking en geen juridisch advies." }, { text: "Bron: Rapport Alimentatienormen 2026, Expertgroep Alimentatie." });
 
   const pages: PdfLine[][] = [];
   let page: PdfLine[] = [];

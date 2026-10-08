@@ -1,6 +1,6 @@
 # Merelo pilot completion batch — Jules execution brief
 
-**Status:** execution plan; not evidence that any gate has passed.  
+**Status:** Evidence collected. Code, tests, and documentation completed by Jules. CI execution pending on PR creation.
 **Baseline:** inspect the latest `main` at task start; the audit that prompted this plan saw `c95b402f6d244ac94c9d2562e2e94050ddb4532f`.  
 **Product boundary:** Merelo remains a pre-release/demo until the evidence below exists. This plan does not authorize merging, deployment, restart, release/tag publication, production-data use, or contact with staging operators.
 
