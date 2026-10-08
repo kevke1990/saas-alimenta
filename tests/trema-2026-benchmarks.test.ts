@@ -80,4 +80,62 @@ describe("Trema 2026 Benchmark Suite", () => {
 
     expect(result).toBeDefined();
   });
+
+  it("Dossier 1: Een kind, standaard draagkracht, zorgkorting 15%, inclusief KGB-verrekening", () => {
+    const input: any = {
+      referenceYear: 2026,
+      calculationDate: "2026-06-15",
+      parents: [
+        { id: "A", role: "MAINTENANCE_DEBTOR", nbi: 3200, kgbVerified: true, household: "single" },
+        { id: "B", role: "MAINTENANCE_CREDITOR", nbi: 2000 }
+      ],
+      children: [
+        { id: "c1", birthDate: "2015-01-01", careDiscountPercent: 15 }
+      ],
+      need: { ownShareMonthly: 400 }
+    };
+    const calculation = runCalculationEngineV2(input, "2026.1");
+    expect(calculation.result).toBeDefined();
+  });
+
+  it("Dossier 2: Twee kinderen, verschillende zorgkortingen, draagkrachttekort (tekortcorrectie)", () => {
+    const input: any = {
+      referenceYear: 2026,
+      calculationDate: "2026-06-15",
+      parents: [
+        { id: "A", role: "MAINTENANCE_DEBTOR", nbi: 1500, household: "single" },
+        { id: "B", role: "MAINTENANCE_CREDITOR", nbi: 2500 }
+      ],
+      children: [
+        { id: "c1", birthDate: "2015-01-01", careDiscountPercent: 15 },
+        { id: "c2", birthDate: "2018-01-01", careDiscountPercent: 35 }
+      ],
+      need: { ownShareMonthly: 800 }
+    };
+    const calculation = runCalculationEngineV2(input, "2026.1");
+    expect(calculation.result).toBeDefined();
+  });
+
+  it("Dossier 3: Samenloop kinder- en partneralimentatie met draagkrachtverdeling", () => {
+    const input: any = {
+      referenceYear: 2026,
+      calculationDate: "2026-06-15",
+      parents: [
+        { id: "A", role: "MAINTENANCE_DEBTOR", nbi: 5000, household: "single" },
+        { id: "B", role: "MAINTENANCE_CREDITOR", nbi: 1500 }
+      ],
+      children: [
+        { id: "c1", birthDate: "2015-01-01", careDiscountPercent: 15 }
+      ],
+      need: { ownShareMonthly: 600 },
+      partnerSupport: {
+        enabled: true,
+        payerIndex: 0,
+        historicalNBGI: 5000,
+        historicalChildCosts: 600
+      }
+    };
+    const calculation = runCalculationEngineV2(input, "2026.1");
+    expect(calculation.result).toBeDefined();
+  });
 });
