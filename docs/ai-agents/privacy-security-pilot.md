@@ -20,7 +20,7 @@ This document defines the security and privacy boundaries for the Merelo synthet
 | Use of Real Data | HIGH | OPEN | Requires signed DPIA and processing agreements. Current pilot restricted to synthetic data. | Product Owner |
 | Historical Calculation Fallback | HIGH | CLOSED | Implemented `REVIEW_REQUIRED` fail-closed mechanism in engine adapter. | Jules/Codex |
 | Unapproved PDF Export | MED | OPEN | Logic implemented, but real integration DB tests are missing. | Jules/Codex |
-| Tenant Isolation Breach | HIGH | CLOSED | Logic implemented and integration tests with real mock isolation passed. | Jules/Codex |
+| Tenant Isolation Breach | HIGH | OPEN | Route-guards via mocks tested, maar fysieke DB-isolatie bewaard voor staging/integratie. | Jules/Codex |
 | Backup/Restore Drill | HIGH | OPEN | Requires staging/prod restore drill with documented RPO/RTO. | DevOps/Operations |
 
 *Note: Do not mark a risk as CLOSED without verified repository evidence (code + tests).*

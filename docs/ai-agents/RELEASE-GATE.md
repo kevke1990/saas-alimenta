@@ -32,7 +32,7 @@ This is a target date, not permission to waive unresolved blockers. If a blocker
 
 - [ ] Authentication and session behavior verified.
 - [ ] Authorization/RBAC paths verified for every protected resource class.
-- [x] Tenant isolation tested at resource level.
+- [ ] Tenant isolation tested at resource level.
 - [ ] Secrets absent from Git and logs.
 - [ ] Document storage and AI extraction boundaries verified.
 - [ ] Audit trail covers security-sensitive and professional review actions.
