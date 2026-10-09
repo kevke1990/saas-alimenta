@@ -123,15 +123,15 @@ export default function Home() {
             <h2>Van intake tot rapport in vier stappen.</h2>
             <p>Een vaste route door het dossier, met de bestaande applicatielogica als bron van waarheid.</p>
           </div>
-          <ol className="al-workflow">
+          <div className="al-workflow">
             {workflowItems.map(([n,title,text]) => (
-              <li className="al-step" key={n}>
+              <div className="al-step" key={n}>
                 <div className="al-step-num">{n}</div>
                 <h3>{title}</h3>
                 <p>{text}</p>
-              </li>
+              </div>
             ))}
-          </ol>
+          </div>
         </div>
       </section>
 

@@ -94,7 +94,7 @@ export default function DemoStarter() {
   }
 
   return <div>
-    <button type="button" className="quick-card" onClick={startDemo} disabled={busy} style={{ width: "100%", textAlign: "left", border: 0, font: "inherit", cursor: busy ? "wait" : "pointer" }}>
+    <button type="button" className="btn secondary quick-card" onClick={startDemo} disabled={busy} style={{ width: "100%", textAlign: "left", border: 0, font: "inherit", cursor: busy ? "wait" : "pointer" }}>
       <b>{busy ? "Demo wordt opgebouwd…" : "▶ Start volledige demo"}</b>
       <span>Laad een fictief gezin met ouders, kinderen, wonen, nieuwe partner, kinderalimentatie en partneralimentatie. Daarna ga je direct naar de workflow.</span>
     </button>

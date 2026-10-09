@@ -31,7 +31,7 @@ export default function SideNav() {
     <nav id="workspace-navigation" className={"side-nav side-nav-premium" + (open ? " mobile-open" : "")} aria-label="Werkpleknavigatie">
       <div className="nav-label">Werkplek</div>
       {nav.map((item) => {
-        const active = item.href === "/dashboard" ? path === "/dashboard" : path === item.href || path.startsWith(item.href + "/");
+        const active = item.href === "/dashboard" ? path === "/dashboard" : item.href === "/cases" ? (path === "/cases" || (path.startsWith("/cases/") && !path.startsWith("/cases/new"))) : path === item.href || path.startsWith(item.href + "/");
         return <Link key={item.href} href={item.href} className={"side-link side-link-premium" + (active ? " active" : "")} aria-current={active ? "page" : undefined} onClick={() => setOpen(false)}>
           <span className="side-link-icon" aria-hidden><Icon name={item.icon}/></span><span>{item.label}</span>{item.href === "/cases/new" ? <span className="nav-cta-dot" aria-hidden/> : null}
         </Link>;
