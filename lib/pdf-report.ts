@@ -81,6 +81,8 @@ export function createCalculationPdf(input: {
 }) {
   const r = input.result as Record<string, any>;
   const lines: PdfLine[] = [
+    { text: "MERELO ALIMENTATIE", size: 24, bold: true },
+    { text: "" },
     { text: input.draft ? "CONCEPT / NIET GOEDGEKEURD" : (input.title || "Merelo – Alimentatieberekening"), size: 18, bold: true },
 
     { text: input.practiceName || "", size: 10, bold: true },
@@ -110,7 +112,9 @@ export function createCalculationPdf(input: {
   }
   lines.push({ text: "" }, { text: "Methodiek en aandachtspunten", size: 14, bold: true });
   if (Array.isArray(r.warnings)) for (const warning of r.warnings as string[]) lines.push({ text: `• ${warning}` });
-  lines.push({ text: "" }, { text: `Opgesteld door: ${input.professionalName || "Merelo"}` }, { text: "Dit rapport is een rekenkundige uitwerking en geen juridisch advies." }, { text: "Bron: Rapport Alimentatienormen 2026, Expertgroep Alimentatie." });
+  lines.push({ text: "" }, { text: "Ondertekening & Verantwoording", size: 14, bold: true });
+  lines.push({ text: `Opgesteld door: ${input.professionalName || "Merelo"}` }, { text: "Dit rapport is een rekenkundige uitwerking en geen juridisch advies." }, { text: "Bron: Rapport Alimentatienormen 2026, Expertgroep Alimentatie." });
+  lines.push({ text: "" }, { text: "" }, { text: "" }, { text: "Handtekening professional: _________________________" });
 
   const pages: PdfLine[][] = [];
   let page: PdfLine[] = [];

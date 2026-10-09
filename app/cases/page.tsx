@@ -222,14 +222,14 @@ export default async function CasesPage({
                 </caption>
                 <thead>
                   <tr>
-                    <th>Dossier</th>
+                    <th style={{ width: "20%" }}>Dossier</th>
                     <th>Cliënt</th>
-                    <th>Berekening</th>
+                    <th style={{ textAlign: "right" }}>Berekening</th>
                     <th>Prioriteit</th>
                     <th>Documenten</th>
                     <th>Review</th>
                     <th>Norm / engine</th>
-                    <th>Bijgewerkt</th>
+                    <th style={{ textAlign: "center" }}>Bijgewerkt</th>
                     <th><span className="sr-only">Openen</span></th>
                     <th><span className="sr-only">Acties</span></th>
                   </tr>
@@ -271,7 +271,7 @@ export default async function CasesPage({
                           </Link>
                         </td>
                         <td data-label="Cliënt">{c.client?.name || "—"}</td>
-                        <td data-label="Berekening">
+                        <td data-label="Berekening" style={{ textAlign: "right" }}>
                           <strong className="cases-money">{money(r.totalNeed)}</strong>
                         </td>
                         <td data-label="Prioriteit">
@@ -310,7 +310,7 @@ export default async function CasesPage({
                             {calc ? `${calc.normVersion} · ${calc.engineVersion}` : c.calculationVersion}
                           </span>
                         </td>
-                        <td data-label="Bijgewerkt">
+                        <td data-label="Bijgewerkt" style={{ textAlign: "center" }}>
                           <span className="cases-date">{date(c.updatedAt)}</span>
                         </td>
                         <td className="cases-open-cell">
