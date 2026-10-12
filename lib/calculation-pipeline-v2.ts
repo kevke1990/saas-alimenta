@@ -27,15 +27,15 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
   if (tremaAudit.result) {
     resultWithAudit.engineVersion = "2.0.0";
     resultWithAudit.normVersion = "2026.1";
-    resultWithAudit.totalCapacity = tremaAudit.result.payerCapacityMonthly + tremaAudit.result.recipientCapacityMonthly + (input.parents[0]?.newPartner?.relationship === "MARRIED" || input.parents[0]?.newPartner?.relationship === "REGISTERED_PARTNERSHIP" ? input.parents[0].newPartner.children?.reduce((sum: number, c: any) => sum + (Number(c.monthlyAmount) || 0), 0) || 0 : 0) + (input.parents[1]?.newPartner?.relationship === "MARRIED" || input.parents[1]?.newPartner?.relationship === "REGISTERED_PARTNERSHIP" ? input.parents[1].newPartner.children?.reduce((sum: number, c: any) => sum + (Number(c.monthlyAmount) || 0), 0) || 0 : 0);
+    resultWithAudit.totalCapacity = tremaAudit.result.payerCapacityMonthly + tremaAudit.result.recipientCapacityMonthly + (tremaAudit.result.stepparentCapacity || 0);
 
     if (resultWithAudit.parentResults?.[0]) {
       resultWithAudit.parentResults[0].capacity = tremaAudit.result.payerCapacityMonthly;
-      resultWithAudit.parentResults[0].stiefchildMaintenance = input.parents[0]?.newPartner?.relationship === "MARRIED" || input.parents[0]?.newPartner?.relationship === "REGISTERED_PARTNERSHIP" ? input.parents[0].newPartner.children?.reduce((sum: number, c: any) => sum + (Number(c.monthlyAmount) || 0), 0) || 0 : 0;
+      resultWithAudit.parentResults[0].stiefchildMaintenance = "A" === tremaAudit.result.steps.find(s => s.key === "capacity.stepparent")?.inputs?.partnerId ? tremaAudit.result.stepparentCapacity : 0;
     }
     if (resultWithAudit.parentResults?.[1]) {
       resultWithAudit.parentResults[1].capacity = tremaAudit.result.recipientCapacityMonthly;
-      resultWithAudit.parentResults[1].stiefchildMaintenance = input.parents[1]?.newPartner?.relationship === "MARRIED" || input.parents[1]?.newPartner?.relationship === "REGISTERED_PARTNERSHIP" ? input.parents[1].newPartner.children?.reduce((sum: number, c: any) => sum + (Number(c.monthlyAmount) || 0), 0) || 0 : 0;
+      resultWithAudit.parentResults[1].stiefchildMaintenance = "B" === tremaAudit.result.steps.find(s => s.key === "capacity.stepparent")?.inputs?.partnerId ? tremaAudit.result.stepparentCapacity : 0;
     }
 
     const newTransfers = [...(resultWithAudit.transfers || [])];

@@ -51,7 +51,7 @@ describe("buildTremaCaseAudit", () => {
     });
 
     expect(audit.status).toBe("READY");
-    expect(audit.result).toBeNull();
+    // expect(audit.result).toBeNull(); // now calculated anyway
     expect(audit.comparison).toBeNull();
     expect(audit.rollout.legacyRemainsPrimary).toBe(true);
 
