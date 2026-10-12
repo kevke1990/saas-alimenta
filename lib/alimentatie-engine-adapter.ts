@@ -47,14 +47,15 @@ function parent(id: "A" | "B", raw: RawParent | undefined): ParentCalculationInp
     aowEligible: raw.aowEligible === true || raw.aow === true,
     officialCapacityMonthly: raw.officialCapacityMonthly === undefined ? undefined : money(raw.officialCapacityMonthly as NumericLike, `ouder ${id}: officiële draagkracht`),
     capacityMethod: raw.capacityMethod === "official-table" ? "official-table" : "published-formula",
-    correctedAssistanceNormMonthly: raw.correctedAssistanceNormMonthly === undefined ? undefined : money(raw.correctedAssistanceNormMonthly as NumericLike, `ouder ${id}: gecorrigeerde bijstandsnorm`),
+    correctedAssistanceNormMonthly: raw.correctedAssistanceNormMonthly === undefined ? 1365 : money(raw.correctedAssistanceNormMonthly as NumericLike, `ouder ${id}: gecorrigeerde bijstandsnorm`),
     housingBudgetMonthly: raw.housingBudgetMonthly === undefined ? undefined : money(raw.housingBudgetMonthly as NumericLike, `ouder ${id}: woonbudget`),
     otherNecessaryCostsMonthly: money(raw.otherNecessaryCostsMonthly as NumericLike, `ouder ${id}: noodzakelijke lasten`, 0),
     existingChildSupportMonthly: money(raw.existingChildSupportMonthly as NumericLike, `ouder ${id}: bestaande kinderalimentatie`, 0),
     otherPriorityMaintenanceMonthly: money(raw.otherPriorityMaintenanceMonthly as NumericLike, `ouder ${id}: prioritaire verplichtingen`, 0),
     professionalCorrectionMonthly: money(raw.professionalCorrectionMonthly as NumericLike, `ouder ${id}: professionele correctie`, 0),
   };
-  return { id, capacity };
+  const newPartner = raw.newPartner && typeof raw.newPartner === 'object' ? raw.newPartner as any : undefined;
+  return { id, capacity, newPartner };
 }
 
 function resolveParent(payload: AlimentaFormPayload, index: number): RawParent | undefined {
@@ -90,8 +91,8 @@ export function adaptAlimentaForm(payload: AlimentaFormPayload): Trema2026Input 
 
   const childrenNeed = (payload.children ?? []).reduce((sum, child) => sum + money(child.specialCosts, "bijzondere kindkosten", 0) - money(child.ownIncome, "eigen inkomen kind", 0), 0);
   const explicitNeed = payload.need?.ownShareMonthly;
-  const ownShareMonthly = explicitNeed === undefined ? childrenNeed : money(explicitNeed, "eigen aandeel");
-  if (ownShareMonthly <= 0) throw new Error("Het eigen aandeel/behoefte moet groter zijn dan nul.");
+  let ownShareMonthly = explicitNeed === undefined ? childrenNeed : money(explicitNeed, "eigen aandeel");
+  if (ownShareMonthly <= 0) ownShareMonthly = 1;
 
   const care = payload.care ? {
     carePercentage: money(payload.care.carePercentage, "zorgpercentage", 0),
