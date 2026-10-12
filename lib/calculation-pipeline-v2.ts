@@ -39,12 +39,31 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     }
 
     const newTransfers = [...(resultWithAudit.transfers || [])];
-    if (newTransfers[0]) {
-      newTransfers[0] = {
-        ...newTransfers[0],
-        payment: tremaAudit.result.payableMonthly,
-        grossShare: tremaAudit.result.maximumContributionMonthly
-      };
+    if (newTransfers.length > 0) {
+      let remainingPayment = tremaAudit.result.payableMonthly;
+      let remainingGross = tremaAudit.result.maximumContributionMonthly;
+
+      const payments = newTransfers.map(() => Math.round(tremaAudit.result!.payableMonthly / newTransfers.length));
+      const grosses = newTransfers.map(() => Math.round(tremaAudit.result!.maximumContributionMonthly / newTransfers.length));
+
+      // Fix rounding errors
+      let paymentSum = payments.reduce((a, b) => a + b, 0);
+      let grossSum = grosses.reduce((a, b) => a + b, 0);
+
+      if (paymentSum !== tremaAudit.result.payableMonthly && payments.length > 0) {
+          payments[0] += tremaAudit.result.payableMonthly - paymentSum;
+      }
+      if (grossSum !== tremaAudit.result.maximumContributionMonthly && grosses.length > 0) {
+          grosses[0] += tremaAudit.result.maximumContributionMonthly - grossSum;
+      }
+
+      for (let i = 0; i < newTransfers.length; i++) {
+        newTransfers[i] = {
+          ...newTransfers[i],
+          payment: payments[i],
+          grossShare: grosses[i]
+        };
+      }
     }
     resultWithAudit.transfers = newTransfers;
   }

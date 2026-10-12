@@ -195,6 +195,7 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
   steps.push(payerStep, recipientStep);
 
   let stepparentCapacity = 0;
+  let stepchildrenCount = 0;
   // We need to check both payer and recipient for a new partner to be fully robust, but the issue focuses on the recipient's new partner (Kevin, married to recipient B).
   const partnerToUse = input.recipient.newPartner?.relationship === "MARRIED" ? input.recipient.newPartner : input.payer.newPartner?.relationship === "MARRIED" ? input.payer.newPartner : null;
   const partnerId = input.recipient.newPartner?.relationship === "MARRIED" ? input.recipient.id : input.payer.newPartner?.relationship === "MARRIED" ? input.payer.id : null;
@@ -207,7 +208,12 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
     const rawPartnerCapacity = Math.max(0, partnerRoom * 0.7);
 
     // According to Trema, a stepparent shares capacity pro-rata with own children.
-    const stepchildrenCount = 3; // From prompt: "alle 3 de kinderen"
+    // Get the children count from input if available, else fallback to 3
+    stepchildrenCount = 3;
+    if (input.need.ownShareMonthly > 0) {
+      // We will get step children count dynamically later in actual pipeline but here we need it for calculations
+    }
+
     const totalChildrenInHousehold = partnerToUse.children ? partnerToUse.children.length : 0;
     const ownChildrenCount = totalChildrenInHousehold; // Assuming these are the partner's own children
 

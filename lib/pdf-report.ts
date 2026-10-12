@@ -106,13 +106,23 @@ export function createCalculationPdf(input: {
   }
     if (Array.isArray(r.transfers)) {
     lines.push({ text: "Draagkrachtvergelijking (Tabel 4)", size: 14, bold: true });
+
+    let totalCap = 0;
+    const tremaResult = r.tremaAudit?.result;
+    if (tremaResult && tremaResult.totalCapacity) {
+      totalCap = tremaResult.totalCapacity;
+    } else {
+      totalCap = (r.parentResults?.[0]?.capacity || 0) + (r.parentResults?.[1]?.capacity || 0);
+    }
+    lines.push({ text: `Gezamenlijke draagkracht: € ${Math.round(totalCap)} p/m` });
+
     if (r.parentResults?.[0]) {
       lines.push({ text: `Draagkracht Ouder A: € ${Math.round(r.parentResults[0].capacity)} p/m` });
-      if (r.parentResults[0].stiefchildMaintenance) lines.push({ text: `Aandeel gehuwde stiefouder A: € ${Math.round(r.parentResults[0].stiefchildMaintenance)} p/m` });
+      if (tremaResult && tremaResult.stepparentCapacity && tremaResult.steps.find((s: any) => s.key === "capacity.stepparent")?.inputs?.partnerId === "A") lines.push({ text: `Draagkracht Stiefouder A: € ${Math.round(tremaResult.stepparentCapacity)} p/m` });
     }
     if (r.parentResults?.[1]) {
       lines.push({ text: `Draagkracht Ouder B: € ${Math.round(r.parentResults[1].capacity)} p/m` });
-      if (r.parentResults[1].stiefchildMaintenance) lines.push({ text: `Aandeel gehuwde stiefouder B: € ${Math.round(r.parentResults[1].stiefchildMaintenance)} p/m` });
+      if (r.parentResults[1].stiefchildMaintenance) lines.push({ text: `Draagkracht Stiefouder B: € ${Math.round(r.parentResults[1].stiefchildMaintenance)} p/m` });
     }
     lines.push({ text: "" });
     for (const t of r.transfers as any[]) lines.push({ text: `Kind ${t.childIndex}: ${t.direction}, bijdrage € ${Math.round(t.payment)} p/m, bruto zorgkorting € ${Math.round(t.grossCareDiscount ?? t.careDiscount ?? 0)}, tekortcorrectie € ${Math.round(t.shortfallCareDiscountAdjustment ?? 0)}, verzilverbaar/toegepast € ${Math.round(t.appliedCareDiscount ?? t.careDiscount ?? 0)}` });

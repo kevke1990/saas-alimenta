@@ -1,13 +1,9 @@
-/** Safe integration boundary for the Trema 2026 engine.
- *
- * The audit layer is deliberately non-blocking: incomplete legacy wizard data
- * is reported as INPUT_INCOMPLETE instead of breaking case creation.
- */
 import { adaptAlimentaForm, type AlimentaFormPayload } from "./alimentatie-engine-adapter";
 import { calculateTrema2026 } from "./alimentatie-engine-trema-2026";
 import { compareLegacyWithTrema, type TremaComparison } from "./trema-comparison";
 import { normalizeLegacyResultForTrema } from "./trema-legacy-normalizer";
 import { getTremaRolloutDecision } from "./trema-rollout";
+import { CaseInput } from "./calculator";
 
 export type TremaCaseAuditStatus = "READY" | "INPUT_INCOMPLETE" | "ERROR";
 
@@ -31,7 +27,21 @@ export function buildTremaCaseAudit(
 ): TremaCaseAudit {
   const rollout = getTremaRolloutDecision("AUDIT_ONLY");
   try {
-    const input = adaptAlimentaForm(payload as AlimentaFormPayload);
+    const caseInput = payload as CaseInput;
+    // We pass the payload explicitly formatted to avoid legacy field issues.
+    // Specially passing the 'children' and calculation values properly for adaptAlimentaForm.
+    const inputForAdapter = {
+        ...(payload as any),
+        children: caseInput.children || []
+    };
+
+    // We need to fetch totalNeed from legacyResult if available or calculate it
+    if (legacyResult && typeof legacyResult === 'object' && 'totalNeed' in legacyResult) {
+        if (!inputForAdapter.need) inputForAdapter.need = {};
+        inputForAdapter.need.ownShareMonthly = (legacyResult as any).totalNeed;
+    }
+
+    const input = adaptAlimentaForm(inputForAdapter as AlimentaFormPayload);
     const result = calculateTrema2026(input);
     const normalizedLegacy = normalizeLegacyResultForTrema(legacyResult);
     const comparison = normalizedLegacy === null ? null : compareLegacyWithTrema(normalizedLegacy, result);
