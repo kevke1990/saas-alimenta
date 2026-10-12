@@ -33,7 +33,26 @@ export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
     const palGross=Number(combined.partnerSupport?.monthlyGross||pal?.result?.monthlyGross||0); const palNet=Number(combined.partnerSupport?.monthlyNet||pal?.result?.monthlyNet||0);
     const totalPayment=Number(combined.totalMonthlyPayments||childTotal+palGross); const payerIndex=combined.partnerSupport?.payerIndex;
     const childRows=childResults.map((x:any,i:number)=>{const t=transfers[i]||x.payments||{}; const source=childrenInput[i]||{}; return `<tr><td><strong>${esc(childNames[i]||`Kind ${x.childIndex}`)}</strong></td><td>${esc(x.age)}</td><td>${esc(x.residence||"—")}</td><td>${money(x.baseNeed)}</td><td>${money(x.specialCosts)}</td><td>${money(x.need)}</td><td>${pct((x.careDiscountByParent?.[t.payerIndex]??0)>0?((parents[t.payerIndex]?.careDaysPerWeek||0)>=3?35:(parents[t.payerIndex]?.careDaysPerWeek||0)>=2?25:(parents[t.payerIndex]?.careDaysPerWeek||0)>=1?15:5):0)}</td><td>${money(t.careDiscount)}</td><td>${esc(t.direction||"—")}</td><td><strong>${money(t.payment)}</strong></td></tr>`}).join("");
-    const parentRows=parentResults.map((x:any,i:number)=>{const inc=r.incomeResults?.[i]; const p=parents[i]||{}; return `<tr><td><strong>${esc(parentNames[i])}</strong></td><td>${money(x.nbi)}</td><td>${money(x.kgb)}</td><td>${money(x.capacity)}</td><td>${esc(x.capacityMethod||"—")}</td><td>${pct(x.sharePct)}</td><td>${money(x.allocatedNeed)}</td><td>${money(x.totalCareDiscount)}</td><td><strong>${money(x.paymentTotal)}</strong></td></tr>`}).join("");
+
+    const tremaResult = (calc as any)?.tremaAudit?.result || (r as any)?.tremaAudit?.result;
+    const additionalStepparentRow = tremaResult?.stepparentCapacity ? `<tr><td><strong>${esc(tremaResult.steps.find((s: any) => s.key === "capacity.stepparent")?.inputs?.partnerId === "A" ? parents[0]?.newPartner?.name || "Stiefouder A" : parents[1]?.newPartner?.name || "Stiefouder B")} (Stiefouder)</strong></td><td>—</td><td>—</td><td>${money(tremaResult.stepparentCapacity)}</td><td>pro-rata stiefkinderen</td><td>${pct((tremaResult.stepparentCapacity / tremaResult.totalCapacity) * 100 || 0)}</td><td>—</td><td>—</td><td><strong>—</strong></td></tr>` : "";
+
+    let totalCap = 0;
+    if (tremaResult && tremaResult.totalCapacity) {
+        totalCap = tremaResult.totalCapacity;
+    } else {
+        totalCap = parentResults.reduce((acc: number, p: any) => acc + p.capacity, 0);
+    }
+
+    const parentRows=parentResults.map((x:any,i:number)=>{
+        const inc=r.incomeResults?.[i];
+        const p=parents[i]||{};
+        let sharePct = x.sharePct;
+        if (tremaResult && tremaResult.totalCapacity) {
+           sharePct = tremaResult.totalCapacity > 0 ? (x.capacity / tremaResult.totalCapacity) * 100 : 0;
+        }
+        return `<tr><td><strong>${esc(parentNames[i])}</strong></td><td>${money(x.nbi)}</td><td>${money(x.kgb)}</td><td>${money(x.capacity)}</td><td>${esc(x.capacityMethod||"—")}</td><td>${pct(sharePct)}</td><td>${money(x.allocatedNeed)}</td><td>${money(x.totalCareDiscount)}</td><td><strong>${money(x.paymentTotal)}</strong></td></tr>`;
+    }).join("") + additionalStepparentRow;
     const incomeRows=(r.incomeResults||[]).map((inc:any,i:number)=>inc?`<tr><td><strong>${esc(parentNames[i])}</strong></td><td>${money(inc.grossAnnual)}</td><td>${money(inc.taxableBox1)}</td><td>${money(inc.taxCreditTotal)}</td><td>${money(inc.nbiMonthly)}</td><td>${esc(parents[i]?.income?.mode||"—")}</td></tr>`:"").join("");
     const stepRows=(r.calculationSteps||[]).map((s:any)=>`<tr><td>${s.step}</td><td><strong>${esc(s.title)}</strong></td><td>${money(s.value)}</td><td>${esc(s.formula)}</td></tr>`).join("");
     const palStepRows=(pal?.steps||[]).map((s:any)=>`<tr><td>${s.step}</td><td><strong>${esc(s.title)}</strong></td><td>${money(s.value)}</td><td>${esc(s.formula)}</td></tr>`).join("");
