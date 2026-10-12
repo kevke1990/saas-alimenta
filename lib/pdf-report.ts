@@ -111,7 +111,7 @@ export function createCalculationPdf(input: {
       if (r.parentResults[0].stiefchildMaintenance) lines.push({ text: `Aandeel gehuwde stiefouder A: € ${Math.round(r.parentResults[0].stiefchildMaintenance)} p/m` });
     }
     if (r.parentResults?.[1]) {
-      lines.push({ text: `Draagkracht Ouder B: ${Math.round(r.parentResults[1].capacity)} p/m` });
+      lines.push({ text: `Draagkracht Ouder B: € ${Math.round(r.parentResults[1].capacity)} p/m` });
       if (r.parentResults[1].stiefchildMaintenance) lines.push({ text: `Aandeel gehuwde stiefouder B: € ${Math.round(r.parentResults[1].stiefchildMaintenance)} p/m` });
     }
     lines.push({ text: "" });

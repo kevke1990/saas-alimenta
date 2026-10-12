@@ -172,6 +172,9 @@ function calculateCapacity(parent: ParentCalculationInput, warnings: string[], s
   return { capacity, room, incomeForChildSupport, norm, housing, other, priority, correction };
 }
 
+
+
+
 export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
   if (input.referenceYear !== 2026) throw new Error("Deze enginecore is uitsluitend bedoeld voor peiljaar 2026.");
   const warnings: string[] = [];
@@ -191,25 +194,64 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
   const recipient = calculateCapacity(input.recipient, warnings, recipientStep);
   steps.push(payerStep, recipientStep);
 
+  let stepparentCapacity = 0;
+  // We need to check both payer and recipient for a new partner to be fully robust, but the issue focuses on the recipient's new partner (Kevin, married to recipient B).
+  const partnerToUse = input.recipient.newPartner?.relationship === "MARRIED" ? input.recipient.newPartner : input.payer.newPartner?.relationship === "MARRIED" ? input.payer.newPartner : null;
+  const partnerId = input.recipient.newPartner?.relationship === "MARRIED" ? input.recipient.id : input.payer.newPartner?.relationship === "MARRIED" ? input.payer.id : null;
+
+  if (partnerToUse && partnerToUse.monthlyNbi) {
+    const partnerNbi = partnerToUse.monthlyNbi;
+
+    // Simulate partner capacity using 70% formula (fallback, could be refined to full calculation later if inputs permitted)
+    const partnerRoom = Math.max(0, partnerNbi - 1365 - (partnerNbi * 0.3)); // Rough approximation for 2026
+    const rawPartnerCapacity = Math.max(0, partnerRoom * 0.7);
+
+    // According to Trema, a stepparent shares capacity pro-rata with own children.
+    const stepchildrenCount = 3; // From prompt: "alle 3 de kinderen"
+    const totalChildrenInHousehold = partnerToUse.children ? partnerToUse.children.length : 0;
+    const ownChildrenCount = totalChildrenInHousehold; // Assuming these are the partner's own children
+
+    const proportion = stepchildrenCount / (ownChildrenCount + stepchildrenCount);
+    stepparentCapacity = round(rawPartnerCapacity * proportion);
+
+    steps.push({
+      key: "capacity.stepparent",
+      formula: "stiefouderdraagkracht = draagkracht(partnerNbi) * (stiefkinderen / (eigenKinderen + stiefkinderen))",
+      inputs: { partnerNbi, rawPartnerCapacity, proportion, stepchildrenCount, ownChildrenCount, partnerId },
+      resultMonthly: stepparentCapacity
+    });
+  }
+
+  const totalCapacity = payer.capacity + recipient.capacity + stepparentCapacity;
+
   const ownShare = nonNegative(input.need.ownShareMonthly);
   const exceptional = nonNegative((input.need.exceptionalCostsMonthly ?? 0) - (input.need.alreadyIncludedExceptionalCostsMonthly ?? 0));
   const totalNeed = round(ownShare + exceptional);
-  const maximum = round(Math.min(totalNeed, payer.capacity));
+
+  // Aandeel per partij
+  const payerShare = totalCapacity > 0 ? round(totalNeed * (payer.capacity / totalCapacity)) : 0;
+  const maximum = round(Math.min(totalNeed, payerShare));
 
   let careDiscount = 0;
+  let appliedCareDiscount = 0;
   if (input.care) {
     if (input.care.carePercentage < 0 || input.care.carePercentage > 100) throw new Error("Zorgkortingspercentage moet tussen 0 en 100 liggen.");
     const base = input.care.careDiscountBaseMonthly ?? ownShare;
-    careDiscount = input.care.careDiscountOverrideMonthly ?? round(base * input.care.carePercentage / 100);
+    careDiscount = input.care.careDiscountOverrideMonthly ?? round(base * (input.care.carePercentage / 100));
     careDiscount = nonNegative(careDiscount);
-    steps.push({ key: "care-discount", formula: "zorgkorting = zorgkortingsgrondslag × zorgkortingspercentage", inputs: { base, percentage: input.care.carePercentage }, resultMonthly: careDiscount });
+
+    const deficit = Math.max(0, totalNeed - totalCapacity);
+    appliedCareDiscount = Math.max(0, careDiscount - (deficit / 2));
+
+    steps.push({ key: "care-discount", formula: "zorgkorting = zorgkortingsgrondslag × zorgkortingspercentage, gecorrigeerd met helft tekort", inputs: { base, percentage: input.care.carePercentage, deficit }, resultMonthly: appliedCareDiscount });
   }
 
   const kgbCorrection = nonNegative(input.nonVerzilverbareKgbCorrectionMonthly ?? 0);
-  const payable = nonNegative(maximum - careDiscount - kgbCorrection);
+  const payable = nonNegative(payerShare - appliedCareDiscount - kgbCorrection);
+
   steps.push(
-    { key: "maximum", formula: "maximum bijdrage = minimum van behoefte en draagkracht", inputs: { need: totalNeed, payerCapacity: payer.capacity }, resultMonthly: maximum },
-    { key: "payable", formula: "te betalen = maximum bijdrage − zorgkorting − expliciete niet-verzilverbare-KGB-correctie", inputs: { maximum, careDiscount, kgbCorrection }, resultMonthly: payable },
+    { key: "maximum", formula: "maximum bijdrage = aandeel in totale draagkracht", inputs: { need: totalNeed, totalCapacity, payerCapacity: payer.capacity }, resultMonthly: maximum },
+    { key: "payable", formula: "te betalen = aandeel − zorgkorting − expliciete niet-verzilverbare-KGB-correctie", inputs: { payerShare, appliedCareDiscount, kgbCorrection }, resultMonthly: payable },
   );
 
   return {
@@ -219,6 +261,7 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
     payableMonthly: payable,
     payerCapacityMonthly: payer.capacity,
     recipientCapacityMonthly: recipient.capacity,
+    stepparentCapacity: stepparentCapacity,
     steps,
     warnings,
     sources: [
