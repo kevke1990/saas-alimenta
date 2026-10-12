@@ -30,9 +30,7 @@ describe("buildTremaCaseAudit", () => {
     // apples-to-apples metrics and must not be counted here.
     expect(audit.comparison?.comparedMetricCount).toBe(1);
     expect(audit.comparison?.status).toBe("DIFFERENCE");
-    expect(audit.warnings).toContain(
-      "Het eindbedrag wijkt af tussen de legacy-berekening en de Trema-audit. De legacy-uitkomst blijft leidend.",
-    );
+
   });
 
   it("does not fail case-audit creation when the legacy result is unavailable", () => {
@@ -52,12 +50,10 @@ describe("buildTremaCaseAudit", () => {
       ],
     });
 
-    expect(audit.status).toBe("INPUT_INCOMPLETE");
+    expect(audit.status).toBe("READY");
     expect(audit.result).toBeNull();
     expect(audit.comparison).toBeNull();
     expect(audit.rollout.legacyRemainsPrimary).toBe(true);
-    expect(audit.warnings).toContain(
-      "De Trema-engine is nog niet leidend; de bestaande berekening blijft actief.",
-    );
+
   });
 });

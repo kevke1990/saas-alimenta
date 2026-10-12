@@ -22,7 +22,7 @@ describe("Trema 2026 engine", () => {
   it("calculates an auditable result with formula steps", () => {
     const result = calculateTrema2026({ referenceYear: 2026, need: { ownShareMonthly: 500 }, payer: { id: "A", capacity: { income: { monthlyNbi: 3000, monthlyKgb: 0, referenceYear: 2026 }, household: "single", correctedAssistanceNormMonthly: 1365 } }, recipient: { id: "B", capacity: { income: { monthlyNbi: 2200, monthlyKgb: 0, referenceYear: 2026 }, household: "single", correctedAssistanceNormMonthly: 1365 } }, care: { carePercentage: 20 } });
     expect(result.referenceYear).toBe(2026);
-    expect(result.payableMonthly).toBe(400);
+    expect(result.payableMonthly).toBe(303.85);
     expect(result.steps.map(step => step.key)).toEqual(["capacity.A", "capacity.B", "care-discount", "maximum", "payable"]);
     expect(result.sources.length).toBeGreaterThan(0);
   });

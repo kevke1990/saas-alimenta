@@ -43,6 +43,12 @@ export interface CapacityInput {
 export interface ParentCalculationInput {
   id: ParentId;
   capacity: CapacityInput;
+  newPartner?: {
+    relationship?: string;
+    monthlyNbi?: number;
+    selfSupporting?: boolean;
+    children?: Array<{ age?: number; monthlyAmount?: number; livesAtHome?: boolean; active?: boolean }>;
+  };
 }
 
 export interface CareInput {
@@ -81,6 +87,7 @@ export interface Trema2026Result {
   payableMonthly: number;
   payerCapacityMonthly: number;
   recipientCapacityMonthly: number;
+  stepparentCapacity?: number;
   steps: FormulaStep[];
   warnings: string[];
   sources: string[];
