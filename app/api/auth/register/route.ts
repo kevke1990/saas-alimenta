@@ -36,7 +36,7 @@ export async function POST(req: Request) {
       },
     });
     await ensureTenant(user);
-    await db.branding.create({ data: { userId: user.id, companyName: body.companyName || body.name, reportTitle: "Alimenta Pro" } });
+    await db.branding.create({ data: { userId: user.id, companyName: body.companyName || body.name, reportTitle: "Merelo" } });
     let verificationSent = false;
     try { await sendVerificationEmail(user); verificationSent = true; } catch { /* payment/access remains recoverable */ }
     await createSession(user.id);

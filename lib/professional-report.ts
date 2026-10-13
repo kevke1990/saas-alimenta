@@ -42,7 +42,7 @@ export function buildProfessionalReport(input: any): ProfessionalReport {
   const approved = statusApproved && !!currentBinding && !!suppliedApprovalBinding && isReviewBindingCurrent(suppliedApprovalBinding, currentBinding);
 
   return {
-    title: 'Alimenta Pro — professioneel rekenrapport', generatedAt: new Date().toISOString(),
+    title: 'Merelo — professioneel rekenrapport', generatedAt: new Date().toISOString(),
     caseName: String(input.name || 'Onbenoemd dossier'), clientName: input.client?.name || undefined,
     status: String(input.reviewStatus || 'INCOMPLETE'), reviewScore: input.review?.score, reviewStatus: input.reviewStatus,
     calculation: { id: snapshotId, engineVersion, normVersion, fingerprint, createdAt: latest?.createdAt ? new Date(latest.createdAt).toISOString() : undefined },

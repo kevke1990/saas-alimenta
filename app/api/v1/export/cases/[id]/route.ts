@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const item = await db.case.findFirst({ where: { id, userId: auth.user.id }, include: { client: true, calculations: { orderBy: { createdAt: "asc" } }, incomeFacts: { orderBy: { createdAt: "asc" } }, tasks: { orderBy: { createdAt: "asc" } }, overrides: { orderBy: { createdAt: "asc" } } } });
   if (!item) return apiError("Dossier niet gevonden.", 404);
-  const exported = { schemaVersion: "1.0", exportedAt: new Date().toISOString(), source: "Alimenta Pro API v1", case: item };
+  const exported = { schemaVersion: "1.0", exportedAt: new Date().toISOString(), source: "Merelo API v1", case: item };
   await recordApiRequest(auth.user.id, { endpoint: "/api/v1/export/cases/[id]", method: "GET", caseId: id });
   return new NextResponse(JSON.stringify(exported, null, 2), { headers: { "content-type": "application/json; charset=utf-8", "content-disposition": `attachment; filename="alimenta-case-${id}.json"`, "x-ratelimit-remaining": String(rate.remaining) } });
 }
