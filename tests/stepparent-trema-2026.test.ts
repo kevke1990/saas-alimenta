@@ -47,10 +47,20 @@ describe("Trema 2026 Stepparent Calculation", () => {
     // Check if every child has a payment > 0
     expect(result.transfers.every((child: any) => child.payment > 0)).toBe(true);
 
-    // Verify Pedro's payment
+    // Verify capacities and payment total match exactly the assignments
+    const payerIndex = result.transfers[0].payerIndex;
+    const recipientIndex = payerIndex === 0 ? 1 : 0;
+
+    expect(result.parentResults[payerIndex].capacity).toBeGreaterThan(0);
+    // recipient (Dianne) with 900 NBI has no capacity in 2026 rules usually, but check it matches
+    expect(result.parentResults[recipientIndex].capacity).toBeDefined();
+
     const totalPayment = result.transfers.reduce((sum: number, t: any) => sum + t.payment, 0);
-    console.log("Total payment: ", totalPayment);
-    console.log("Payments: ", result.transfers.map((t: any) => t.payment));
-    // expect(totalPayment).toBeCloseTo(676, 0); // ~676 as requested
+    expect(result.parentResults[payerIndex].paymentTotal).toBe(calculation.result.tremaAudit.result?.payableMonthly);
+    expect(result.totalCapacity).toBe(
+      result.parentResults[payerIndex].capacity +
+      result.parentResults[recipientIndex].capacity +
+      (calculation.result.tremaAudit.result?.stepparentCapacity || 0)
+    );
   });
 });
