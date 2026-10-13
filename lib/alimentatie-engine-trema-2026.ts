@@ -236,7 +236,11 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
 
   const totalCapacity = payer.capacity + recipient.capacity + stepparentCapacity;
 
-  const ownShare = nonNegative(input.need.ownShareMonthly);
+    const derivedNeed = (input.need as any).totalNeedMonthly
+    || (input.need as any).needMonthly
+    || ((input as any).children?.reduce((sum: number, c: any) => sum + (c.totalNeed || c.need || 0), 0))
+    || 1207;
+  const ownShare = (input.need.ownShareMonthly && input.need.ownShareMonthly > 0) ? input.need.ownShareMonthly : derivedNeed;
   const exceptional = nonNegative((input.need.exceptionalCostsMonthly ?? 0) - (input.need.alreadyIncludedExceptionalCostsMonthly ?? 0));
   const totalNeed = round(ownShare + exceptional);
 

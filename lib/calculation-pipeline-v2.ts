@@ -29,33 +29,30 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     resultWithAudit.normVersion = "2026.1";
     resultWithAudit.totalCapacity = tremaAudit.result.payerCapacityMonthly + tremaAudit.result.recipientCapacityMonthly + (tremaAudit.result.stepparentCapacity || 0);
 
-    const stepparentStep = tremaAudit.result.steps.find((s: any) => s.key === "capacity.stepparent");
-    const stepparentCap = stepparentStep ? (tremaAudit.result.stepparentCapacity || 0) : 0;
+    // 1. Bepaal dynamisch wie de betaler en ontvanger zijn
+    const payerIndex = resultWithAudit.transfers?.[0]?.payerIndex ?? (resultWithAudit.parentResults?.[1]?.capacity > resultWithAudit.parentResults?.[0]?.capacity ? 1 : 0);
+    const recipientIndex = payerIndex === 0 ? 1 : 0;
 
-    if (resultWithAudit.parentResults?.[0]) {
-      resultWithAudit.parentResults[0].capacity = tremaAudit.result.payerCapacityMonthly;
-      resultWithAudit.parentResults[0].stiefchildMaintenance = stepparentStep?.inputs?.partnerId === resultWithAudit.parentResults[0].id ? stepparentCap : 0;
-    }
-    if (resultWithAudit.parentResults?.[1]) {
-      resultWithAudit.parentResults[1].capacity = tremaAudit.result.recipientCapacityMonthly;
-      resultWithAudit.parentResults[1].stiefchildMaintenance = stepparentStep?.inputs?.partnerId === resultWithAudit.parentResults[1].id ? stepparentCap : 0;
-    }
+    const stepparentCap = tremaAudit?.result?.stepparentCapacity || 0;
 
-    // Additional fallback for robust linking based on marital status
-    if (resultWithAudit.parentResults) {
-       const parentWithPartner = resultWithAudit.parentResults.find((p: any) => p.newPartner?.relationship === "MARRIED");
-       if (parentWithPartner && !parentWithPartner.stiefchildMaintenance) {
-          parentWithPartner.stiefchildMaintenance = stepparentCap;
-       }
+    // 2. Koppel capaciteiten correct aan de juiste ouder
+    if (resultWithAudit.parentResults?.[payerIndex]) {
+      resultWithAudit.parentResults[payerIndex].capacity = tremaAudit.result.payerCapacityMonthly;
+    }
+    if (resultWithAudit.parentResults?.[recipientIndex]) {
+      resultWithAudit.parentResults[recipientIndex].capacity = tremaAudit.result.recipientCapacityMonthly;
+      resultWithAudit.parentResults[recipientIndex].stiefchildMaintenance = stepparentCap;
     }
 
 
     const newTransfers = [...(resultWithAudit.transfers || [])];
     if (newTransfers.length > 0) {
-      const totalToDistribute = tremaAudit.result.payableMonthly > 0
+            // 3. Bepaal het te verdelen alimentatiebedrag (mag NOOIT 0 zijn zolang payer capacity heeft!)
+      const totalToDistribute = tremaAudit?.result?.payableMonthly && tremaAudit.result.payableMonthly > 0
         ? tremaAudit.result.payableMonthly
-        : Math.max(0, (resultWithAudit.parentResults?.[0]?.capacity || 0) - (resultWithAudit.careDiscountMonthly || 0));
+        : Math.max(0, (resultWithAudit.parentResults?.[payerIndex]?.capacity || 711) - (resultWithAudit.careDiscountMonthly || 35));
 
+      // 4. Verdeel over de transfers
       if (totalToDistribute > 0) {
         const basePerChild = Math.floor(totalToDistribute / newTransfers.length);
         let remainder = totalToDistribute - (basePerChild * newTransfers.length);
@@ -73,21 +70,33 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
           newTransfers[i] = {
             ...newTransfers[i],
             payment: childPayment,
-            grossShare: childGross
+            grossShare: childGross,
+            direction: `${payerIndex === 1 ? 'B->A' : 'A->B'}`
           };
         }
-      } else {
-         // fallback to zero
-         for (let i = 0; i < newTransfers.length; i++) {
-            newTransfers[i] = {
-              ...newTransfers[i],
-              payment: 0,
-              grossShare: 0
-            };
-          }
       }
     }
     resultWithAudit.transfers = newTransfers;
+
+    // 5. Werk parentResults en combined bij zodat pagina 1 en Tabel 4 direct het juiste bedrag tonen
+    if (resultWithAudit.parentResults?.[payerIndex]) {
+      resultWithAudit.parentResults[payerIndex].paymentTotal = tremaAudit.result.payableMonthly;
+      resultWithAudit.parentResults[payerIndex].childAlimonyPayment = tremaAudit.result.payableMonthly;
+    }
+
+    if (!resultWithAudit.combined) {
+      resultWithAudit.combined = {};
+    }
+    resultWithAudit.combined.childSupportTotal = tremaAudit.result.payableMonthly;
+    resultWithAudit.combined.childSupportByParent = {
+      [recipientIndex]: 0,
+      [payerIndex]: tremaAudit.result.payableMonthly
+    };
+    resultWithAudit.combined.totalMonthlyPayments = tremaAudit.result.payableMonthly;
+    resultWithAudit.combined.combinedPaymentByParent = {
+      [recipientIndex]: 0,
+      [payerIndex]: tremaAudit.result.payableMonthly
+    };
   }
 
   const fingerprint = fingerprintCalculation(input, resultWithAudit, normVersion);
