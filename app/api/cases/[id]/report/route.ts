@@ -35,27 +35,48 @@ export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
     const childRows=childResults.map((x:any,i:number)=>{const t=transfers[i]||x.payments||{}; const source=childrenInput[i]||{}; return `<tr><td><strong>${esc(childNames[i]||`Kind ${x.childIndex}`)}</strong></td><td>${esc(x.age)}</td><td>${esc(x.residence||"—")}</td><td>${money(x.baseNeed)}</td><td>${money(x.specialCosts)}</td><td>${money(x.need)}</td><td>${pct((x.careDiscountByParent?.[t.payerIndex]??0)>0?((parents[t.payerIndex]?.careDaysPerWeek||0)>=3?35:(parents[t.payerIndex]?.careDaysPerWeek||0)>=2?25:(parents[t.payerIndex]?.careDaysPerWeek||0)>=1?15:5):0)}</td><td>${money(t.careDiscount)}</td><td>${esc(t.direction||"—")}</td><td><strong>${money(t.payment)}</strong></td></tr>`}).join("");
 
     const tremaResult = (calc as any)?.tremaAudit?.result || (r as any)?.tremaAudit?.result;
-        let totalCap = 0;
-    if (tremaResult && tremaResult.totalCapacity) {
-        totalCap = tremaResult.totalCapacity;
-    } else {
-        totalCap = parentResults.reduce((acc: number, p: any) => acc + p.capacity, 0);
-    }
+
+    const stepparentCap = tremaResult?.stepparentCapacity
+      || r.parentResults?.[0]?.stiefchildMaintenance
+      || r.parentResults?.[1]?.stiefchildMaintenance
+      || 0;
+
+    const totalCap = (tremaResult?.totalCapacity && tremaResult.totalCapacity > 0)
+      ? tremaResult.totalCapacity
+      : (r.totalCapacity && r.totalCapacity > 0)
+      ? r.totalCapacity
+      : (parentResults.reduce((acc: number, p: any) => acc + (p.capacity || 0), 0) + stepparentCap);
+
     let additionalStepparentRow = "";
-    if (r.parentResults?.[0]?.stiefchildMaintenance) {
-        additionalStepparentRow = `<tr><td><strong>${esc(parents[0]?.newPartner?.name || "Stiefouder A")} (Stiefouder)</strong></td><td>—</td><td>—</td><td>${money(r.parentResults[0].stiefchildMaintenance)}</td><td>pro-rata stiefkinderen</td><td>${pct((r.parentResults[0].stiefchildMaintenance / totalCap) * 100 || 0)}</td><td>—</td><td>—</td><td><strong>—</strong></td></tr>`;
-    } else if (r.parentResults?.[1]?.stiefchildMaintenance) {
-        additionalStepparentRow = `<tr><td><strong>${esc(parents[1]?.newPartner?.name || "Stiefouder B")} (Stiefouder)</strong></td><td>—</td><td>—</td><td>${money(r.parentResults[1].stiefchildMaintenance)}</td><td>pro-rata stiefkinderen</td><td>${pct((r.parentResults[1].stiefchildMaintenance / totalCap) * 100 || 0)}</td><td>—</td><td>—</td><td><strong>—</strong></td></tr>`;
+    const partnerParent = parents.find(
+      (p: any) => p.newPartner?.present && (p.newPartner.relationship === 'MARRIED' || p.newPartner.relatievorm === 'MARRIED' || p.newPartner.relationship === 'REGISTERED_PARTNERSHIP')
+    );
+
+    if (stepparentCap > 0 && partnerParent?.newPartner) {
+      const partner = partnerParent.newPartner;
+      const partnerName = partner.name || "Stiefouder";
+      const partnerNbi = partner.nbiMonthly || partner.nbi || 0;
+      const sharePct = totalCap > 0 ? (stepparentCap / totalCap) * 100 : 0;
+
+      additionalStepparentRow = `<tr>
+        <td><strong>${esc(partnerName)} (Stiefouder)</strong></td>
+        <td>${money(partnerNbi)}</td>
+        <td>—</td>
+        <td>${money(stepparentCap)}</td>
+        <td>pro-rata stiefkinderen</td>
+        <td>${pct(sharePct)}</td>
+        <td>—</td>
+        <td>—</td>
+        <td><strong>—</strong></td>
+      </tr>`;
     }
-
-
 
     const parentRows=parentResults.map((x:any,i:number)=>{
         const inc=r.incomeResults?.[i];
         const p=parents[i]||{};
         let sharePct = x.sharePct;
-        if (tremaResult && tremaResult.totalCapacity) {
-           sharePct = tremaResult.totalCapacity > 0 ? (x.capacity / tremaResult.totalCapacity) * 100 : 0;
+        if (totalCap > 0) {
+           sharePct = (x.capacity / totalCap) * 100;
         }
         return `<tr><td><strong>${esc(parentNames[i])}</strong></td><td>${money(x.nbi)}</td><td>${money(x.kgb)}</td><td>${money(x.capacity)}</td><td>${esc(x.capacityMethod||"—")}</td><td>${pct(sharePct)}</td><td>${money(x.allocatedNeed)}</td><td>${money(x.totalCareDiscount)}</td><td><strong>${money(x.paymentTotal)}</strong></td></tr>`;
     }).join("") + additionalStepparentRow;

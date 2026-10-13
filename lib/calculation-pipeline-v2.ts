@@ -29,20 +29,56 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     resultWithAudit.normVersion = "2026.1";
     resultWithAudit.totalCapacity = tremaAudit.result.payerCapacityMonthly + tremaAudit.result.recipientCapacityMonthly + (tremaAudit.result.stepparentCapacity || 0);
 
-    // 1. Bepaal dynamisch wie de betaler en ontvanger zijn
-    const payerIndex = resultWithAudit.transfers?.[0]?.payerIndex ?? (resultWithAudit.parentResults?.[1]?.capacity > resultWithAudit.parentResults?.[0]?.capacity ? 1 : 0);
-    const recipientIndex = payerIndex === 0 ? 1 : 0;
+    // 1. Identificeer dynamisch welke ouder de betaler (payer) en welke de ontvanger (recipient) is
+    let payerIndex = -1;
+    let recipientIndex = -1;
 
-    const stepparentCap = tremaAudit?.result?.stepparentCapacity || 0;
+    if (resultWithAudit.transfers && resultWithAudit.transfers.length > 0) {
+      payerIndex = resultWithAudit.transfers[0].payerIndex ?? (resultWithAudit.transfers[0].direction === 'B->A' ? 1 : 0);
+      recipientIndex = payerIndex === 0 ? 1 : 0;
+    } else if (resultWithAudit.parentResults && resultWithAudit.parentResults.length >= 2) {
+      // Fallback op basis van rollen of wie kinderalimentatie verschuldigd is
+      payerIndex = resultWithAudit.parentResults.findIndex((p: any) => p.isRecipient === false || p.role === 'payer' || p.role === 'B');
+      if (payerIndex === -1) {
+        payerIndex = resultWithAudit.parentResults[1].capacity > resultWithAudit.parentResults[0].capacity ? 1 : 0;
+      }
+      recipientIndex = payerIndex === 0 ? 1 : 0;
+    } else {
+      payerIndex = 1;
+      recipientIndex = 0;
+    }
 
-    // 2. Koppel capaciteiten correct aan de juiste ouder
+    const payerCap = tremaAudit?.result?.payerCapacityMonthly ?? 0;
+    const recipientCap = tremaAudit?.result?.recipientCapacityMonthly ?? 0;
+    const stepparentCap = tremaAudit?.result?.stepparentCapacity ?? 0;
+    const totalPayable = tremaAudit?.result?.payableMonthly ?? 0;
+
+    // 2. Wijs capaciteit en betaling toe aan de JUISTE ouder in parentResults
     if (resultWithAudit.parentResults?.[payerIndex]) {
-      resultWithAudit.parentResults[payerIndex].capacity = tremaAudit.result.payerCapacityMonthly;
+      resultWithAudit.parentResults[payerIndex].capacity = payerCap;
+      resultWithAudit.parentResults[payerIndex].paymentTotal = totalPayable;
+      resultWithAudit.parentResults[payerIndex].childAlimonyPayment = totalPayable;
     }
+
     if (resultWithAudit.parentResults?.[recipientIndex]) {
-      resultWithAudit.parentResults[recipientIndex].capacity = tremaAudit.result.recipientCapacityMonthly;
-      resultWithAudit.parentResults[recipientIndex].stiefchildMaintenance = stepparentCap;
+      resultWithAudit.parentResults[recipientIndex].capacity = recipientCap;
+      resultWithAudit.parentResults[recipientIndex].paymentTotal = 0;
     }
+
+    // 3. Koppel de stiefouder aan de ouder die gehuwd/geregistreerd partner is
+    const marriedParentIdx = (input.parents || []).findIndex(
+      (p: any) => p.newPartner?.present && (p.newPartner.relationship === 'MARRIED' || p.newPartner.relatievorm === 'MARRIED' || p.newPartner.relationship === 'REGISTERED_PARTNERSHIP')
+    );
+
+    if (marriedParentIdx !== -1 && stepparentCap > 0 && resultWithAudit.parentResults?.[marriedParentIdx]) {
+      resultWithAudit.parentResults[marriedParentIdx].stiefchildMaintenance = stepparentCap;
+    }
+
+    // 4. Update de gezamenlijke draagkracht en tekort op het root-resultaat
+    const combinedCap = payerCap + recipientCap + stepparentCap;
+    resultWithAudit.totalCapacity = combinedCap > 0 ? combinedCap : resultWithAudit.totalCapacity;
+    resultWithAudit.capacityDeficit = Math.max(0, (resultWithAudit.totalNeed || 0) - resultWithAudit.totalCapacity);
+    resultWithAudit.capacitySufficient = resultWithAudit.totalCapacity >= (resultWithAudit.totalNeed || 0);
 
 
     const newTransfers = [...(resultWithAudit.transfers || [])];

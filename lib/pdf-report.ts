@@ -107,13 +107,18 @@ export function createCalculationPdf(input: {
     if (Array.isArray(r.transfers)) {
     lines.push({ text: "Draagkrachtvergelijking (Tabel 4)", size: 14, bold: true });
 
-    let totalCap = 0;
     const tremaResult = r.tremaAudit?.result;
-    if (tremaResult && tremaResult.totalCapacity) {
-      totalCap = tremaResult.totalCapacity;
-    } else {
-      totalCap = (r.parentResults?.[0]?.capacity || 0) + (r.parentResults?.[1]?.capacity || 0);
-    }
+    const stepparentCap = tremaResult?.stepparentCapacity
+      || r.parentResults?.[0]?.stiefchildMaintenance
+      || r.parentResults?.[1]?.stiefchildMaintenance
+      || 0;
+
+    let totalCap = (tremaResult?.totalCapacity && tremaResult.totalCapacity > 0)
+      ? tremaResult.totalCapacity
+      : (r.totalCapacity && r.totalCapacity > 0)
+      ? r.totalCapacity
+      : ((r.parentResults?.[0]?.capacity || 0) + (r.parentResults?.[1]?.capacity || 0) + stepparentCap);
+
     lines.push({ text: `Gezamenlijke draagkracht: € ${Math.round(totalCap)} p/m` });
 
         if (r.parentResults?.[0]) {
