@@ -188,7 +188,7 @@ export default async function AttentionCenter() {
       </section>
 
       <section className="panel topgap">
-        <div className="panel-head"><div><div className="section-kicker">Uitlegbaarheid</div><h2 className="panel-title">Geen automatische juridische beslissing</h2><div className="panel-sub">Alimenta Pro gebruikt deze signalen alleen om werk te ordenen. Een professional bepaalt zelf wat inhoudelijk moet gebeuren; berekeningen en reviewstatussen worden niet automatisch aangepast.</div></div></div>
+        <div className="panel-head"><div><div className="section-kicker">Uitlegbaarheid</div><h2 className="panel-title">Geen automatische juridische beslissing</h2><div className="panel-sub">Merelo gebruikt deze signalen alleen om werk te ordenen. Een professional bepaalt zelf wat inhoudelijk moet gebeuren; berekeningen en reviewstatussen worden niet automatisch aangepast.</div></div></div>
       </section>
     </AppShell>
   );

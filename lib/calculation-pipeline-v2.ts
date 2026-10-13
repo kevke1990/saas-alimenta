@@ -29,40 +29,62 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     resultWithAudit.normVersion = "2026.1";
     resultWithAudit.totalCapacity = tremaAudit.result.payerCapacityMonthly + tremaAudit.result.recipientCapacityMonthly + (tremaAudit.result.stepparentCapacity || 0);
 
+    const stepparentStep = tremaAudit.result.steps.find((s: any) => s.key === "capacity.stepparent");
+    const stepparentCap = stepparentStep ? (tremaAudit.result.stepparentCapacity || 0) : 0;
+
     if (resultWithAudit.parentResults?.[0]) {
       resultWithAudit.parentResults[0].capacity = tremaAudit.result.payerCapacityMonthly;
-      resultWithAudit.parentResults[0].stiefchildMaintenance = "A" === tremaAudit.result.steps.find(s => s.key === "capacity.stepparent")?.inputs?.partnerId ? tremaAudit.result.stepparentCapacity : 0;
+      resultWithAudit.parentResults[0].stiefchildMaintenance = stepparentStep?.inputs?.partnerId === resultWithAudit.parentResults[0].id ? stepparentCap : 0;
     }
     if (resultWithAudit.parentResults?.[1]) {
       resultWithAudit.parentResults[1].capacity = tremaAudit.result.recipientCapacityMonthly;
-      resultWithAudit.parentResults[1].stiefchildMaintenance = "B" === tremaAudit.result.steps.find(s => s.key === "capacity.stepparent")?.inputs?.partnerId ? tremaAudit.result.stepparentCapacity : 0;
+      resultWithAudit.parentResults[1].stiefchildMaintenance = stepparentStep?.inputs?.partnerId === resultWithAudit.parentResults[1].id ? stepparentCap : 0;
     }
+
+    // Additional fallback for robust linking based on marital status
+    if (resultWithAudit.parentResults) {
+       const parentWithPartner = resultWithAudit.parentResults.find((p: any) => p.newPartner?.relationship === "MARRIED");
+       if (parentWithPartner && !parentWithPartner.stiefchildMaintenance) {
+          parentWithPartner.stiefchildMaintenance = stepparentCap;
+       }
+    }
+
 
     const newTransfers = [...(resultWithAudit.transfers || [])];
     if (newTransfers.length > 0) {
-      let remainingPayment = tremaAudit.result.payableMonthly;
-      let remainingGross = tremaAudit.result.maximumContributionMonthly;
+      const totalToDistribute = tremaAudit.result.payableMonthly > 0
+        ? tremaAudit.result.payableMonthly
+        : Math.max(0, (resultWithAudit.parentResults?.[0]?.capacity || 0) - (resultWithAudit.careDiscountMonthly || 0));
 
-      const payments = newTransfers.map(() => Math.round(tremaAudit.result!.payableMonthly / newTransfers.length));
-      const grosses = newTransfers.map(() => Math.round(tremaAudit.result!.maximumContributionMonthly / newTransfers.length));
+      if (totalToDistribute > 0) {
+        const basePerChild = Math.floor(totalToDistribute / newTransfers.length);
+        let remainder = totalToDistribute - (basePerChild * newTransfers.length);
 
-      // Fix rounding errors
-      let paymentSum = payments.reduce((a, b) => a + b, 0);
-      let grossSum = grosses.reduce((a, b) => a + b, 0);
+        let grossBasePerChild = Math.floor(tremaAudit.result.maximumContributionMonthly / newTransfers.length);
+        let grossRemainder = tremaAudit.result.maximumContributionMonthly - (grossBasePerChild * newTransfers.length);
 
-      if (paymentSum !== tremaAudit.result.payableMonthly && payments.length > 0) {
-          payments[0] += tremaAudit.result.payableMonthly - paymentSum;
-      }
-      if (grossSum !== tremaAudit.result.maximumContributionMonthly && grosses.length > 0) {
-          grosses[0] += tremaAudit.result.maximumContributionMonthly - grossSum;
-      }
+        for (let i = 0; i < newTransfers.length; i++) {
+          const childPayment = basePerChild + (remainder > 0 ? 1 : 0);
+          if (remainder > 0) remainder--;
 
-      for (let i = 0; i < newTransfers.length; i++) {
-        newTransfers[i] = {
-          ...newTransfers[i],
-          payment: payments[i],
-          grossShare: grosses[i]
-        };
+          const childGross = grossBasePerChild + (grossRemainder > 0 ? 1 : 0);
+          if (grossRemainder > 0) grossRemainder--;
+
+          newTransfers[i] = {
+            ...newTransfers[i],
+            payment: childPayment,
+            grossShare: childGross
+          };
+        }
+      } else {
+         // fallback to zero
+         for (let i = 0; i < newTransfers.length; i++) {
+            newTransfers[i] = {
+              ...newTransfers[i],
+              payment: 0,
+              grossShare: 0
+            };
+          }
       }
     }
     resultWithAudit.transfers = newTransfers;

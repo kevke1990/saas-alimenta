@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       for (const [key, p] of Object.entries(PRICING)) {
         const existing = await db.stripePlan.findUnique({ where: { key } });
         let product: any = existing?.stripeProductId ? await stripe.products.retrieve(existing.stripeProductId).catch(() => null) : null;
-        if (!product || product.deleted) product = await stripe.products.create({ name: `Alimenta Pro — ${p.name}`, description: p.description, metadata: { plan: key } });
+        if (!product || product.deleted) product = await stripe.products.create({ name: `Merelo — ${p.name}`, description: p.description, metadata: { plan: key } });
         let price: any = existing?.stripePriceId ? await stripe.prices.retrieve(existing.stripePriceId).catch(() => null) : null;
         if (!price || !price.active || price.unit_amount !== Math.round(p.annual * 100) || price.currency !== "eur") {
           const oldPriceId = existing?.stripePriceId;

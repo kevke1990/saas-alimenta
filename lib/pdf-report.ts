@@ -116,11 +116,11 @@ export function createCalculationPdf(input: {
     }
     lines.push({ text: `Gezamenlijke draagkracht: € ${Math.round(totalCap)} p/m` });
 
-    if (r.parentResults?.[0]) {
+        if (r.parentResults?.[0]) {
       lines.push({ text: `Draagkracht Ouder A: € ${Math.round(r.parentResults[0].capacity)} p/m` });
-      if (tremaResult && tremaResult.stepparentCapacity && tremaResult.steps.find((s: any) => s.key === "capacity.stepparent")?.inputs?.partnerId === "A") lines.push({ text: `Draagkracht Stiefouder A: € ${Math.round(tremaResult.stepparentCapacity)} p/m` });
+      if (r.parentResults[0].stiefchildMaintenance) lines.push({ text: `Draagkracht Stiefouder A: € ${Math.round(r.parentResults[0].stiefchildMaintenance)} p/m` });
     }
-    if (r.parentResults?.[1]) {
+        if (r.parentResults?.[1]) {
       lines.push({ text: `Draagkracht Ouder B: € ${Math.round(r.parentResults[1].capacity)} p/m` });
       if (r.parentResults[1].stiefchildMaintenance) lines.push({ text: `Draagkracht Stiefouder B: € ${Math.round(r.parentResults[1].stiefchildMaintenance)} p/m` });
     }

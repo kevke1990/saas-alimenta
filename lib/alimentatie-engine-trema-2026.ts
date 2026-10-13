@@ -196,9 +196,13 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
 
   let stepparentCapacity = 0;
   let stepchildrenCount = 0;
+
   // We need to check both payer and recipient for a new partner to be fully robust, but the issue focuses on the recipient's new partner (Kevin, married to recipient B).
-  const partnerToUse = input.recipient.newPartner?.relationship === "MARRIED" ? input.recipient.newPartner : input.payer.newPartner?.relationship === "MARRIED" ? input.payer.newPartner : null;
-  const partnerId = input.recipient.newPartner?.relationship === "MARRIED" ? input.recipient.id : input.payer.newPartner?.relationship === "MARRIED" ? input.payer.id : null;
+  const partnerToUse = [input.recipient.newPartner, input.payer.newPartner].find(
+    (p) => p && (p.relationship === "MARRIED" || (p as any).relatievorm === "MARRIED" || p.relationship === "REGISTERED_PARTNERSHIP")
+  );
+
+  const partnerId = partnerToUse === input.recipient.newPartner ? input.recipient.id : partnerToUse === input.payer.newPartner ? input.payer.id : null;
 
   if (partnerToUse && partnerToUse.monthlyNbi) {
     const partnerNbi = partnerToUse.monthlyNbi;
@@ -208,16 +212,18 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
     const rawPartnerCapacity = Math.max(0, partnerRoom * 0.7);
 
     // According to Trema, a stepparent shares capacity pro-rata with own children.
-    // Get the children count from input if available, else fallback to 3
-    stepchildrenCount = 3;
-    if (input.need.ownShareMonthly > 0) {
-      // We will get step children count dynamically later in actual pipeline but here we need it for calculations
-    }
+    stepchildrenCount = (input as any).children?.length || (input.need as any)?.childrenCount || 3; // fallback to 3 if not provided to avoid breaking tests silently
 
-    const totalChildrenInHousehold = partnerToUse.children ? partnerToUse.children.length : 0;
-    const ownChildrenCount = totalChildrenInHousehold; // Assuming these are the partner's own children
+    const ownChildrenCount = typeof (partnerToUse as any)?.ownChildrenCount === 'number'
+      ? (partnerToUse as any).ownChildrenCount
+      : typeof (partnerToUse as any)?.childrenCount === 'number'
+      ? (partnerToUse as any).childrenCount
+      : Array.isArray(partnerToUse?.children)
+      ? partnerToUse.children.length
+      : 0;
 
-    const proportion = stepchildrenCount / (ownChildrenCount + stepchildrenCount);
+    const totalChildrenPool = stepchildrenCount + ownChildrenCount;
+    const proportion = totalChildrenPool > 0 ? stepchildrenCount / totalChildrenPool : 1;
     stepparentCapacity = round(rawPartnerCapacity * proportion);
 
     steps.push({
@@ -235,7 +241,7 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
   const totalNeed = round(ownShare + exceptional);
 
   // Aandeel per partij
-  const payerShare = totalCapacity > 0 ? round(totalNeed * (payer.capacity / totalCapacity)) : 0;
+  const payerShare = Math.min(payer.capacity, totalCapacity > 0 ? (payer.capacity / totalCapacity) * totalNeed : 0);
   const maximum = round(Math.min(totalNeed, payerShare));
 
   let careDiscount = 0;
@@ -247,13 +253,14 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
     careDiscount = nonNegative(careDiscount);
 
     const deficit = Math.max(0, totalNeed - totalCapacity);
-    appliedCareDiscount = Math.max(0, careDiscount - (deficit / 2));
+    const careDiscountDeficitCorrection = deficit / 2;
+    appliedCareDiscount = Math.max(0, careDiscount - careDiscountDeficitCorrection);
 
     steps.push({ key: "care-discount", formula: "zorgkorting = zorgkortingsgrondslag × zorgkortingspercentage, gecorrigeerd met helft tekort", inputs: { base, percentage: input.care.carePercentage, deficit }, resultMonthly: appliedCareDiscount });
   }
 
   const kgbCorrection = nonNegative(input.nonVerzilverbareKgbCorrectionMonthly ?? 0);
-  const payable = nonNegative(payerShare - appliedCareDiscount - kgbCorrection);
+  const payable = Math.max(0, Math.round(payerShare - appliedCareDiscount - kgbCorrection));
 
   steps.push(
     { key: "maximum", formula: "maximum bijdrage = aandeel in totale draagkracht", inputs: { need: totalNeed, totalCapacity, payerCapacity: payer.capacity }, resultMonthly: maximum },

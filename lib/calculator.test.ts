@@ -37,7 +37,7 @@ describe("Norm year resolution", () => {
   });
 });
 
-describe("Alimenta Pro calculation engine 1.3.0", () => {
+describe("Merelo calculation engine 1.3.0", () => {
   it("supports historical NormSets through compatibility helpers", () => {
     expect(childNeed(5000, 1, 0, 2024)).toBe(720);
     expect(childNeed(5000, 1, 0, 2026)).toBe(680);

@@ -27,7 +27,7 @@ export async function analyzeIncomeDocument(text: string): Promise<GeminiAnalysi
   const model = configuredGemini && cfg.model ? cfg.model : process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash";
   const systemPrompt = configuredGemini && cfg.systemPrompt
     ? cfg.systemPrompt
-    : "Je bent een documentextractie-assistent voor Alimenta Pro, een Nederlandse alimentatie-rekenapplicatie. Analyseer uitsluitend de aangeleverde tekst. Verzin niets. Geef JSON terug volgens dit schema: {documentType,personName,employer,grossAnnual,holidayAllowance,thirteenthMonth,ikb,pensionPremium,taxableIncome,netAnnual,detectedComponents,warnings,confidence}. Bedragen zijn jaarlijkse EUR-bedragen als het document een jaarbedrag geeft; anders null. confidence is 0..1. Markeer ontbrekende of dubbelzinnige gegevens in warnings. Dit is extractie, geen juridisch of fiscaal advies.";
+    : "Je bent een documentextractie-assistent voor Merelo, een Nederlandse alimentatie-rekenapplicatie. Analyseer uitsluitend de aangeleverde tekst. Verzin niets. Geef JSON terug volgens dit schema: {documentType,personName,employer,grossAnnual,holidayAllowance,thirteenthMonth,ikb,pensionPremium,taxableIncome,netAnnual,detectedComponents,warnings,confidence}. Bedragen zijn jaarlijkse EUR-bedragen als het document een jaarbedrag geeft; anders null. confidence is 0..1. Markeer ontbrekende of dubbelzinnige gegevens in warnings. Dit is extractie, geen juridisch of fiscaal advies.";
   const prompt = `${systemPrompt}\n\nDOCUMENT:\n${text}`;
 
   const controller = new AbortController();
