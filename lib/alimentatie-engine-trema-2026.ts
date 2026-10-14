@@ -33,6 +33,8 @@ export interface CapacityInput {
   correctedAssistanceNormMonthly?: number;
   /** Housing budget is normally 30% of NBI; may be supplied explicitly. */
   housingBudgetMonthly?: number;
+  housingCostMode?: "FORFAIT" | "ACTUAL";
+  actualHousingCost?: number;
   otherNecessaryCostsMonthly?: number;
   existingChildSupportMonthly?: number;
   otherPriorityMaintenanceMonthly?: number;
@@ -147,7 +149,7 @@ function calculateCapacity(parent: ParentCalculationInput, warnings: string[], s
 
   const incomeForChildSupport = round(nbi + kgb);
   const norm = calculateCorrectedNorm(c);
-  const housing = c.housingBudgetMonthly === undefined ? round(nbi * 0.3) : nonNegative(c.housingBudgetMonthly);
+  const housing = c.housingCostMode === "ACTUAL" && typeof c.actualHousingCost === "number" ? nonNegative(c.actualHousingCost) : (c.housingBudgetMonthly === undefined ? round(nbi * 0.3) : nonNegative(c.housingBudgetMonthly));
   const other = nonNegative(c.otherNecessaryCostsMonthly ?? 0);
   const priority = nonNegative((c.existingChildSupportMonthly ?? 0) + (c.otherPriorityMaintenanceMonthly ?? 0));
   const correction = c.professionalCorrectionMonthly ?? 0;
