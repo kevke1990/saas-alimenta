@@ -8,7 +8,7 @@ type RawParent = Record<string, unknown>;
 export type AlimentaFormPayload = {
   referenceYear?: NumericLike;
   calculationDate?: string;
-  need?: { ownShareMonthly?: NumericLike; exceptionalCostsMonthly?: NumericLike; alreadyIncludedExceptionalCostsMonthly?: NumericLike };
+  need?: { ownShareMonthly?: NumericLike; totalNeedMonthly?: NumericLike; exceptionalCostsMonthly?: NumericLike; alreadyIncludedExceptionalCostsMonthly?: NumericLike };
   payer?: RawParent;
   recipient?: RawParent;
   parents?: RawParent[];
@@ -89,15 +89,33 @@ export function adaptAlimentaForm(payload: AlimentaFormPayload): Trema2026Input 
   const referenceYear = money(payload.referenceYear, "peiljaar", 2026);
   if (referenceYear !== 2026) throw new Error("REVIEW_REQUIRED: de huidige berekeningsengine ondersteunt uitsluitend de 2026-normset.");
 
+  const p0 = resolveParent(payload, 0);
+  const p1 = resolveParent(payload, 1);
+  const resA = (payload.children || []).filter((c: any) => c.residence === 'A' || c.residence === 'Ouder A').length;
+  const resB = (payload.children || []).filter((c: any) => c.residence === 'B' || c.residence === 'Ouder B').length;
+  const isParent0Payer = resB > resA || (resB === 0 && resA === 0);
+
+  const payerRaw = isParent0Payer ? p0 : p1;
+  const recipientRaw = isParent0Payer ? p1 : p0;
+  const payerId = isParent0Payer ? "A" : "B";
+  const recipientId = isParent0Payer ? "B" : "A";
+
   const childrenNeed = (payload.children ?? []).reduce((sum, child) => sum + money(child.specialCosts, "bijzondere kindkosten", 0) - money(child.ownIncome, "eigen inkomen kind", 0), 0);
-  const explicitNeed = payload.need?.ownShareMonthly;
+  const explicitNeed = payload.need?.totalNeedMonthly ?? payload.need?.ownShareMonthly; // Give totalNeed priority
   let ownShareMonthly = explicitNeed === undefined ? childrenNeed : money(explicitNeed, "eigen aandeel");
   if (ownShareMonthly <= 0) ownShareMonthly = 1;
 
-  const care = payload.care ? {
-    carePercentage: money(payload.care.carePercentage, "zorgpercentage", 0),
-    careDiscountBaseMonthly: payload.care.careDiscountBaseMonthly === undefined ? undefined : money(payload.care.careDiscountBaseMonthly, "zorgkortingsgrondslag"),
-    careDiscountOverrideMonthly: payload.care.careDiscountOverrideMonthly === undefined ? undefined : money(payload.care.careDiscountOverrideMonthly, "zorgkorting"),
+  let carePercentage = payload.care?.carePercentage;
+  if (carePercentage === undefined && payerRaw?.careDaysPerWeek !== undefined) {
+    const days = Number(payerRaw.careDaysPerWeek);
+    carePercentage = days >= 3 ? 35 : days >= 2 ? 25 : days >= 1 ? 15 : days > 0 ? 5 : 0;
+  }
+
+  const baseNeedTotal = (payload.children || []).reduce((sum: number, c: any) => sum + Number(c.baseNeed || c.need || 380), 0);
+  const care = carePercentage !== undefined ? {
+    carePercentage: Number(carePercentage),
+    careDiscountBaseMonthly: payload.care?.careDiscountBaseMonthly !== undefined ? Number(payload.care.careDiscountBaseMonthly) : baseNeedTotal,
+    careDiscountOverrideMonthly: payload.care?.careDiscountOverrideMonthly !== undefined ? Number(payload.care.careDiscountOverrideMonthly) : undefined,
   } : undefined;
 
   return {
@@ -107,8 +125,8 @@ export function adaptAlimentaForm(payload: AlimentaFormPayload): Trema2026Input 
       exceptionalCostsMonthly: money(payload.need?.exceptionalCostsMonthly, "bijzondere kosten", 0),
       alreadyIncludedExceptionalCostsMonthly: money(payload.need?.alreadyIncludedExceptionalCostsMonthly, "reeds opgenomen bijzondere kosten", 0),
     },
-    payer: parent("A", resolveParent(payload, 0)),
-    recipient: parent("B", resolveParent(payload, 1)),
+    payer: parent(payerId, payerRaw),
+    recipient: parent(recipientId, recipientRaw),
     care,
     nonVerzilverbareKgbCorrectionMonthly: money(payload.nonVerzilverbareKgbCorrectionMonthly, "niet-verzilverbare KGB-correctie", 0),
   };

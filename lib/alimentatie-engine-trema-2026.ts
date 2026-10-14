@@ -204,8 +204,9 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
 
   const partnerId = partnerToUse === input.recipient.newPartner ? input.recipient.id : partnerToUse === input.payer.newPartner ? input.payer.id : null;
 
-  if (partnerToUse && partnerToUse.monthlyNbi) {
-    const partnerNbi = partnerToUse.monthlyNbi;
+  const partnerNbiValue = (partnerToUse as any)?.monthlyNbi ?? (partnerToUse as any)?.nbiMonthly ?? (partnerToUse as any)?.nbi;
+  if (partnerToUse && partnerNbiValue !== undefined) {
+    const partnerNbi = Number(partnerNbiValue);
 
     // Simulate partner capacity using 70% formula (fallback, could be refined to full calculation later if inputs permitted)
     const partnerRoom = Math.max(0, partnerNbi - 1365 - (partnerNbi * 0.3)); // Rough approximation for 2026
@@ -250,17 +251,16 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
 
   let careDiscount = 0;
   let appliedCareDiscount = 0;
-  if (input.care) {
+  if (input.care && input.care.carePercentage > 0) {
     if (input.care.carePercentage < 0 || input.care.carePercentage > 100) throw new Error("Zorgkortingspercentage moet tussen 0 en 100 liggen.");
     const base = input.care.careDiscountBaseMonthly ?? ownShare;
-    careDiscount = input.care.careDiscountOverrideMonthly ?? round(base * (input.care.carePercentage / 100));
-    careDiscount = nonNegative(careDiscount);
+    const grossCareDiscount = input.care.careDiscountOverrideMonthly ?? round(base * (input.care.carePercentage / 100));
 
+    // Trema 2026: bij tekort verminderen met helft tekort, begrensd op minimaal 0
     const deficit = Math.max(0, totalNeed - totalCapacity);
-    const careDiscountDeficitCorrection = deficit / 2;
-    appliedCareDiscount = Math.max(0, careDiscount - careDiscountDeficitCorrection);
+    appliedCareDiscount = Math.max(0, Math.round(grossCareDiscount - (deficit / 2)));
 
-    steps.push({ key: "care-discount", formula: "zorgkorting = zorgkortingsgrondslag × zorgkortingspercentage, gecorrigeerd met helft tekort", inputs: { base, percentage: input.care.carePercentage, deficit }, resultMonthly: appliedCareDiscount });
+    steps.push({ key: "care-discount", formula: "zorgkorting = bruto zorgkorting minus helft tekort", inputs: { base, percentage: input.care.carePercentage, deficit }, resultMonthly: appliedCareDiscount });
   }
 
   const kgbCorrection = nonNegative(input.nonVerzilverbareKgbCorrectionMonthly ?? 0);
