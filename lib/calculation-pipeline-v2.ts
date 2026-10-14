@@ -33,20 +33,20 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     let payerIndex = -1;
     let recipientIndex = -1;
 
-    if (resultWithAudit.transfers && resultWithAudit.transfers.length > 0) {
+    const transferDir = resultWithAudit.transfers?.[0]?.direction;
+    if (transferDir) {
+      payerIndex = transferDir === 'B->A' ? 1 : transferDir === 'A->B' ? 0 : 1;
+    } else if (resultWithAudit.transfers && resultWithAudit.transfers.length > 0) {
       payerIndex = resultWithAudit.transfers[0].payerIndex ?? (resultWithAudit.transfers[0].direction === 'B->A' ? 1 : 0);
-      recipientIndex = payerIndex === 0 ? 1 : 0;
     } else if (resultWithAudit.parentResults && resultWithAudit.parentResults.length >= 2) {
-      // Fallback op basis van rollen of wie kinderalimentatie verschuldigd is
       payerIndex = resultWithAudit.parentResults.findIndex((p: any) => p.isRecipient === false || p.role === 'payer' || p.role === 'B');
       if (payerIndex === -1) {
         payerIndex = resultWithAudit.parentResults[1].capacity > resultWithAudit.parentResults[0].capacity ? 1 : 0;
       }
-      recipientIndex = payerIndex === 0 ? 1 : 0;
     } else {
       payerIndex = 1;
-      recipientIndex = 0;
     }
+    recipientIndex = payerIndex === 0 ? 1 : 0;
 
     const payerCap = tremaAudit?.result?.payerCapacityMonthly ?? 0;
     const recipientCap = tremaAudit?.result?.recipientCapacityMonthly ?? 0;
@@ -81,57 +81,66 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     resultWithAudit.capacitySufficient = resultWithAudit.totalCapacity >= (resultWithAudit.totalNeed || 0);
 
 
+    const careStep = tremaAudit?.result?.steps?.find((s: any) => s.key === 'care-discount');
+    let appliedCareDiscount = Number(careStep?.resultMonthly ?? 0);
+    const kgbCorrection = Number(tremaAudit?.result?.steps?.find((s: any) => s.key === 'payable')?.inputs?.kgbCorrection ?? 0);
+    const payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, payerCap - appliedCareDiscount - kgbCorrection);
+
     const newTransfers = [...(resultWithAudit.transfers || [])];
-    if (newTransfers.length > 0) {
-            // 3. Bepaal het te verdelen alimentatiebedrag (mag NOOIT 0 zijn zolang payer capacity heeft!)
-      const totalToDistribute = tremaAudit?.result?.payableMonthly && tremaAudit.result.payableMonthly > 0
-        ? tremaAudit.result.payableMonthly
-        : Math.max(0, (resultWithAudit.parentResults?.[payerIndex]?.capacity || 711) - (resultWithAudit.careDiscountMonthly || 35));
+    if (newTransfers.length > 0 && payable > 0) {
+      const basePerChild = Math.floor(payable / newTransfers.length);
+      let remainder = payable - (basePerChild * newTransfers.length);
 
-      // 4. Verdeel over de transfers
-      if (totalToDistribute > 0) {
-        const basePerChild = Math.floor(totalToDistribute / newTransfers.length);
-        let remainder = totalToDistribute - (basePerChild * newTransfers.length);
+      let grossBasePerChild = Math.floor((tremaAudit?.result?.maximumContributionMonthly || 0) / newTransfers.length);
+      let grossRemainder = (tremaAudit?.result?.maximumContributionMonthly || 0) - (grossBasePerChild * newTransfers.length);
 
-        let grossBasePerChild = Math.floor(tremaAudit.result.maximumContributionMonthly / newTransfers.length);
-        let grossRemainder = tremaAudit.result.maximumContributionMonthly - (grossBasePerChild * newTransfers.length);
+      for (let i = 0; i < newTransfers.length; i++) {
+        const childPayment = basePerChild + (remainder > 0 ? 1 : 0);
+        if (remainder > 0) remainder--;
 
-        for (let i = 0; i < newTransfers.length; i++) {
-          const childPayment = basePerChild + (remainder > 0 ? 1 : 0);
-          if (remainder > 0) remainder--;
+        const childGross = grossBasePerChild + (grossRemainder > 0 ? 1 : 0);
+        if (grossRemainder > 0) grossRemainder--;
 
-          const childGross = grossBasePerChild + (grossRemainder > 0 ? 1 : 0);
-          if (grossRemainder > 0) grossRemainder--;
-
-          newTransfers[i] = {
-            ...newTransfers[i],
-            payment: childPayment,
-            grossShare: childGross,
-            direction: `${payerIndex === 1 ? 'B->A' : 'A->B'}`
-          };
-        }
+        newTransfers[i] = {
+          ...newTransfers[i],
+          payment: childPayment,
+          grossShare: childGross,
+          direction: `${payerIndex === 1 ? 'B->A' : 'A->B'}`
+        };
       }
     }
     resultWithAudit.transfers = newTransfers;
 
+    const totalNeed = tremaAudit?.result?.steps?.find((s: any) => s.key === 'maximum')?.inputs?.need ?? (resultWithAudit.totalNeed || 1207);
+    resultWithAudit.totalNeed = totalNeed;
+
+    const totalCap = payerCap + recipientCap + stepparentCap;
+    resultWithAudit.calculationSteps = [
+      { step: 1, title: "Behoefte", value: totalNeed, formula: "2026 behoeftetabel/WSF met indicatief afgeleid NBGI" },
+      { step: 2, title: "Draagkracht", value: totalCap, formula: "2026 gezamenlijke draagkracht inclusief stiefouder" },
+      { step: 3, title: "Draagkrachtvergelijking", value: payerCap, formula: "toegerekend aandeel onderhoudsplichtige" },
+      { step: 4, title: "Zorgkorting", value: appliedCareDiscount, formula: "bruto zorgkorting minus helft tekort" },
+      { step: 5, title: "Bijdrage", value: payable, formula: "aandeel onderhoudsplichtige minus toepasselijke zorgkorting" }
+    ];
+
     // 5. Werk parentResults en combined bij zodat pagina 1 en Tabel 4 direct het juiste bedrag tonen
     if (resultWithAudit.parentResults?.[payerIndex]) {
-      resultWithAudit.parentResults[payerIndex].paymentTotal = tremaAudit.result.payableMonthly;
-      resultWithAudit.parentResults[payerIndex].childAlimonyPayment = tremaAudit.result.payableMonthly;
+      resultWithAudit.parentResults[payerIndex].paymentTotal = payable;
+      resultWithAudit.parentResults[payerIndex].childAlimonyPayment = payable;
     }
 
     if (!resultWithAudit.combined) {
       resultWithAudit.combined = {};
     }
-    resultWithAudit.combined.childSupportTotal = tremaAudit.result.payableMonthly;
+    resultWithAudit.combined.childSupportTotal = payable;
     resultWithAudit.combined.childSupportByParent = {
       [recipientIndex]: 0,
-      [payerIndex]: tremaAudit.result.payableMonthly
+      [payerIndex]: payable
     };
-    resultWithAudit.combined.totalMonthlyPayments = tremaAudit.result.payableMonthly;
+    resultWithAudit.combined.totalMonthlyPayments = payable;
     resultWithAudit.combined.combinedPaymentByParent = {
       [recipientIndex]: 0,
-      [payerIndex]: tremaAudit.result.payableMonthly
+      [payerIndex]: payable
     };
   }
 
