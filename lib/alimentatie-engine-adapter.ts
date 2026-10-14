@@ -48,6 +48,8 @@ function parent(id: "A" | "B", raw: RawParent | undefined): ParentCalculationInp
     officialCapacityMonthly: raw.officialCapacityMonthly === undefined ? undefined : money(raw.officialCapacityMonthly as NumericLike, `ouder ${id}: officiële draagkracht`),
     capacityMethod: raw.capacityMethod === "official-table" ? "official-table" : "published-formula",
     correctedAssistanceNormMonthly: raw.correctedAssistanceNormMonthly === undefined ? 1365 : money(raw.correctedAssistanceNormMonthly as NumericLike, `ouder ${id}: gecorrigeerde bijstandsnorm`),
+    housingCostMode: raw.housingCostMode === "ACTUAL" ? "ACTUAL" : "FORFAIT",
+    actualHousingCost: raw.actualHousingCost === undefined ? undefined : money(raw.actualHousingCost as NumericLike, `ouder ${id}: werkelijke woonlast`),
     housingBudgetMonthly: raw.housingBudgetMonthly === undefined ? undefined : money(raw.housingBudgetMonthly as NumericLike, `ouder ${id}: woonbudget`),
     otherNecessaryCostsMonthly: money(raw.otherNecessaryCostsMonthly as NumericLike, `ouder ${id}: noodzakelijke lasten`, 0),
     existingChildSupportMonthly: money(raw.existingChildSupportMonthly as NumericLike, `ouder ${id}: bestaande kinderalimentatie`, 0),
