@@ -155,6 +155,33 @@ export const HISTORICAL_NORM_PARAMETER_RECORDS: readonly HistoricalNormParameter
     sourceLocator: "Bijlage januari 2023: vakantiebonnen, heffingskortingen, box-3-rendementen, bijstandsnormen en overige norminputs",
     sourceDate: "2023-01-01",
   },
+  {
+    periodId: "2006-H1",
+    key: "minimumIncome",
+    status: "verified",
+    sourceUrl: "https://www.rechtspraak.nl/SiteCollectionDocuments/Bijlage-2006-eerste-helft.pdf",
+    sourceLocator: "Paragraaf 9, p. 2: bijstandsnorm inclusief vakantiegeld; paragraaf 10: gemiddelde basishuur",
+    sourceDate: "2006-01-01",
+    notes: "January 2006: married €1,201; single parent €1,081; single €841; average basic rent €190.",
+  },
+  {
+    periodId: "2006-H2",
+    key: "minimumIncome",
+    status: "verified",
+    sourceUrl: "https://www.rechtspraak.nl/SiteCollectionDocuments/Bijlage-2006-tweede-helft.pdf",
+    sourceLocator: "Paragraaf 9, p. 10: bijstandsnorm inclusief vakantietoeslag; paragraaf 10: gemiddelde basishuur",
+    sourceDate: "2006-07-01",
+    notes: "July 2006: married €1,208; single parent €1,087; single €846; average basic rent €197.",
+  },
+  {
+    periodId: "2006-H2",
+    key: "tableAmount",
+    status: "verified",
+    sourceUrl: "https://www.rechtspraak.nl/SiteCollectionDocuments/Bijlage-2006-tweede-helft.pdf",
+    sourceLocator: "Paragraaf 28, tabellen 1 en 2, p. 11: kinderbijslagpunten en eigen aandeel kosten van kinderen",
+    sourceDate: "2006-07-01",
+    notes: "Official July 2006 tables 1-4 were transcribed into historical-2006-norm-data.ts; other required parameter groups and independent reference calculations remain pending.",
+  },
 ];
 
 export function getHistoricalNormParameterRecords(periodId: string): readonly HistoricalNormParameterRecord[] {
