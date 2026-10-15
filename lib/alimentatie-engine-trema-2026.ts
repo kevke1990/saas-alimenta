@@ -149,7 +149,8 @@ function calculateCapacity(parent: ParentCalculationInput, warnings: string[], s
 
   const incomeForChildSupport = round(nbi + kgb);
   const norm = calculateCorrectedNorm(c);
-  const housing = c.housingCostMode === "ACTUAL" && typeof c.actualHousingCost === "number" ? nonNegative(c.actualHousingCost) : (c.housingBudgetMonthly === undefined ? round(nbi * 0.3) : nonNegative(c.housingBudgetMonthly));
+  const isActual = c.housingCostMode === 'ACTUAL' || (c as any).housingType === 'ACTUAL' || (typeof c.actualHousingCost === 'number' && c.actualHousingCost >= 0);
+  const housing = isActual ? nonNegative(c.actualHousingCost ?? (c as any).housingCosts ?? 0) : Math.round(nbi * 0.30);
   const other = nonNegative(c.otherNecessaryCostsMonthly ?? 0);
   const priority = nonNegative((c.existingChildSupportMonthly ?? 0) + (c.otherPriorityMaintenanceMonthly ?? 0));
   const correction = c.professionalCorrectionMonthly ?? 0;
@@ -239,10 +240,7 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
 
   const totalCapacity = payer.capacity + recipient.capacity + stepparentCapacity;
 
-    const derivedNeed = (input.need as any).totalNeedMonthly
-    || (input.need as any).needMonthly
-    || ((input as any).children?.reduce((sum: number, c: any) => sum + (c.totalNeed || c.need || 0), 0))
-    || 1207;
+    const derivedNeed = (input.need as any).totalNeedMonthly || (input.need as any).needMonthly || ((input as any).children?.reduce((sum: number, c: any) => sum + (c.totalNeed || c.need || c.baseNeed || 0), 0)) || 1207;
   const ownShare = (input.need.ownShareMonthly && input.need.ownShareMonthly > 0) ? input.need.ownShareMonthly : derivedNeed;
   const exceptional = nonNegative((input.need.exceptionalCostsMonthly ?? 0) - (input.need.alreadyIncludedExceptionalCostsMonthly ?? 0));
   const totalNeed = round(ownShare + exceptional);

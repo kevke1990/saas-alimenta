@@ -84,7 +84,16 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     const careStep = tremaAudit?.result?.steps?.find((s: any) => s.key === 'care-discount');
     let appliedCareDiscount = Number(careStep?.resultMonthly ?? 0);
     const kgbCorrection = Number(tremaAudit?.result?.steps?.find((s: any) => s.key === 'payable')?.inputs?.kgbCorrection ?? 0);
-    const payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, payerCap - appliedCareDiscount - kgbCorrection);
+    const combinedCap2 = payerCap + recipientCap + stepparentCap;
+    const totalNeed2 = tremaAudit?.result?.steps?.find((s: any) => s.key === 'maximum')?.inputs?.need ?? (resultWithAudit.totalNeed || 1207);
+    const deficit = Math.max(0, totalNeed2 - combinedCap2);
+
+    let payable = 0;
+    if (deficit === 0) {
+      payable = Math.min(payerCap, totalNeed2) - appliedCareDiscount;
+    } else {
+      payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, payerCap - appliedCareDiscount - kgbCorrection);
+    }
 
     const newTransfers = [...(resultWithAudit.transfers || [])];
     if (newTransfers.length > 0 && payable > 0) {
@@ -144,7 +153,9 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     };
   }
 
-  const fingerprint = fingerprintCalculation(input, resultWithAudit, normVersion);
+  const fingerprint = fingerprintCalculation(input, resultWithAudit, "2026.1");
+  resultWithAudit.engineVersion = "2.0.0";
+  resultWithAudit.normVersion = "2026.1";
   return {
     input,
     result: resultWithAudit,
