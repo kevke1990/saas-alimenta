@@ -34,3 +34,29 @@ export const clientSchema = z.object({
   personAName: z.string().min(2).max(150), personAEmail: optionalEmail, personAPhone: z.string().max(50).optional(), personAGender: gender,
   personBName: z.string().min(2).max(150), personBEmail: optionalEmail, personBPhone: z.string().max(50).optional(), personBGender: gender
 });
+
+const numericLikeSchema = z.union([z.number(), z.string(), z.null(), z.undefined()]);
+
+export const alimentaFormPayloadSchema = z.object({
+  referenceYear: numericLikeSchema,
+  calculationDate: z.string().optional(),
+  need: z.object({
+    ownShareMonthly: numericLikeSchema,
+    totalNeedMonthly: numericLikeSchema,
+    exceptionalCostsMonthly: numericLikeSchema,
+    alreadyIncludedExceptionalCostsMonthly: numericLikeSchema
+  }).optional(),
+  payer: z.record(z.string(), z.unknown()).optional(),
+  recipient: z.record(z.string(), z.unknown()).optional(),
+  parents: z.array(z.record(z.string(), z.unknown())).optional(),
+  children: z.array(z.object({
+    specialCosts: numericLikeSchema,
+    ownIncome: numericLikeSchema
+  })).optional(),
+  care: z.object({
+    carePercentage: numericLikeSchema,
+    careDiscountBaseMonthly: numericLikeSchema,
+    careDiscountOverrideMonthly: numericLikeSchema
+  }).optional(),
+  nonVerzilverbareKgbCorrectionMonthly: numericLikeSchema
+}).partial();
