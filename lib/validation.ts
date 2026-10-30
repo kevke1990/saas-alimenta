@@ -60,3 +60,24 @@ export const alimentaFormPayloadSchema = z.object({
   }).optional(),
   nonVerzilverbareKgbCorrectionMonthly: numericLikeSchema
 }).partial();
+
+export const trema2027ParentSchema = z.object({
+  id: z.enum(["A", "B"]),
+  monthlyNbi: z.number().nonnegative(),
+  monthlyKgb: z.number().nonnegative().optional(),
+  kgbVerified: z.boolean().optional(),
+  officialCapacityMonthly: z.number().nonnegative(),
+});
+
+export const trema2027PayloadSchema = z.object({
+  referenceYear: z.literal(2027),
+  ownShareMonthly: z.number().nonnegative(),
+  exceptionalCostsMonthly: z.number().nonnegative().optional(),
+  alreadyIncludedExceptionalCostsMonthly: z.number().nonnegative().optional(),
+  payer: trema2027ParentSchema,
+  recipient: trema2027ParentSchema,
+  carePercentage: z.number().min(0).max(1).optional(),
+  careDiscountBaseMonthly: z.number().nonnegative().optional(),
+  careDiscountOverrideMonthly: z.number().nonnegative().optional(),
+  nonVerzilverbareKgbCorrectionMonthly: z.number().nonnegative().optional(),
+});
