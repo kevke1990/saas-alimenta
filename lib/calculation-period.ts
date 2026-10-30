@@ -2,7 +2,7 @@ import {
   assertHistoricalNormExecutable,
   resolveHistoricalNormPeriod,
   type HistoricalNormPeriod,
-} from "./historical-alimentatie-norms";
+} from "./historical/historical-alimentatie-norms";
 
 export type CalculationPeriodResolution = {
   requestedDate: string;

@@ -7,7 +7,7 @@
  * are still required by the release gate.
  */
 
-import { NORM_SETS, type NormYear } from "./norms";
+import { NORM_SETS, type NormYear } from "../norms";
 
 export type HistoricalNormParameterStatus = "pending" | "verified";
 

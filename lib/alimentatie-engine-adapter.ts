@@ -1,6 +1,6 @@
 /** Adapter boundary between Alimenta form payloads and the audited Trema 2026 core. */
 import type { CapacityInput, ParentCalculationInput, Trema2026Input } from "@/lib/alimentatie-engine-trema-2026";
-import { resolveHistoricalNormPeriod, assertHistoricalNormExecutable } from "./historical-alimentatie-norms";
+import { resolveHistoricalNormPeriod, assertHistoricalNormExecutable } from "./historical/historical-alimentatie-norms";
 
 type NumericLike = number | string | null | undefined;
 type RawParent = Record<string, unknown>;
