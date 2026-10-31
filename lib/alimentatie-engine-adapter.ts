@@ -1,6 +1,6 @@
 /** Adapter boundary between Alimenta form payloads and the audited Trema 2026 core. */
 import type { CapacityInput, ParentCalculationInput, Trema2026Input } from "@/lib/alimentatie-engine-trema-2026";
-import { resolveHistoricalNormPeriod, assertHistoricalNormExecutable } from "./historical-alimentatie-norms";
+import { resolveHistoricalNormPeriod, assertHistoricalNormExecutable } from "./historical/historical-alimentatie-norms";
 
 type NumericLike = number | string | null | undefined;
 type RawParent = Record<string, unknown>;
@@ -48,8 +48,8 @@ function parent(id: "A" | "B", raw: RawParent | undefined): ParentCalculationInp
     officialCapacityMonthly: raw.officialCapacityMonthly === undefined ? undefined : money(raw.officialCapacityMonthly as NumericLike, `ouder ${id}: officiële draagkracht`),
     capacityMethod: raw.capacityMethod === "official-table" ? "official-table" : "published-formula",
     correctedAssistanceNormMonthly: raw.correctedAssistanceNormMonthly === undefined ? 1365 : money(raw.correctedAssistanceNormMonthly as NumericLike, `ouder ${id}: gecorrigeerde bijstandsnorm`),
-    housingCostMode: raw.housingCostMode === "ACTUAL" ? "ACTUAL" : "FORFAIT",
-    actualHousingCost: raw.actualHousingCost === undefined ? undefined : money(raw.actualHousingCost as NumericLike, `ouder ${id}: werkelijke woonlast`),
+    housingCostMode: raw.housingCostMode === "ACTUAL" || ((raw.actualHousingCost !== undefined && Number(raw.actualHousingCost) >= 0) || (raw.housingCosts !== undefined && Number(raw.housingCosts) > 0) || ((raw.housing && typeof raw.housing === "object" && (raw.housing as any).monthlyCosts !== undefined && Number((raw.housing as any).monthlyCosts) > 0))) ? "ACTUAL" : "FORFAIT",
+    actualHousingCost: (firstValue(raw, ["actualHousingCost", "housingCosts"]) ?? (raw.housing && typeof raw.housing === "object" ? (raw.housing as any).monthlyCosts : undefined)) === undefined ? undefined : money((firstValue(raw, ["actualHousingCost", "housingCosts"]) ?? (raw.housing && typeof raw.housing === "object" ? (raw.housing as any).monthlyCosts : undefined)) as NumericLike, `ouder ${id}: werkelijke woonlast`),
     housingBudgetMonthly: raw.housingBudgetMonthly === undefined ? undefined : money(raw.housingBudgetMonthly as NumericLike, `ouder ${id}: woonbudget`),
     otherNecessaryCostsMonthly: money(raw.otherNecessaryCostsMonthly as NumericLike, `ouder ${id}: noodzakelijke lasten`, 0),
     existingChildSupportMonthly: money(raw.existingChildSupportMonthly as NumericLike, `ouder ${id}: bestaande kinderalimentatie`, 0),

@@ -34,3 +34,50 @@ export const clientSchema = z.object({
   personAName: z.string().min(2).max(150), personAEmail: optionalEmail, personAPhone: z.string().max(50).optional(), personAGender: gender,
   personBName: z.string().min(2).max(150), personBEmail: optionalEmail, personBPhone: z.string().max(50).optional(), personBGender: gender
 });
+
+const numericLikeSchema = z.union([z.number(), z.string(), z.null(), z.undefined()]);
+
+export const alimentaFormPayloadSchema = z.object({
+  referenceYear: numericLikeSchema,
+  calculationDate: z.string().optional(),
+  need: z.object({
+    ownShareMonthly: numericLikeSchema,
+    totalNeedMonthly: numericLikeSchema,
+    exceptionalCostsMonthly: numericLikeSchema,
+    alreadyIncludedExceptionalCostsMonthly: numericLikeSchema
+  }).optional(),
+  payer: z.record(z.string(), z.unknown()).optional(),
+  recipient: z.record(z.string(), z.unknown()).optional(),
+  parents: z.array(z.record(z.string(), z.unknown())).optional(),
+  children: z.array(z.object({
+    specialCosts: numericLikeSchema,
+    ownIncome: numericLikeSchema
+  })).optional(),
+  care: z.object({
+    carePercentage: numericLikeSchema,
+    careDiscountBaseMonthly: numericLikeSchema,
+    careDiscountOverrideMonthly: numericLikeSchema
+  }).optional(),
+  nonVerzilverbareKgbCorrectionMonthly: numericLikeSchema
+}).partial();
+
+export const trema2027ParentSchema = z.object({
+  id: z.enum(["A", "B"]),
+  monthlyNbi: z.number().nonnegative(),
+  monthlyKgb: z.number().nonnegative().optional(),
+  kgbVerified: z.boolean().optional(),
+  officialCapacityMonthly: z.number().nonnegative(),
+});
+
+export const trema2027PayloadSchema = z.object({
+  referenceYear: z.literal(2027),
+  ownShareMonthly: z.number().nonnegative(),
+  exceptionalCostsMonthly: z.number().nonnegative().optional(),
+  alreadyIncludedExceptionalCostsMonthly: z.number().nonnegative().optional(),
+  payer: trema2027ParentSchema,
+  recipient: trema2027ParentSchema,
+  carePercentage: z.number().min(0).max(1).optional(),
+  careDiscountBaseMonthly: z.number().nonnegative().optional(),
+  careDiscountOverrideMonthly: z.number().nonnegative().optional(),
+  nonVerzilverbareKgbCorrectionMonthly: z.number().nonnegative().optional(),
+});
