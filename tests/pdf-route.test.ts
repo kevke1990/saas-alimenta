@@ -4,6 +4,7 @@ import * as auth from "../lib/auth";
 import { db } from "../lib/db";
 import { requireCaseTenantAccess } from "../lib/tenant-access";
 import { buildReviewCalculationBinding } from "../lib/review-binding";
+import { execSync } from "child_process";
 
 vi.mock("../lib/auth");
 vi.mock("../lib/tenant-access");
@@ -14,6 +15,10 @@ vi.mock("../lib/db", () => ({
     auditLog: { findFirst: vi.fn() },
   }
 }));
+
+function extractText(pdfBuffer: Buffer): string {
+  return execSync("pdftotext - -", { input: pdfBuffer }).toString("utf-8");
+}
 
 describe("PDF Route Export states", () => {
   beforeEach(() => {
@@ -32,8 +37,8 @@ describe("PDF Route Export states", () => {
 
     const req = new Request("http://localhost");
     const res = await GET(req, { params: Promise.resolve({ id: "case1" }) });
-    const buffer = await res.arrayBuffer();
-    const text = Buffer.from(buffer).toString("latin1");
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const text = extractText(buffer);
 
     expect(text).toContain("CONCEPT / NIET GOEDGEKEURD");
   });
@@ -46,12 +51,12 @@ describe("PDF Route Export states", () => {
       calculations: [{ id: "calc1", engineVersion: "2026", normVersion: "2026", result: {} }]
     } as any);
 
-    vi.mocked(db.auditLog.findFirst).mockResolvedValue(null as any); // no audit log found
+    vi.mocked(db.auditLog.findFirst).mockResolvedValue(null as any);
 
     const req = new Request("http://localhost");
     const res = await GET(req, { params: Promise.resolve({ id: "case1" }) });
-    const buffer = await res.arrayBuffer();
-    const text = Buffer.from(buffer).toString("latin1");
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const text = extractText(buffer);
 
     expect(text).toContain("CONCEPT / NIET GOEDGEKEURD");
   });
@@ -65,15 +70,14 @@ describe("PDF Route Export states", () => {
       calculations: [calc]
     } as any);
 
-    // Audit log has a binding, but it doesn't match the current calculation fingerprint
     vi.mocked(db.auditLog.findFirst).mockResolvedValue({
       metadata: { calculationBinding: { calculationId: "calc1", fingerprint: "old-fingerprint" } }
     } as any);
 
     const req = new Request("http://localhost");
     const res = await GET(req, { params: Promise.resolve({ id: "case1" }) });
-    const buffer = await res.arrayBuffer();
-    const text = Buffer.from(buffer).toString("latin1");
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const text = extractText(buffer);
 
     expect(text).toContain("CONCEPT / NIET GOEDGEKEURD");
   });
@@ -95,15 +99,15 @@ describe("PDF Route Export states", () => {
 
     const req = new Request("http://localhost");
     const res = await GET(req, { params: Promise.resolve({ id: "case1" }) });
-    const buffer = await res.arrayBuffer();
-    const text = Buffer.from(buffer).toString("latin1");
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const text = extractText(buffer);
 
     expect(text).not.toContain("CONCEPT / NIET GOEDGEKEURD");
     expect(text).toContain("Alimentatieberekening");
   });
 
   it("exports DRAFT when there is no calculation at all", async () => {
-     vi.mocked(db.case.findFirst).mockResolvedValue({
+    vi.mocked(db.case.findFirst).mockResolvedValue({
       id: "case1",
       name: "Case 1",
       approvedAt: new Date(),
@@ -112,8 +116,8 @@ describe("PDF Route Export states", () => {
 
     const req = new Request("http://localhost");
     const res = await GET(req, { params: Promise.resolve({ id: "case1" }) });
-    const buffer = await res.arrayBuffer();
-    const text = Buffer.from(buffer).toString("latin1");
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const text = extractText(buffer);
 
     expect(text).toContain("CONCEPT / NIET GOEDGEKEURD");
   });

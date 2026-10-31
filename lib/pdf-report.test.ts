@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createCalculationPdf } from "./pdf-report";
+import { execSync } from "child_process";
+
+function extractText(pdfBuffer: Buffer): string {
+  return execSync("pdftotext - -", { input: pdfBuffer }).toString("utf-8");
+}
 
 describe("calculation PDF report", () => {
   it("creates a valid vector PDF with multiple pages and neutral styling", async () => {
@@ -28,10 +33,15 @@ describe("calculation PDF report", () => {
       },
     });
 
-    const text = pdf.toString("latin1");
-    expect(text.startsWith("%PDF")).toBe(true);
+    expect(pdf.subarray(0, 4).toString()).toBe("%PDF");
     expect(pdf.length).toBeGreaterThan(1000);
-    expect(text).toContain("/Type /Pages");
-    expect(text).toContain("startxref");
+
+    const text = extractText(pdf);
+    expect(text).toContain("Alimentatieberekening");
+    expect(text).toContain("Dossier & Partijen");
+    expect(text).toContain("1.223");
+    expect(text).toContain("1.428");
+    expect(text).toContain("Dianne");
+    expect(text).toContain("Pedro");
   });
 });

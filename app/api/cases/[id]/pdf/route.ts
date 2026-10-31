@@ -44,7 +44,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   }
 
   const result = (calculation?.result || record.result || {}) as Record<string, unknown>;
-  const pdfBuffer = createCalculationPdf({
+  const caseData = (record.data || {}) as Record<string, unknown>;
+  const pdfBuffer = await createCalculationPdf({
     draft: isDraft,
     title: "Alimentatieberekening",
     clientName: record.client?.name || undefined,
@@ -52,6 +53,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     calculationVersion: calculation?.engineVersion || record.calculationVersion,
     normVersion: calculation?.normVersion || "2026.1",
     result,
+    caseData,
     professionalName: user.name || user.email,
     practiceName: user.companyName || "Familierecht Specialist",
   });
