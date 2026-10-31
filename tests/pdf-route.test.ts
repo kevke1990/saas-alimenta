@@ -99,7 +99,7 @@ describe("PDF Route Export states", () => {
     const text = Buffer.from(buffer).toString("latin1");
 
     expect(text).not.toContain("CONCEPT / NIET GOEDGEKEURD");
-    expect(text).toContain("Merelo");
+    expect(text).toContain("Alimentatieberekening");
   });
 
   it("exports DRAFT when there is no calculation at all", async () => {

@@ -1,9 +1,11 @@
 import { db } from "./db";
+import nodemailer, { type Transporter, type SendMailOptions } from "nodemailer";
 
 type TransactionalEmailInput = {
   from: string;
   to: string[];
   cc?: string[];
+  bcc?: string[];
   subject: string;
   textBody?: string;
   htmlBody?: string;
@@ -33,18 +35,70 @@ async function logMail(input: TransactionalEmailInput, status: "SENT" | "FAILED"
   }
 }
 
+let smtpTransporter: Transporter | null = null;
+
+function getSmtpTransporter() {
+  if (smtpTransporter) return smtpTransporter;
+  const host = process.env.SMTP_HOST || "127.0.0.1";
+  const port = Number(process.env.SMTP_PORT || 25);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS;
+  const secure = process.env.SMTP_SECURE === "true" || port === 465;
+
+  smtpTransporter = nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: user && pass ? { user, pass } : undefined,
+    tls: {
+      rejectUnauthorized: process.env.SMTP_IGNORE_TLS !== "true" && process.env.NODE_ENV === "production" ? false : false,
+    },
+  });
+
+  return smtpTransporter;
+}
+
 export async function sendTransactionalEmail(input: TransactionalEmailInput) {
-  const token = process.env.POSTMARK_SERVER_TOKEN;
-  if (!token) {
-    const error = "POSTMARK_SERVER_TOKEN ontbreekt";
-    await logMail(input, "FAILED", undefined, error);
-    throw new Error(error);
+  const mailProvider = (process.env.MAIL_PROVIDER || "smtp").toLowerCase();
+
+  // 1. SMTP Provider (Standaard & Universeel inzetbaar)
+  if (mailProvider === "smtp" || !process.env.POSTMARK_SERVER_TOKEN) {
+    try {
+      const transporter = getSmtpTransporter();
+      const mailOptions: SendMailOptions = {
+        from: input.from,
+        to: input.to,
+        cc: input.cc,
+        bcc: input.bcc,
+        subject: input.subject,
+        text: input.textBody || "",
+        html: input.htmlBody,
+        replyTo: input.replyTo,
+        attachments: input.attachments?.map((a) => ({
+          filename: a.Name,
+          content: Buffer.from(a.Content, "base64"),
+          contentType: a.ContentType,
+          cid: a.ContentID,
+        })),
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      await logMail(input, "SENT", info.messageId);
+      return { MessageID: info.messageId, SubmittedAt: new Date().toISOString() };
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : "SMTP verzendfout";
+      await logMail(input, "FAILED", undefined, message);
+      throw new Error(`Email verzenden via SMTP mislukt: ${message}`);
+    }
   }
 
+  // 2. Postmark Provider (indien POSTMARK_SERVER_TOKEN geconfigureerd is)
+  const token = process.env.POSTMARK_SERVER_TOKEN;
   const body: Record<string, unknown> = {
     From: input.from,
     To: input.to.join(","),
     Cc: input.cc?.join(",") || undefined,
+    Bcc: input.bcc?.join(",") || undefined,
     Subject: input.subject,
     TextBody: input.textBody || "",
     HtmlBody: input.htmlBody || undefined,

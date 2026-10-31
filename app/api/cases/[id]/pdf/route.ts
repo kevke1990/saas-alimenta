@@ -44,22 +44,22 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   }
 
   const result = (calculation?.result || record.result || {}) as Record<string, unknown>;
-  const pdf = createCalculationPdf({
+  const pdfBuffer = createCalculationPdf({
     draft: isDraft,
-    title: "Merelo – Alimentatieberekening",
+    title: "Alimentatieberekening",
     clientName: record.client?.name || undefined,
     caseName: record.name,
     calculationVersion: calculation?.engineVersion || record.calculationVersion,
     normVersion: calculation?.normVersion || "2026.1",
     result,
     professionalName: user.name || user.email,
-    practiceName: user.companyName || "Merelo",
+    practiceName: user.companyName || "Familierecht Specialist",
   });
-  return new NextResponse(pdf as BodyInit, {
+  return new NextResponse(new Uint8Array(pdfBuffer), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="alimenta-${record.id}.pdf"`,
+      "Content-Disposition": `attachment; filename="alimentatieberekening-${record.id}.pdf"`,
       "Cache-Control": "private, no-store",
     },
   });
