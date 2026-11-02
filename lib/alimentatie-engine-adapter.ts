@@ -68,8 +68,8 @@ function parent(id: "A" | "B", raw: RawParent | undefined): ParentCalculationInp
     actualHousingCost: (firstValue(raw, ["actualHousingCost", "housingCosts"]) ?? (raw.housing && typeof raw.housing === "object" ? (raw.housing as any).monthlyCosts : undefined)) === undefined ? undefined : money((firstValue(raw, ["actualHousingCost", "housingCosts"]) ?? (raw.housing && typeof raw.housing === "object" ? (raw.housing as any).monthlyCosts : undefined)) as NumericLike, `ouder ${id}: werkelijke woonlast`),
     housingBudgetMonthly: raw.housingBudgetMonthly === undefined ? undefined : money(raw.housingBudgetMonthly as NumericLike, `ouder ${id}: woonbudget`),
     otherNecessaryCostsMonthly: money(raw.otherNecessaryCostsMonthly as NumericLike, `ouder ${id}: noodzakelijke lasten`, 0),
-    existingChildSupportMonthly: money(raw.existingChildSupportMonthly as NumericLike, `ouder ${id}: bestaande kinderalimentatie`, 0),
-    otherPriorityMaintenanceMonthly: money(raw.otherPriorityMaintenanceMonthly as NumericLike, `ouder ${id}: prioritaire verplichtingen`, 0),
+    existingChildSupportMonthly: money((raw.existingChildSupportMonthly ?? raw.stiefchildMaintenance) as NumericLike, `ouder ${id}: bestaande kinderalimentatie`, 0),
+    otherPriorityMaintenanceMonthly: money((raw.otherPriorityMaintenanceMonthly ?? raw.otherMaintenance) as NumericLike, `ouder ${id}: prioritaire verplichtingen`, 0),
     professionalCorrectionMonthly: money(raw.professionalCorrectionMonthly as NumericLike, `ouder ${id}: professionele correctie`, 0),
   };
   const newPartner = raw.newPartner && typeof raw.newPartner === 'object' ? raw.newPartner as any : undefined;

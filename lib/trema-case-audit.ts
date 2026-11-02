@@ -35,8 +35,23 @@ export function buildTremaCaseAudit(
         children: caseInput.children || []
     };
 
-    // Ensure parents inherit calculated income results if parent.nbi is 0/empty
-    if (legacyResult && typeof legacyResult === 'object' && Array.isArray((legacyResult as any).incomeResults) && Array.isArray(inputForAdapter.parents)) {
+    // Ensure parents inherit calculated income results or calculated stiefchildMaintenance
+    if (legacyResult && typeof legacyResult === 'object' && Array.isArray((legacyResult as any).parentResults) && Array.isArray(inputForAdapter.parents)) {
+      inputForAdapter.parents = inputForAdapter.parents.map((p: any, idx: number) => {
+        const pRes = (legacyResult as any).parentResults[idx];
+        const incRes = (legacyResult as any).incomeResults?.[idx];
+        const updated = { ...p };
+        if (incRes?.nbiMonthly && (!p.nbi || p.nbi === 0)) {
+          updated.nbi = incRes.nbiMonthly;
+          updated.monthlyNbi = incRes.nbiMonthly;
+          updated.kgb = p.kgb || incRes.components?.find((c: any) => c.kind === "income" && c.label === "KGB")?.annual / 12 || 0;
+        }
+        if (pRes?.stiefchildMaintenance) {
+          updated.stiefchildMaintenance = pRes.stiefchildMaintenance;
+        }
+        return updated;
+      });
+    } else if (legacyResult && typeof legacyResult === 'object' && Array.isArray((legacyResult as any).incomeResults) && Array.isArray(inputForAdapter.parents)) {
       inputForAdapter.parents = inputForAdapter.parents.map((p: any, idx: number) => {
         const incRes = (legacyResult as any).incomeResults[idx];
         if (incRes?.nbiMonthly && (!p.nbi || p.nbi === 0)) {

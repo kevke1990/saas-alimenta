@@ -261,7 +261,7 @@ describe("Legal stepchild maintenance", () => {
     expect(r.warnings.some((w: string) => w.includes("stiefkinderen"))).toBe(true);
   });
 
-  it("does not invent a stiefchild contribution when the amount is missing", () => {
+  it("automatically applies statutory pro-rata stepchild distribution when no manual amount is provided", () => {
     const r = calculate({
       historicalNBGI: 5000,
       parents: [
@@ -278,9 +278,12 @@ describe("Legal stepchild maintenance", () => {
       ],
       children: [{ age: 10, residence: "B" }],
     });
-    expect(r.parentResults[0].stiefchildMaintenance).toBe(0);
-    expect(r.partnerReview[0].status).toBe("REVIEW_REQUIRED");
-    expect(r.warnings.some((w: string) => w.includes("vastgestelde/onderbouwde maandbijdrage"))).toBe(true);
+    expect(r.parentResults[0].stiefchildMaintenance).toBe(258);
+    expect(r.parentResults[0].capacity).toBe(257);
+    expect(r.partnerReview[0].status).toBe("CALCULATED");
+    expect(r.partnerReview[0].legalStepParent).toBe(true);
+    expect(r.warnings.some((w: string) => w.includes("art. 1:395 BW"))).toBe(true);
+    expect(r.warnings.some((w: string) => w.includes("STIEFKIND_BIJDRAGE_ONTBREEKT"))).toBe(false);
   });
 });
 

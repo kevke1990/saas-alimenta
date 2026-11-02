@@ -93,8 +93,8 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
 
       const capA = Math.round(rawCapA > 0 ? rawCapA : (tremaResult?.recipientCapacityMonthly && tremaResult.recipientCapacityMonthly > 0 ? tremaResult.recipientCapacityMonthly : (currentCalc?.parentA_capacity || 0)));
       const capB = Math.round(rawCapB > 0 ? rawCapB : (tremaResult?.payerCapacityMonthly && tremaResult.payerCapacityMonthly > 0 ? tremaResult.payerCapacityMonthly : (currentCalc?.parentB_capacity || 0)));
-      const stepparentCap = Math.round(Number(tremaResult?.stepparentCapacity || pA.stiefchildMaintenance || pB.stiefchildMaintenance || 0));
-      const totalCapacity = Math.round(Number(r.totalCapacity || (capA + capB + stepparentCap)));
+      const stepparentCap = Math.round(Number(pA.stiefchildMaintenance || pB.stiefchildMaintenance || tremaResult?.stepparentCapacity || 0));
+      const totalCapacity = Math.round(Number(r.totalCapacity || (capA + capB)));
 
       const paymentA = Math.round(Number(pA.paymentTotal ?? pA.childAlimonyPayment ?? 0));
       const paymentB = Math.round(Number(pB.paymentTotal ?? pB.childAlimonyPayment ?? (currentCalc?.contribution && capB >= capA ? currentCalc.contribution : 0)));
@@ -366,7 +366,8 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       curY = drawRow(`Draagkracht ${nameA}:`, euro(capA), curY);
       curY = drawRow(`Draagkracht ${nameB}:`, euro(capB), curY);
       if (stepparentCap > 0) {
-        curY = drawRow("Draagkracht stiefouder (pro-rata):", euro(stepparentCap), curY);
+        const stepParentName = (pB.stiefchildMaintenance && pB.stiefchildMaintenance > 0) ? nameB : nameA;
+        curY = drawRow(`Wettelijke stiefouderbijdrage art. 1:395 BW (${stepParentName}):`, euro(stepparentCap), curY);
       }
       if (careDiscountPct > 0 || careDiscountPayer > 0) {
         curY = drawRow(`Zorgkortingspercentage ${payerName}:`, pct(careDiscountPct <= 1 ? careDiscountPct * 100 : careDiscountPct), curY);
@@ -391,8 +392,9 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
         "1. Behoeftebepaling: De behoefte van de kinderen is vastgesteld conform de officiële tabel 'Kosten van kinderen' van het Nibud, behorende bij de Tremanormen (Expertgroep Alimentatienormen). Indien van toepassing is deze behoefte geïndexeerd met de wettelijke indexeringspercentages.",
         "2. Draagkrachtverdeling: Bij een toereikende gezamenlijke draagkracht wordt de behoefte tussen de ouders verdeeld naar rato van ieders draagkracht. Wanneer de gezamenlijke draagkracht onvoldoende is, dragen beide ouders gelijkwaardig bij in het tekort en wordt de zorgkorting slechts toegepast voor zover de draagkracht dit toelaat.",
         `3. Zorgkorting: De zorgkorting compenseert de verblijfskosten tijdens de omgangsregeling/zorgverdeling (${payerName}: ${payerName === nameB ? careDaysB : careDaysA} zorgdag(en)/week).`,
-        "4. Rechtsgeldigheid: Deze berekening voldoet aan de wettelijke maatstaven van artikel 1:392 e.v. en 1:404 van het Burgerlijk Wetboek en is geschikt voor het echtscheidingsconvenant, ouderschapsplan of indiening bij de rechtbank. Wijziging van omstandigheden kan aanleiding geven tot herberekening.",
-      ];
+        stepparentCap > 0 ? "4. Stiefouder-onderhoudsplicht (art. 1:395 BW jo. 1:404 BW): Door het huwelijk of geregistreerd partnerschap is de ouder van rechtswege onderhoudsplichtig voor de tot het gezin behorende minderjarige stiefkinderen. Conform de Tremanormen en vaste rechtspraak van de Hoge Raad (HR 9 maart 2018) staan eigen kinderen en stiefkinderen in gelijke rangorde en wordt de beschikbare draagkracht pro-rata verdeeld over alle kinderen." : null,
+        `${stepparentCap > 0 ? "5" : "4"}. Rechtsgeldigheid: Deze berekening voldoet aan de wettelijke maatstaven van artikel 1:392 e.v. en 1:404 van het Burgerlijk Wetboek en is geschikt voor het echtscheidingsconvenant, ouderschapsplan of indiening bij de rechtbank. Wijziging van omstandigheden kan aanleiding geven tot herberekening.`,
+      ].filter(Boolean) as string[];
       paragraphs.forEach((p) => {
         doc.text(p, 45, curY, { width: 505, align: "justify" });
         curY += doc.heightOfString(p, { width: 505 }) + 3;

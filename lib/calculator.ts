@@ -84,15 +84,47 @@ export function calculate(input: CaseInput) {
     const qualifyingStepChildren = partnerRelationshipIsFormal
       ? (partner?.children ?? []).filter(c => c.active !== false && c.age !== undefined && c.age !== null && String(c.age).trim() !== "" && n(c.age) < 21 && c.livesAtHome !== false)
       : [];
-    const stiefchildMaintenance = qualifyingStepChildren.reduce((sum, child) => sum + n(child.monthlyAmount), 0);
+    const manualStepMaintenance = qualifyingStepChildren.reduce((sum, child) => sum + n(child.monthlyAmount), 0);
+    const hasManualStepMaintenance = manualStepMaintenance > 0;
+
     const explicitOtherMaintenance = n(parent.otherMaintenance);
-    const effectiveOtherMaintenance = explicitOtherMaintenance + stiefchildMaintenance;
-    const capResult = calculateChildSupportCapacity({
+
+    let rawCapResult = calculateChildSupportCapacity({
       ...parent,
       nbi: incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi,
-      otherMaintenance: effectiveOtherMaintenance,
+      otherMaintenance: explicitOtherMaintenance,
       isCareParent: hasCareResidence
     }, normSet);
+
+    let stiefchildMaintenance = 0;
+    let capResult = rawCapResult;
+
+    if (qualifyingStepChildren.length > 0) {
+      if (hasManualStepMaintenance) {
+        stiefchildMaintenance = manualStepMaintenance;
+        capResult = calculateChildSupportCapacity({
+          ...parent,
+          nbi: incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi,
+          otherMaintenance: explicitOtherMaintenance + stiefchildMaintenance,
+          isCareParent: hasCareResidence
+        }, normSet);
+      } else {
+        // Wettelijke verdeling art. 1:395 BW jo. art. 1:404 BW / Tremanormen (gelijke rang en pro-rata toerekening over alle kinderen)
+        const ownChildCount = childCount;
+        const stepChildCount = qualifyingStepChildren.length;
+        const totalChildPool = ownChildCount + stepChildCount;
+        if (totalChildPool > 0 && rawCapResult.capacity > 0) {
+          stiefchildMaintenance = money(rawCapResult.capacity * (stepChildCount / totalChildPool));
+          const adjustedCapacity = Math.max(0, money(rawCapResult.capacity - stiefchildMaintenance));
+          capResult = {
+            ...rawCapResult,
+            capacity: adjustedCapacity
+          };
+        }
+      }
+    }
+
+    const effectiveOtherMaintenance = explicitOtherMaintenance + stiefchildMaintenance;
     return {
       parentIndex,
       nbi: money(incomeResults[parentIndex]?.nbiMonthly ?? parent.nbi),
@@ -180,17 +212,19 @@ export function calculate(input: CaseInput) {
       : [];
     const partnerNbiVal = partner.monthlyNbi ?? (partner as any).nbiMonthly ?? (partner as any).nbi;
     if (formalRelationship && qualifyingStepChildren.length && (partnerNbiVal === undefined || isNaN(Number(partnerNbiVal)))) reasons.push("PARTNER_NBI_ONTBREEKT");
-    if (formalRelationship && qualifyingStepChildren.some(c => n((c as any).monthlyAmount ?? (c as any).amount) <= 0)) reasons.push("STIEFKIND_BIJDRAGE_ONTBREEKT");
-    if (formalRelationship && qualifyingStepChildren.length && parent.newPartner?.maintenanceObligation !== true && (parent.newPartner as any)?.wettelijkeOnderhoudsplicht !== true) reasons.push("WETTELIJKE_STIEFOUDER_ONDERHOUDSPLICHT_NIET_GEREGISTREERD");
     if (partner.includedInCalculation === true && partner.maintenanceObligation === undefined) reasons.push("ONDERHOUDSVERPLICHTING_ONDUIDELIJK");
     if (partner.children?.length && partner.includedInCalculation === true && partner.maintenanceObligation !== true) reasons.push("STIEFKINDEREN_MAAR_GEEN_VASTGESTELDE_ONDERHOUDSVERPLICHTING");
+    
+    const parentRes = parentResults[parentIndex];
+    const calculatedStepMaintenance = parentRes?.stiefchildMaintenance ?? 0;
+
     return {
       parentIndex,
       status: reasons.length ? "REVIEW_REQUIRED" : (qualifyingStepChildren.length ? "CALCULATED" : "RECORDED_ONLY"),
-      includedInCalculation: partner.includedInCalculation === true,
+      includedInCalculation: partner.includedInCalculation === true || formalRelationship,
       legalStepParent: formalRelationship && qualifyingStepChildren.length > 0,
-      qualifyingStepChildren: qualifyingStepChildren.map(c => ({ label: c.label ?? null, age: n(c.age), monthlyAmount: money(n(c.monthlyAmount)) })),
-      stiefchildMaintenance: money(qualifyingStepChildren.reduce((sum, c) => sum + n(c.monthlyAmount), 0)),
+      qualifyingStepChildren: qualifyingStepChildren.map(c => ({ label: c.label ?? (c as any).name ?? null, age: n(c.age), monthlyAmount: money(n(c.monthlyAmount)) })),
+      stiefchildMaintenance: money(calculatedStepMaintenance),
       reasons
     };
   });
@@ -206,8 +240,14 @@ export function calculate(input: CaseInput) {
     const formalRelationship = partner?.relationship === "MARRIED" || partner?.relationship === "REGISTERED_PARTNERSHIP";
     const qualifyingStepChildren = formalRelationship ? (partner?.children ?? []).filter(c => c.active !== false && c.age !== undefined && c.age !== null && String(c.age).trim() !== "" && n(c.age) < 21 && c.livesAtHome !== false) : [];
     if (qualifyingStepChildren.length) {
-      warnings.push("Ouder " + (parentIndex + 1) + " is juridisch onderhoudsplichtig voor de geregistreerde stiefkinderen jonger dan 21 jaar; de ingevoerde stiefkindbijdrage is daarom in mindering gebracht op de draagkracht.");
-      if (qualifyingStepChildren.some(c => n(c.monthlyAmount) <= 0)) warnings.push("REVIEW_REQUIRED: voor één of meer stiefkinderen ontbreekt een vastgestelde/onderbouwde maandbijdrage. De berekening gebruikt daarom geen geschatte bijdrage.");
+      const parentRes = parentResults[parentIndex];
+      const manualSum = qualifyingStepChildren.reduce((sum, c) => sum + n(c.monthlyAmount), 0);
+      if (manualSum > 0) {
+        warnings.push("Ouder " + (parentIndex + 1) + " is juridisch onderhoudsplichtig voor de geregistreerde stiefkinderen jonger dan 21 jaar; de ingevoerde stiefkindbijdrage is daarom in mindering gebracht op de draagkracht.");
+      } else {
+        const stepAmt = parentRes?.stiefchildMaintenance ?? 0;
+        warnings.push(`Ouder ${parentIndex + 1} is gehuwd/geregistreerd partner met een partner met ${qualifyingStepChildren.length} inwonend(e) minderjarig(e) stiefkind(eren). Conform art. 1:395 BW en Tremanormen is de draagkracht pro-rata verdeeld over alle ${childCount + qualifyingStepChildren.length} kinderen (€ ${stepAmt} toegerekend aan stiefkinderen).`);
+      }
     }
   });
   partnerReview.forEach(review => review.reasons.forEach(reason => warnings.push("REVIEW_REQUIRED: nieuwe partner ouder " + (review.parentIndex + 1) + ": " + reason + ".")));
