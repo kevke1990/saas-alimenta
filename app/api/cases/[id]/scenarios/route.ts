@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
+import { requireCaseTenantAccess } from '@/lib/tenant-access';
 import { db } from '@/lib/db';
 import { calculationFingerprint } from '@/lib/calculation-snapshot';
 import { calculateScenario, type ScenarioChanges } from '@/lib/scenario-engine';
@@ -7,14 +8,16 @@ import type { CaseInput } from '@/lib/calculator';
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(); const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: user.id }, include: { scenarios: { orderBy: { createdAt: 'desc' }, take: 30 } } });
+  const access = await requireCaseTenantAccess(user.id, id, 'READ_ONLY');
+  const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, include: { scenarios: { orderBy: { createdAt: 'desc' }, take: 30 } } });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
   return NextResponse.json(c.scenarios);
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(); const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: user.id, status: { not: 'ARCHIVED' } }, include: { calculations: { orderBy: { createdAt: 'desc' }, take: 20 } } });
+  const access = await requireCaseTenantAccess(user.id, id, 'PROFESSIONAL');
+  const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId, status: { not: 'ARCHIVED' } }, include: { calculations: { orderBy: { createdAt: 'desc' }, take: 20 } } });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
   try {
     const body = await req.json();
@@ -29,7 +32,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       caseId: id, userId: user.id, name, description: body.description ? String(body.description).slice(0, 2000) : null,
       baseCalculationId: c.calculations[0]?.id || null, inputSnapshot: result.input as any, changes: changes as any, result: result as any, fingerprint
     } });
-    await db.auditLog.create({ data: { userId: user.id, action: 'SCENARIO_CREATED', metadata: { caseId: id, scenarioId: created.id, fingerprint } } });
+    await db.auditLog.create({ data: { userId: user.id, organizationId: access.organizationId, entityType: 'CASE', entityId: id, actorRole: access.role, action: 'SCENARIO_CREATED', metadata: { caseId: id, scenarioId: created.id, fingerprint } } });
     return NextResponse.json(created);
   } catch (e: any) { return new NextResponse(e?.message || 'Scenario berekenen mislukt.', { status: 400 }); }
 }
+

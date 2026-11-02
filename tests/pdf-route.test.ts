@@ -121,4 +121,27 @@ describe("PDF Route Export states", () => {
 
     expect(text).toContain("CONCEPT / NIET GOEDGEKEURD");
   });
+
+  it("exports DRAFT when reviewStatus was reset to INCOMPLETE despite stale approvedAt", async () => {
+    const calc = { id: "calc1", engineVersion: "2026", normVersion: "2026", result: {} };
+    const validBinding = buildReviewCalculationBinding(calc as any);
+    vi.mocked(db.case.findFirst).mockResolvedValue({
+      id: "case1",
+      name: "Case 1",
+      reviewStatus: "INCOMPLETE",
+      approvedAt: new Date(),
+      calculations: [calc]
+    } as any);
+
+    vi.mocked(db.auditLog.findFirst).mockResolvedValue({
+      metadata: { calculationBinding: validBinding }
+    } as any);
+
+    const req = new Request("http://localhost");
+    const res = await GET(req, { params: Promise.resolve({ id: "case1" }) });
+    const buffer = Buffer.from(await res.arrayBuffer());
+    const text = extractText(buffer);
+
+    expect(text).toContain("CONCEPT / NIET GOEDGEKEURD");
+  });
 });

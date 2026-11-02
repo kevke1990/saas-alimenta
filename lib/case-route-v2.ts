@@ -10,36 +10,41 @@ import { calculationLockMessage, isCaseLockedForCalculation } from "@/lib/case-l
 import { applyIncomeFactMappings, buildIncomeFactProvenance, mapApprovedIncomeFacts } from "@/lib/income-fact-provenance";
 import { runCalculationEngineV2 } from "@/lib/calculation-pipeline-v2";
 import { persistCaseCalculationV2 } from "@/lib/case-calculation-v2";
-import { requireCaseTenantAccess } from "@/lib/tenant-access";
+import { requireCaseTenantAccess, type TenantCaseAccess } from "@/lib/tenant-access";
 import { CALCULATION_ENGINE_V2, CALCULATION_CONTRACT_VERSION } from "@/lib/calculation-engine-v2";
 import type { ProvenanceInput } from "@/lib/calculation-provenance";
 
-export async function getCase(request: Request, params: Promise<{ id: string }>) {
-  const u = await requireUser();
+export type CaseRouteAuthContext = {
+  user: { id: string; email: string; name?: string | null };
+  access: TenantCaseAccess;
+};
+
+export async function getCase(request: Request, params: Promise<{ id: string }>, context?: CaseRouteAuthContext) {
+  const u = context?.user ?? (await requireUser());
   const { id } = await params;
-  await requireCaseTenantAccess(u.id, id, "READ_ONLY");
-  const c = await db.case.findFirst({ where: { id }, include: { client: true, calculations: true } });
+  const access = context?.access ?? (await requireCaseTenantAccess(u.id, id, "READ_ONLY"));
+  const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, include: { client: true, calculations: true } });
   if (!c) return new NextResponse("Not found", { status: 404 });
   return NextResponse.json(c);
 }
 
-export async function deleteCase(request: Request, params: Promise<{ id: string }>) {
-  const u = await requireUser();
+export async function deleteCase(request: Request, params: Promise<{ id: string }>, context?: CaseRouteAuthContext) {
+  const u = context?.user ?? (await requireUser());
   const { id } = await params;
-  await requireCaseTenantAccess(u.id, id, "PROFESSIONAL");
-  const c = await db.case.findFirst({ where: { id } });
+  const access = context?.access ?? (await requireCaseTenantAccess(u.id, id, "PROFESSIONAL"));
+  const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId } });
   if (!c) return new NextResponse("Not found", { status: 404 });
   await db.case.update({ where: { id }, data: { status: "ARCHIVED" } });
   return NextResponse.json({ ok: true });
 }
 
-export async function patchCase(req: Request, params: Promise<{ id: string }>) {
+export async function patchCase(req: Request, params: Promise<{ id: string }>, context?: CaseRouteAuthContext) {
   try {
-    const u = await requireUser();
+    const u = context?.user ?? (await requireUser());
     const tenant = await ensureTenant(u);
     const { id } = await params;
-    await requireCaseTenantAccess(u.id, id, "PROFESSIONAL");
-    const existing = await db.case.findFirst({ where: { id, status: { not: "ARCHIVED" } }, include: { calculations: { orderBy: { createdAt: "desc" }, take: 1 } } });
+    const access = context?.access ?? (await requireCaseTenantAccess(u.id, id, "PROFESSIONAL"));
+    const existing = await db.case.findFirst({ where: { id, organizationId: access.organizationId, status: { not: "ARCHIVED" } }, include: { calculations: { orderBy: { createdAt: "desc" }, take: 1 } } });
     if (!existing) return new NextResponse("Dossier niet gevonden.", { status: 404 });
     if (isCaseLockedForCalculation(existing.reviewStatus)) return new NextResponse(calculationLockMessage(existing.reviewStatus), { status: 409 });
 
@@ -116,6 +121,7 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
     });
     return NextResponse.json({ ...updated.c, calculation: updated.persisted, appliedIncomeFacts: requestedFactIds.length, incomeFactProvenance: factProvenance });
   } catch (e: any) {
-    return new NextResponse(e?.message || "Wijzigen en herberekenen mislukt", { status: 400 });
+    const status = e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 ? 403 : 400;
+    return new NextResponse(e?.message || "Wijzigen en herberekenen mislukt", { status });
   }
 }

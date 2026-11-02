@@ -73,7 +73,10 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     );
 
     if (marriedParentIdx !== -1 && stepparentCap > 0 && resultWithAudit.parentResults?.[marriedParentIdx]) {
-      resultWithAudit.parentResults[marriedParentIdx].stiefchildMaintenance = stepparentCap;
+      resultWithAudit.parentResults[marriedParentIdx].stepparentCapacity = stepparentCap;
+      if (!resultWithAudit.parentResults[marriedParentIdx].stiefchildMaintenance) {
+        resultWithAudit.parentResults[marriedParentIdx].stiefchildMaintenance = stepparentCap;
+      }
     }
 
     // 4. Update de gezamenlijke draagkracht en tekort op het root-resultaat

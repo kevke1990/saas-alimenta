@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
+import { requireCaseTenantAccess } from '@/lib/tenant-access';
 import { db } from '@/lib/db';
 import { calculationFingerprint } from '@/lib/calculation-snapshot';
 import { calculationLockMessage, isCaseLockedForCalculation } from '@/lib/case-lock';
@@ -7,9 +8,10 @@ import { calculationLockMessage, isCaseLockedForCalculation } from '@/lib/case-l
 export async function POST(req: Request, { params }: { params: Promise<{ id: string; scenarioId: string }> }) {
   const user = await requireUser();
   const { id, scenarioId } = await params;
-  const existing = await db.case.findFirst({ where: { id, userId: user.id, status: { not: 'ARCHIVED' } }, include: { calculations: { orderBy: { createdAt: 'desc' }, take: 1 } } });
+  const access = await requireCaseTenantAccess(user.id, id, 'PROFESSIONAL');
+  const existing = await db.case.findFirst({ where: { id, organizationId: access.organizationId, status: { not: 'ARCHIVED' } }, include: { calculations: { orderBy: { createdAt: 'desc' }, take: 1 } } });
   if (!existing) return new NextResponse('Dossier niet gevonden.', { status: 404 });
-  const scenario = await db.calculationScenario.findFirst({ where: { id: scenarioId, caseId: id, userId: user.id } });
+  const scenario = await db.calculationScenario.findFirst({ where: { id: scenarioId, caseId: id } });
   if (!scenario) return new NextResponse('Scenario niet gevonden.', { status: 404 });
 
   let body: { confirm?: boolean } = {};

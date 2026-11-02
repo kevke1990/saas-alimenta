@@ -9,13 +9,18 @@ const transitions: Record<ReviewStatus, readonly ReviewStatus[]> = {
   FINAL: ['FINAL', 'INCOMPLETE'],
 };
 
+function normalizeCurrentStatus(value: unknown): unknown {
+  return value === 'IN_REVIEW' ? 'READY_FOR_REVIEW' : value;
+}
+
 export function isReviewStatus(value: unknown): value is ReviewStatus {
   return typeof value === 'string' && (REVIEW_STATUSES as readonly string[]).includes(value);
 }
 
 export function isAllowedReviewTransition(current: unknown, next: unknown): boolean {
-  if (!isReviewStatus(current) || !isReviewStatus(next)) return false;
-  return transitions[current].includes(next);
+  const normalizedCurrent = normalizeCurrentStatus(current);
+  if (!isReviewStatus(normalizedCurrent) || !isReviewStatus(next)) return false;
+  return transitions[normalizedCurrent].includes(next);
 }
 
 export function isExplicitReopen(current: unknown, next: unknown): boolean {
@@ -25,3 +30,4 @@ export function isExplicitReopen(current: unknown, next: unknown): boolean {
 export function reviewTransitionMessage(current: unknown, next: unknown): string {
   return `Reviewstatus ${String(current)} kan niet rechtstreeks worden gewijzigd naar ${String(next)}.`;
 }
+

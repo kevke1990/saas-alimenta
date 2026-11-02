@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { db } from "@/lib/db";
 import { isCaseLockedForCalculation, calculationLockMessage } from "@/lib/case-lock";
 
@@ -8,10 +9,11 @@ const ALLOWED = new Set(["PROPOSED", "APPROVED", "REJECTED"]);
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const u = await requireUser();
   const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: u.id }, select: { id: true } });
+  const access = await requireCaseTenantAccess(u.id, id, "READ_ONLY");
+  const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, select: { id: true } });
   if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
   const incomeFacts = await db.incomeFact.findMany({
-    where: { userId: u.id, caseId: id },
+    where: { caseId: id },
     include: { document: { select: { id: true, name: true, aiStatus: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -22,6 +24,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const u = await requireUser();
     const { id } = await params;
+    const access = await requireCaseTenantAccess(u.id, id, "PROFESSIONAL");
     const contentType = req.headers.get("content-type") || "";
     const body = contentType.includes("application/json") ? await req.json() : Object.fromEntries((await req.formData()).entries());
     const factId = String(body.factId || "");
@@ -31,11 +34,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const parentRaw = body.parentIndex === undefined || body.parentIndex === "" ? null : Number(body.parentIndex);
     if (parentRaw !== null && parentRaw !== 0 && parentRaw !== 1) return new NextResponse("Ongeldige ouderkeuze", { status: 400 });
 
-    const c = await db.case.findFirst({ where: { id, userId: u.id }, select: { id: true, reviewStatus: true } });
+    const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, select: { id: true, reviewStatus: true } });
     if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
     if (isCaseLockedForCalculation(c.reviewStatus)) return new NextResponse(calculationLockMessage(c.reviewStatus), { status: 409 });
 
-    const fact = await db.incomeFact.findFirst({ where: { id: factId, userId: u.id, caseId: id }, include: { document: true } });
+    const fact = await db.incomeFact.findFirst({ where: { id: factId, caseId: id }, include: { document: true } });
     if (!fact) return new NextResponse("Inkomensfeit niet gevonden", { status: 404 });
     const nextParentIndex = status === "APPROVED" ? parentRaw : fact.parentIndex;
     if (status === "APPROVED" && nextParentIndex === null) return new NextResponse("Kies eerst ouder A of ouder B voor dit inkomensfeit.", { status: 422 });

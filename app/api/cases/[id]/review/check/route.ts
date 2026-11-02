@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
+import { requireCaseTenantAccess } from '@/lib/tenant-access';
 import { db } from '@/lib/db';
 import { isCaseLockedForCalculation } from '@/lib/case-lock';
 import { isProfessionalReviewSection } from '@/lib/professional-review';
@@ -8,20 +9,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const user = await requireUser();
     const { id } = await params;
+    const access = await requireCaseTenantAccess(user.id, id, 'PROFESSIONAL');
     const isJson = req.headers.get('content-type')?.includes('application/json');
     const body = isJson ? await req.json() : Object.fromEntries((await req.formData()).entries());
     const section = String(body.section || '');
     if (!isProfessionalReviewSection(section)) return new NextResponse('Ongeldig controleonderdeel.', { status: 422 });
-    const c = await db.case.findFirst({ where: { id, userId: user.id, status: { not: 'ARCHIVED' } }, include: { calculations: { orderBy: { createdAt: 'desc' }, take: 1 } } });
+    const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId, status: { not: 'ARCHIVED' } }, include: { calculations: { orderBy: { createdAt: 'desc' }, take: 1 } } });
     if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
     if (isCaseLockedForCalculation(c.reviewStatus)) return new NextResponse('Dit dossier is vergrendeld. Heropen eerst de review.', { status: 409 });
     if (!c.calculations[0]) return new NextResponse('Er is nog geen berekeningssnapshot beschikbaar.', { status: 409 });
-    await db.auditLog.create({ data: { userId: user.id, action: 'CASE_REVIEW_CHECKED', metadata: { caseId: id, calculationId: c.calculations[0].id, section, checkedAt: new Date().toISOString() } } });
+    await db.auditLog.create({ data: { userId: user.id, organizationId: access.organizationId, entityType: 'CASE', entityId: id, actorRole: access.role, action: 'CASE_REVIEW_CHECKED', metadata: { caseId: id, calculationId: c.calculations[0].id, section, checkedAt: new Date().toISOString() } } });
     if (!isJson) {
       // Keep the redirect relative so an upstream proxy cannot turn an internal
       // host such as 0.0.0.0 into the browser's public URL.
       return new NextResponse(null, { status: 303, headers: { Location: `/cases/${id}/review` } });
     }
     return NextResponse.json({ ok: true, section, calculationId: c.calculations[0].id });
-  } catch (e: any) { return new NextResponse(e?.message || 'Controleonderdeel opslaan mislukt.', { status: 400 }); }
+  } catch (e: any) { return new NextResponse(e?.message || 'Controleonderdeel opslaan mislukt.', { status: e?.message === 'UNAUTHORIZED' ? 401 : e?.status === 403 ? 403 : 400 }); }
 }
+

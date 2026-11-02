@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { db } from "@/lib/db";
 import { auditSecurity } from "@/lib/team-security";
 import { encryptDocument, sha256, safeDocumentName, MAX_DOCUMENT_BYTES } from "@/lib/document-store";
@@ -10,15 +11,21 @@ import { distributedRateLimit } from "@/lib/rate-limit";
 const allowedMime = new Set(["text/plain", "text/csv", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]);
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const user = await requireUser(); const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: user.id }, select: { id: true } });
-  if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
-  return NextResponse.json({ documents: await db.document.findMany({ where: { caseId: id, userId: user.id }, orderBy: { createdAt: "desc" }, include: { incomeFacts: { orderBy: { createdAt: "asc" } } } }) });
+  try {
+    const user = await requireUser(); const { id } = await params;
+    const access = await requireCaseTenantAccess(user.id, id, "READ_ONLY");
+    const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, select: { id: true } });
+    if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
+    return NextResponse.json({ documents: await db.document.findMany({ where: { caseId: id }, orderBy: { createdAt: "desc" }, include: { incomeFacts: { orderBy: { createdAt: "asc" } } } }) });
+  } catch (e: any) {
+    return new NextResponse(e?.message || "Toegang geweigerd", { status: e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 ? 403 : 400 });
+  }
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser(); const { id } = await params;
-  const c = await db.case.findFirst({ where: { id, userId: user.id }, select: { id: true, clientId: true, organizationId: true } });
+  const access = await requireCaseTenantAccess(user.id, id, "PROFESSIONAL");
+  const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, select: { id: true, clientId: true, organizationId: true } });
   if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
   const contentType = req.headers.get("content-type") || "";
   const body: any = contentType.includes("application/json") ? await req.json() : Object.fromEntries((await req.formData()).entries());

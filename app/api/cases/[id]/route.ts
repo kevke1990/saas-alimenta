@@ -8,32 +8,40 @@ async function authorizeCase(userId: string, params: Promise<{ id: string }>, mi
   return requireCaseTenantAccess(userId, id, minimumRole);
 }
 
+function handleError(e: any) {
+  return new NextResponse(e?.message || "Toegang geweigerd", {
+    status: e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 ? 403 : 404,
+  });
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser();
-    await authorizeCase(user.id, params, "READ_ONLY");
-    return getCase(request, params);
+    const access = await authorizeCase(user.id, params, "READ_ONLY");
+    return await getCase(request, params, { user, access });
   } catch (e: any) {
-    return new NextResponse(e?.message || "Toegang geweigerd", { status: e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 ? 403 : 404 });
+    return handleError(e);
   }
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser();
-    await authorizeCase(user.id, params, "PROFESSIONAL");
-    return deleteCase(request, params);
+    const access = await authorizeCase(user.id, params, "PROFESSIONAL");
+    return await deleteCase(request, params, { user, access });
   } catch (e: any) {
-    return new NextResponse(e?.message || "Toegang geweigerd", { status: e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 ? 403 : 404 });
+    return handleError(e);
   }
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser();
-    await authorizeCase(user.id, params, "PROFESSIONAL");
-    return patchCase(request, params);
+    const access = await authorizeCase(user.id, params, "PROFESSIONAL");
+    return await patchCase(request, params, { user, access });
   } catch (e: any) {
-    return new NextResponse(e?.message || "Toegang geweigerd", { status: e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 ? 403 : 404 });
+    return handleError(e);
   }
 }
+
+

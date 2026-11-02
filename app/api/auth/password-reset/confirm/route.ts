@@ -12,9 +12,13 @@ export async function POST(req: Request) {
     const userId = await consumeAuthToken(token, "PASSWORD_RESET");
     if (!userId) return new NextResponse("Resetlink is ongeldig of verlopen", { status: 400 });
     const passwordHash = await hashPassword(password);
-    await db.user.update({ where: { id: userId }, data: { passwordHash } });
+    await db.$transaction([
+      db.user.update({ where: { id: userId }, data: { passwordHash } }),
+      db.authSession.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } }),
+    ]);
     return NextResponse.json({ ok: true });
   } catch {
     return new NextResponse("Ongeldig verzoek", { status: 400 });
   }
 }
+

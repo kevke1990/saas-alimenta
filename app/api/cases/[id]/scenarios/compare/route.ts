@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
+import { requireCaseTenantAccess } from '@/lib/tenant-access';
 import { db } from '@/lib/db';
 import { compareScenarios } from '@/lib/scenario-comparison';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
+  const access = await requireCaseTenantAccess(user.id, id, 'READ_ONLY');
   const url = new URL(req.url);
   const ids = [...new Set(url.searchParams.getAll('id').flatMap((value) => value.split(',')).map((value) => value.trim()).filter(Boolean))];
 
@@ -13,11 +15,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return new NextResponse('Selecteer 2–6 scenario’s om te vergelijken.', { status: 422 });
   }
 
-  const caseRecord = await db.case.findFirst({ where: { id, userId: user.id }, select: { id: true } });
+  const caseRecord = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, select: { id: true } });
   if (!caseRecord) return new NextResponse('Dossier niet gevonden.', { status: 404 });
 
   const scenarios = await db.calculationScenario.findMany({
-    where: { id: { in: ids }, caseId: id, userId: user.id },
+    where: { id: { in: ids }, caseId: id },
     orderBy: { createdAt: 'asc' },
   });
 
@@ -27,3 +29,4 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
   return NextResponse.json({ caseId: id, scenarios: compareScenarios(scenarios) });
 }
+

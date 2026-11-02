@@ -47,7 +47,11 @@ export function buildTremaCaseAudit(
           updated.kgb = p.kgb || incRes.components?.find((c: any) => c.kind === "income" && c.label === "KGB")?.annual / 12 || 0;
         }
         if (pRes?.stiefchildMaintenance) {
-          updated.stiefchildMaintenance = pRes.stiefchildMaintenance;
+          const partner = p?.newPartner;
+          const partnerHasNbi = partner && (partner.monthlyNbi !== undefined || partner.nbiMonthly !== undefined || partner.nbi !== undefined);
+          if (!partnerHasNbi) {
+            updated.stiefchildMaintenance = pRes.stiefchildMaintenance;
+          }
         }
         return updated;
       });

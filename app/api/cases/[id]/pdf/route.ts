@@ -22,9 +22,19 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const calculation = record.calculations[0];
 
   let isDraft = true;
-  if (record.approvedAt && calculation) {
+  const statusIsApproved =
+    record.reviewStatus === undefined ||
+    record.reviewStatus === "APPROVED" ||
+    record.reviewStatus === "FINAL";
+  if (record.approvedAt && calculation && statusIsApproved) {
     const approvalAudit = await db.auditLog.findFirst({
-      where: { entityType: "CASE", entityId: id, action: "CASE_APPROVED" },
+      where: {
+        action: "CASE_APPROVED",
+        OR: [
+          { entityType: "CASE", entityId: id },
+          { metadata: { path: ["caseId"], equals: id } },
+        ],
+      },
       orderBy: { createdAt: "desc" }
     });
 

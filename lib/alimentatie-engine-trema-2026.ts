@@ -61,6 +61,7 @@ export interface CareInput {
 
 export interface NeedInput {
   ownShareMonthly: number;
+  childrenCount?: number;
   exceptionalCostsMonthly?: number;
   alreadyIncludedExceptionalCostsMonthly?: number;
 }

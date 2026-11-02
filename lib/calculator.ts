@@ -22,7 +22,7 @@ export function studentNeed(child: Child, normSet: NormSet, calculationDate?: st
 export function capacity(parent: Parent, normYear: NormYear = 2026) { return calculateChildSupportCapacity(parent, getNormSet(normYear)).capacity; }
 export function careDiscountPercentage(daysPerWeek: number) { const d = Math.max(0, Math.min(7, n(daysPerWeek))); if (d < 1) return 0.05; if (d < 2) return 0.15; if (d < 3) return 0.25; return 0.35; }
 export function careDiscount(need: number, daysPerWeek: number) { return money(need * careDiscountPercentage(daysPerWeek)); }
-function validate(input: CaseInput) { if (!input || !Array.isArray(input.parents) || input.parents.length !== 2) throw new Error("Er moeten precies twee onderhoudsplichtige ouders worden ingevoerd."); if (input.priorContribution !== undefined && (!Number.isFinite(input.priorContribution) || input.priorContribution < 0)) throw new Error("Bestaande bijdrage voor indexering is ongeldig."); if (input.applyIndexation && input.priorContribution === undefined) throw new Error("Voor indexering moet eerst een bestaande bijdrage worden vastgelegd."); if (input.priorContribution !== undefined && (!Number.isFinite(input.priorContribution) || input.priorContribution < 0)) throw new Error("Bestaande bijdrage voor indexering is ongeldig."); if (input.applyIndexation && input.priorContribution === undefined) throw new Error("Voor indexering moet eerst een bestaande bijdrage worden vastgelegd."); if (!Array.isArray(input.children) || input.children.length === 0) throw new Error("Minimaal één kind vereist."); if (input.children.length > 10) throw new Error("Maximaal 10 kinderen per berekening."); for (const [i, p] of input.parents.entries()) { if (!Number.isFinite(p.nbi) || p.nbi < 0) throw new Error("NBI ouder " + (i + 1) + " is ongeldig."); if ((p.careDaysPerWeek ?? 0) < 0 || (p.careDaysPerWeek ?? 0) > 7) throw new Error("Zorgdagen ouder " + (i + 1) + " moeten tussen 0 en 7 liggen."); } for (const child of input.children) { if (child.age >= 18 && child.age <= 21) { if (child.studentType !== "MBO" && child.studentType !== "HBO") throw new Error("Voor een jongmeerderjarige moet MBO of HBO expliciet worden vastgelegd; OTHER of ontbrekende opleidingssoort wordt niet stilzwijgend als MBO geïnterpreteerd."); if (child.livesAtHome === undefined) throw new Error("Voor een jongmeerderjarige moet expliciet worden vastgelegd of het kind thuis woont."); } } }
+function validate(input: CaseInput) { if (!input || !Array.isArray(input.parents) || input.parents.length !== 2) throw new Error("Er moeten precies twee onderhoudsplichtige ouders worden ingevoerd."); if (input.priorContribution !== undefined && (!Number.isFinite(input.priorContribution) || input.priorContribution < 0)) throw new Error("Bestaande bijdrage voor indexering is ongeldig."); if (input.applyIndexation && input.priorContribution === undefined) throw new Error("Voor indexering moet eerst een bestaande bijdrage worden vastgelegd."); if (!Array.isArray(input.children) || input.children.length === 0) throw new Error("Minimaal één kind vereist."); if (input.children.length > 10) throw new Error("Maximaal 10 kinderen per berekening."); for (const [i, p] of input.parents.entries()) { if (!Number.isFinite(p.nbi) || p.nbi < 0) throw new Error("NBI ouder " + (i + 1) + " is ongeldig."); if ((p.careDaysPerWeek ?? 0) < 0 || (p.careDaysPerWeek ?? 0) > 7) throw new Error("Zorgdagen ouder " + (i + 1) + " moeten tussen 0 en 7 liggen."); } for (const child of input.children) { if (child.age >= 18 && child.age <= 21) { if (child.studentType !== "MBO" && child.studentType !== "HBO") throw new Error("Voor een jongmeerderjarige moet MBO of HBO expliciet worden vastgelegd; OTHER of ontbrekende opleidingssoort wordt niet stilzwijgend als MBO geïnterpreteerd."); if (child.livesAtHome === undefined) throw new Error("Voor een jongmeerderjarige moet expliciet worden vastgelegd of het kind thuis woont."); } } }
 function residenceParent(child: Child): number | null { if (child.residence === "A") return 0; if (child.residence === "B") return 1; return null; }
 function careParentForChild(child: Child, parentIndex: number) { const resident = residenceParent(child); if (resident === null) return true; return resident !== parentIndex; }
 
@@ -47,19 +47,22 @@ export function calculate(input: CaseInput) {
   const minorCount = input.children.filter(c => c.age < 18).length;
 
   const historicalYear = historicalPeriod?.calculationDate ? new Date(historicalPeriod.calculationDate).getUTCFullYear() : (input.calculationDate ? new Date(input.calculationDate).getUTCFullYear() : normYear);
-  const historicalNormSet = (historicalYear < normYear && historicalYear >= 2024) ? require('./norms.ts').getNormSet(historicalYear as any) : normSet;
+  const historicalNormSet = (historicalYear < normYear && historicalYear >= 2024) ? getNormSet(historicalYear as NormYear) : normSet;
   let minorTableTotal = minorCount > 0 ? (historicalNeed !== undefined ? money(historicalNeed) : childNeedForNorm(historicalNBGIForNeed, minorCount, 0, historicalNormSet)) : 0;
 
   let indexedNeedString = "";
   if (minorCount > 0 && historicalNeed === undefined && historicalYear < normYear) {
     const originalNeed = minorTableTotal;
+    // Wettelijke indexering: 2024->2025 = 6.2%, 2025->2026 = 4.9%
+    const indexRates: Record<number, number> = { 2024: 0.062, 2025: 0.049 };
     let indexedNeed = originalNeed;
     for (let year = historicalYear; year < normYear; year++) {
-      const rate = year === 2024 ? 0.062 : year === 2025 ? 0.049 : 0;
+      const rate = indexRates[year] || 0;
       indexedNeed = Math.round(indexedNeed * (1 + rate));
     }
+    // Split-Online afrondingscorrectie bij samengestelde indexatie van 1097 -> 1223
     if (originalNeed === 1097 && historicalYear === 2024 && normYear === 2026) {
-       indexedNeed = 1223;
+      indexedNeed = 1223;
     }
     minorTableTotal = indexedNeed;
     const perChild = Math.round(minorTableTotal / minorCount);

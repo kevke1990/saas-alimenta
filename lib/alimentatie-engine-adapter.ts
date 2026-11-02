@@ -140,6 +140,7 @@ export function adaptAlimentaForm(payload: AlimentaFormPayload): Trema2026Input 
     referenceYear: 2026,
     need: {
       ownShareMonthly,
+      childrenCount: (payload.children && payload.children.length > 0) ? payload.children.length : (payload.need as any)?.childrenCount,
       exceptionalCostsMonthly: money(payload.need?.exceptionalCostsMonthly, "bijzondere kosten", 0),
       alreadyIncludedExceptionalCostsMonthly: money(payload.need?.alreadyIncludedExceptionalCostsMonthly, "reeds opgenomen bijzondere kosten", 0),
     },

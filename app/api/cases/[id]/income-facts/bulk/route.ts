@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { db } from "@/lib/db";
 import { isCaseLockedForCalculation, calculationLockMessage } from "@/lib/case-lock";
 
@@ -17,13 +18,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const user = await requireUser();
     const { id } = await params;
+    const access = await requireCaseTenantAccess(user.id, id, "PROFESSIONAL");
     const body = await req.json().catch(() => null) as { changes?: Change[] } | null;
     if (!body || !Array.isArray(body.changes) || body.changes.length === 0 || body.changes.length > 250) {
       return NextResponse.json({ error: "changes moet 1 tot 250 wijzigingen bevatten" }, { status: 400 });
     }
 
     const dossier = await db.case.findFirst({
-      where: { id, userId: user.id },
+      where: { id, organizationId: access.organizationId },
       select: { id: true, reviewStatus: true },
     });
     if (!dossier) return NextResponse.json({ error: "Dossier niet gevonden" }, { status: 404 });
@@ -49,7 +51,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const result = await db.$transaction(async tx => {
       const facts = await tx.incomeFact.findMany({
-        where: { id: { in: [...uniqueIds] }, userId: user.id, caseId: id },
+        where: { id: { in: [...uniqueIds] }, caseId: id },
       });
       if (facts.length !== normalized.length) throw new Error("Een of meer inkomensfeiten zijn niet gevonden");
       const byId = new Map(facts.map(fact => [fact.id, fact]));

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
+import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { db } from "@/lib/db";
 import { buildExplainableIntelligence } from "@/lib/explainable-intelligence";
 
@@ -26,12 +27,13 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   try {
     const user = await requireUser();
     const { id } = await params;
-    const c = await db.case.findFirst({ where: { id, userId: user.id }, select: { id: true, name: true, reviewStatus: true, data: true, updatedAt: true, normVersionId: true } });
+    const access = await requireCaseTenantAccess(user.id, id, "READ_ONLY");
+    const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, select: { id: true, name: true, reviewStatus: true, data: true, updatedAt: true, normVersionId: true } });
     if (!c) return new NextResponse("Dossier niet gevonden.", { status: 404 });
     const [calculations, facts, documents, activeNorm] = await Promise.all([
       db.calculation.findMany({ where: { caseId: id }, orderBy: { createdAt: "desc" }, take: 2, select: { result: true, normVersion: true, createdAt: true } }),
-      db.incomeFact.findMany({ where: { userId: user.id, caseId: id, status: "PROPOSED" }, select: { confidence: true } }),
-      db.document.findMany({ where: { userId: user.id, caseId: id, approvedAt: null, aiStatus: { not: "NOT_ANALYZED" } }, select: { aiStatus: true } }),
+      db.incomeFact.findMany({ where: { caseId: id, status: "PROPOSED" }, select: { confidence: true } }),
+      db.document.findMany({ where: { caseId: id, approvedAt: null, aiStatus: { not: "NOT_ANALYZED" } }, select: { aiStatus: true } }),
       db.normVersion.findFirst({ where: { isActive: true }, orderBy: { effectiveFrom: "desc" }, select: { version: true } }),
     ]);
     const lowConfidenceIncomeFacts = facts.filter(f => f.confidence != null && f.confidence < 0.7).length;

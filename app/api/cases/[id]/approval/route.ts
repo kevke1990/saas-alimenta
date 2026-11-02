@@ -11,8 +11,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const user = await requireUser();
     const { id } = await params;
-    await requireCaseTenantAccess(user.id, id, "PROFESSIONAL");
-    const c = await db.case.findFirst({ where: { id, userId: user.id }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: 'desc' } } } });
+    const access = await requireCaseTenantAccess(user.id, id, "PROFESSIONAL");
+    const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: 'desc' } } } });
     if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
     const body = req.headers.get('content-type')?.includes('application/json') ? await req.json() : Object.fromEntries((await req.formData()).entries());
     const status = String(body.status || '');
@@ -23,7 +23,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const review = reviewCase({ data: c.data, documents: c.documents, calculations: c.calculations, result: c.result });
     const currentCalculation = c.calculations[0];
-    const reviewLogs = await db.auditLog.findMany({ where: { userId: user.id, action: 'CASE_REVIEW_CHECKED', metadata: { path: ['caseId'], equals: id } }, orderBy: { createdAt: 'desc' }, take: 200 });
+    const reviewLogs = await db.auditLog.findMany({ where: { action: 'CASE_REVIEW_CHECKED', metadata: { path: ['caseId'], equals: id } }, orderBy: { createdAt: 'desc' }, take: 200 });
     const professionalReview = buildProfessionalReviewState(reviewLogs, currentCalculation?.id);
 
     if ((status === 'REVIEWED' || status === 'APPROVED' || status === 'FINAL') && !professionalReview.complete) {
@@ -38,7 +38,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (status === 'APPROVED') approvalBinding = buildReviewCalculationBinding(currentCalculation!);
 
     if (status === 'FINAL') {
-      const approvalAudit = await db.auditLog.findFirst({ where: { userId: user.id, action: 'CASE_APPROVED', metadata: { path: ['caseId'], equals: id } }, orderBy: { createdAt: 'desc' } });
+      const approvalAudit = await db.auditLog.findFirst({ where: { action: 'CASE_APPROVED', metadata: { path: ['caseId'], equals: id } }, orderBy: { createdAt: 'desc' } });
       const storedBinding = approvalAudit?.metadata && typeof approvalAudit.metadata === 'object'
         ? (approvalAudit.metadata as Record<string, unknown>).calculationBinding as Partial<ReturnType<typeof buildReviewCalculationBinding>> | undefined
         : undefined;
@@ -51,16 +51,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (status === 'READY_FOR_REVIEW' || status === 'INCOMPLETE') data.reviewedAt = null;
     if (status === 'REVIEWED' || status === 'APPROVED' || status === 'FINAL') data.reviewedAt = new Date();
     if (status === 'APPROVED' || status === 'FINAL') { data.approvedAt = c.approvedAt || new Date(); data.approvedByUserId = c.approvedByUserId || user.id; }
-    if (status === 'INCOMPLETE') { data.approvedAt = null; data.approvedByUserId = null; }
+    if (status === 'INCOMPLETE' || status === 'READY_FOR_REVIEW' || status === 'REVIEWED') { data.approvedAt = null; data.approvedByUserId = null; }
 
     const updated = await db.$transaction(async (tx) => {
       const next = await tx.case.update({ where: { id }, data });
-      await tx.auditLog.create({ data: { userId: user.id, action: reopened ? 'CASE_REOPENED' : `CASE_${status}`, metadata: { caseId: id, calculationId: currentCalculation?.id || null, previousStatus: c.reviewStatus, newStatus: status, reviewScore: review.score, criticalCount: review.criticalCount, professionalReviewComplete: professionalReview.complete, explicitReopen: reopened, ...(approvalBinding ? { calculationBinding: approvalBinding } : {}) } } });
-      if (comment) await tx.auditLog.create({ data: { userId: user.id, action: 'CASE_REVIEW_COMMENTED', metadata: { caseId: id, calculationId: currentCalculation?.id || null, comment } } });
+      await tx.auditLog.create({ data: { userId: user.id, organizationId: access.organizationId, entityType: 'CASE', entityId: id, actorRole: access.role, action: reopened ? 'CASE_REOPENED' : `CASE_${status}`, metadata: { caseId: id, calculationId: currentCalculation?.id || null, previousStatus: c.reviewStatus, newStatus: status, reviewScore: review.score, criticalCount: review.criticalCount, professionalReviewComplete: professionalReview.complete, explicitReopen: reopened, ...(approvalBinding ? { calculationBinding: approvalBinding } : {}) } } });
+      if (comment) await tx.auditLog.create({ data: { userId: user.id, organizationId: access.organizationId, entityType: 'CASE', entityId: id, actorRole: access.role, action: 'CASE_REVIEW_COMMENTED', metadata: { caseId: id, calculationId: currentCalculation?.id || null, comment } } });
       return next;
     });
     return NextResponse.json(updated);
   } catch (e: any) {
-    return new NextResponse(e?.message || 'Reviewactie mislukt.', { status: 400 });
+    return new NextResponse(e?.message || 'Reviewactie mislukt.', { status: e?.message === 'UNAUTHORIZED' ? 401 : e?.status === 403 ? 403 : 400 });
   }
 }
