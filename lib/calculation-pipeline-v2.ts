@@ -53,16 +53,18 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     const stepparentCap = tremaAudit?.result?.stepparentCapacity ?? 0;
     const totalPayable = tremaAudit?.result?.payableMonthly ?? 0;
 
-    // 2. Wijs capaciteit en betaling toe aan de JUISTE ouder in parentResults
-    if (resultWithAudit.parentResults?.[payerIndex]) {
-      resultWithAudit.parentResults[payerIndex].capacity = payerCap;
-      resultWithAudit.parentResults[payerIndex].paymentTotal = totalPayable;
-      resultWithAudit.parentResults[payerIndex].childAlimonyPayment = totalPayable;
-    }
+    // 2. Wijs capaciteit en betaling toe aan de JUISTE ouder in parentResults (alleen overschrijven als Trema audit geldige waarden levert)
+    if (payerCap > 0 || recipientCap > 0) {
+      if (resultWithAudit.parentResults?.[payerIndex]) {
+        resultWithAudit.parentResults[payerIndex].capacity = payerCap;
+        resultWithAudit.parentResults[payerIndex].paymentTotal = totalPayable;
+        resultWithAudit.parentResults[payerIndex].childAlimonyPayment = totalPayable;
+      }
 
-    if (resultWithAudit.parentResults?.[recipientIndex]) {
-      resultWithAudit.parentResults[recipientIndex].capacity = recipientCap;
-      resultWithAudit.parentResults[recipientIndex].paymentTotal = 0;
+      if (resultWithAudit.parentResults?.[recipientIndex]) {
+        resultWithAudit.parentResults[recipientIndex].capacity = recipientCap;
+        resultWithAudit.parentResults[recipientIndex].paymentTotal = 0;
+      }
     }
 
     // 3. Koppel de stiefouder aan de ouder die gehuwd/geregistreerd partner is
@@ -80,19 +82,21 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     resultWithAudit.capacityDeficit = Math.max(0, (resultWithAudit.totalNeed || 0) - resultWithAudit.totalCapacity);
     resultWithAudit.capacitySufficient = resultWithAudit.totalCapacity >= (resultWithAudit.totalNeed || 0);
 
-
     const careStep = tremaAudit?.result?.steps?.find((s: any) => s.key === 'care-discount');
     let appliedCareDiscount = Number(careStep?.resultMonthly ?? 0);
     const kgbCorrection = Number(tremaAudit?.result?.steps?.find((s: any) => s.key === 'payable')?.inputs?.kgbCorrection ?? 0);
-    const combinedCap2 = payerCap + recipientCap + stepparentCap;
     const totalNeed2 = tremaAudit?.result?.steps?.find((s: any) => s.key === 'maximum')?.inputs?.need ?? (resultWithAudit.totalNeed || 1207);
-    const deficit = Math.max(0, totalNeed2 - combinedCap2);
+    const deficit = Math.max(0, totalNeed2 - combinedCap);
 
     let payable = 0;
-    if (deficit === 0) {
-      payable = Math.min(payerCap, totalNeed2) - appliedCareDiscount;
+    if (combinedCap > 0) {
+      if (deficit === 0) {
+        payable = Math.min(payerCap, totalNeed2) - appliedCareDiscount;
+      } else {
+        payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, payerCap - appliedCareDiscount - kgbCorrection);
+      }
     } else {
-      payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, payerCap - appliedCareDiscount - kgbCorrection);
+      payable = Number(resultWithAudit.currentCalculation?.contribution ?? (resultWithAudit.transfers || []).reduce((s: number, t: any) => s + Number(t.payment || 0), 0));
     }
 
     const newTransfers = [...(resultWithAudit.transfers || [])];
@@ -123,11 +127,11 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     const totalNeed = tremaAudit?.result?.steps?.find((s: any) => s.key === 'maximum')?.inputs?.need ?? (resultWithAudit.totalNeed || 1207);
     resultWithAudit.totalNeed = totalNeed;
 
-    const totalCap = payerCap + recipientCap + stepparentCap;
+    const totalCap = combinedCap > 0 ? combinedCap : Number(resultWithAudit.totalCapacity || 0);
     resultWithAudit.calculationSteps = [
       { step: 1, title: "Behoefte", value: totalNeed, formula: "2026 behoeftetabel/WSF met indicatief afgeleid NBGI" },
       { step: 2, title: "Draagkracht", value: totalCap, formula: "2026 gezamenlijke draagkracht inclusief stiefouder" },
-      { step: 3, title: "Draagkrachtvergelijking", value: payerCap, formula: "toegerekend aandeel onderhoudsplichtige" },
+      { step: 3, title: "Draagkrachtvergelijking", value: payerCap > 0 ? payerCap : Number(resultWithAudit.parentResults?.[payerIndex]?.capacity || 0), formula: "toegerekend aandeel onderhoudsplichtige" },
       { step: 4, title: "Zorgkorting", value: appliedCareDiscount, formula: "bruto zorgkorting minus helft tekort; bij voldoende draagkracht is de bruto zorgkorting volledig verzilverbaar" },
       { step: 5, title: "Bijdrage", value: payable, formula: "aandeel onderhoudsplichtige minus toepasselijke zorgkorting" }
     ];

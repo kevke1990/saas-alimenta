@@ -39,8 +39,24 @@ function firstValue(raw: RawParent, keys: string[]): NumericLike {
 function parent(id: "A" | "B", raw: RawParent | undefined): ParentCalculationInput {
   if (!raw) throw new Error(`Gegevens voor ouder ${id} ontbreken.`);
   const nestedIncome = (raw.income && typeof raw.income === "object" ? raw.income : {}) as RawParent;
-  const income = money(firstValue(raw, ["monthlyNbi", "nbi"]) ?? firstValue(nestedIncome, ["netIncomeMonthly", "monthlyNbi"]), `ouder ${id}: netto besteedbaar inkomen`);
-  const kgb = money(firstValue(raw, ["monthlyKgb", "kgb"]) ?? firstValue(nestedIncome, ["kgbMonthly", "monthlyKgb"]), `ouder ${id}: KGB`, 0);
+  const rawNbi = firstValue(raw, ["monthlyNbi", "nbi"]);
+  const nestedNbi = firstValue(nestedIncome, ["netIncomeMonthly", "monthlyNbi"]);
+  // If rawNbi is 0 or undefined, prefer positive nestedNbi from income profile
+  const resolvedNbi = (rawNbi !== undefined && Number(rawNbi) > 0)
+    ? rawNbi
+    : (nestedNbi !== undefined && Number(nestedNbi) > 0)
+      ? nestedNbi
+      : (rawNbi ?? nestedNbi ?? 0);
+  const income = money(resolvedNbi, `ouder ${id}: netto besteedbaar inkomen`, 0);
+
+  const rawKgb = firstValue(raw, ["monthlyKgb", "kgb"]);
+  const nestedKgb = firstValue(nestedIncome, ["kgbMonthly", "monthlyKgb"]);
+  const resolvedKgb = (rawKgb !== undefined && Number(rawKgb) > 0)
+    ? rawKgb
+    : (nestedKgb !== undefined && Number(nestedKgb) > 0)
+      ? nestedKgb
+      : (rawKgb ?? nestedKgb ?? 0);
+  const kgb = money(resolvedKgb, `ouder ${id}: KGB`, 0);
   const capacity: CapacityInput = {
     income: { monthlyNbi: income, monthlyKgb: kgb, kgbVerified: raw.kgbVerified !== false, referenceYear: 2026 },
     household: raw.household === "pension" ? "pension" : raw.household === "married" ? "married" : "single",

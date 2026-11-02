@@ -48,7 +48,13 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>) {
     if (!parsed.success) return new NextResponse("Ongeldige berekeningsinvoer", { status: 422 });
     const body = parsed.data;
     const requestedFactIds = Array.isArray(raw.approvedFactIds) ? raw.approvedFactIds.map(String).filter(Boolean) : [];
-    let calculationInput: any = { ...body.data, parents: body.data.parents.map(parent => ({ ...parent, nbi: Number(parent.nbi ?? 0) })) };
+    let calculationInput: any = {
+      ...body.data,
+      parents: body.data.parents.map(parent => ({
+        ...parent,
+        nbi: Number(parent.nbi ?? 0) > 0 ? Number(parent.nbi) : Number((parent as any).income?.netIncomeMonthly ?? (parent as any).income?.nbiMonthly ?? 0)
+      }))
+    };
     let factProvenance: any = null;
 
     if (requestedFactIds.length) {

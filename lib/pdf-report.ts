@@ -85,18 +85,26 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
 
       // Figures
       const totalNeed = Math.round(Number(r.totalNeed || 0));
-      const totalCapacity = Math.round(Number(r.totalCapacity || 0));
-      const capA = Math.round(Number(pA.capacity ?? 0));
-      const capB = Math.round(Number(pB.capacity ?? 0));
+
+      const rawCapA = Number(pA.capacity ?? 0);
+      const rawCapB = Number(pB.capacity ?? 0);
+      const tremaResult = r.tremaAudit?.result;
+      const currentCalc = r.currentCalculation;
+
+      const capA = Math.round(rawCapA > 0 ? rawCapA : (tremaResult?.recipientCapacityMonthly && tremaResult.recipientCapacityMonthly > 0 ? tremaResult.recipientCapacityMonthly : (currentCalc?.parentA_capacity || 0)));
+      const capB = Math.round(rawCapB > 0 ? rawCapB : (tremaResult?.payerCapacityMonthly && tremaResult.payerCapacityMonthly > 0 ? tremaResult.payerCapacityMonthly : (currentCalc?.parentB_capacity || 0)));
+      const stepparentCap = Math.round(Number(tremaResult?.stepparentCapacity || pA.stiefchildMaintenance || pB.stiefchildMaintenance || 0));
+      const totalCapacity = Math.round(Number(r.totalCapacity || (capA + capB + stepparentCap)));
+
       const paymentA = Math.round(Number(pA.paymentTotal ?? pA.childAlimonyPayment ?? 0));
-      const paymentB = Math.round(Number(pB.paymentTotal ?? pB.childAlimonyPayment ?? 0));
+      const paymentB = Math.round(Number(pB.paymentTotal ?? pB.childAlimonyPayment ?? (currentCalc?.contribution && capB >= capA ? currentCalc.contribution : 0)));
 
       const payerName = paymentB >= paymentA ? nameB : nameA;
       const recipientName = payerName === nameB ? nameA : nameB;
       const payerAmount = Math.max(paymentA, paymentB);
 
-      const isSufficient = r.capacitySufficient !== false;
-      const capacityDeficit = Math.round(Number(r.capacityDeficit || 0));
+      const isSufficient = totalCapacity >= totalNeed;
+      const capacityDeficit = Math.round(Math.max(0, totalNeed - totalCapacity));
 
       const historicalNBGI = r.historicalCalculation?.historicalNBGI || cd.historicalNBGI || r.historicalCalculation?.fallbackNBGI || r.nbgi || 0;
       const historicalNeed = r.historicalCalculation?.historicalNeed || (totalNeed > 0 ? totalNeed : 0);
@@ -299,16 +307,16 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       curY += 12;
 
       // Parent A extraction
-      const nbiA = pA.nbi ?? cd.parents?.[0]?.nbi ?? pA.income?.nbiMonthly ?? 0;
-      const kgbA = pA.kgb ?? cd.parents?.[0]?.kgb ?? pA.income?.kgbMonthly ?? 0;
-      const totalIncA = (pA.income?.nbiIncludingKgbMonthly) ?? (nbiA + kgbA);
+      const nbiA = (pA.nbi && pA.nbi > 0) ? pA.nbi : (cd.parents?.[0]?.nbi && cd.parents?.[0]?.nbi > 0) ? cd.parents?.[0]?.nbi : (pA.income?.nbiMonthly || cd.parents?.[0]?.income?.netIncomeMonthly || currentCalc?.parentA_NBI || 0);
+      const kgbA = pA.kgb ?? cd.parents?.[0]?.kgb ?? pA.income?.kgbMonthly ?? cd.parents?.[0]?.income?.kgbMonthly ?? currentCalc?.parentA_KGB ?? 0;
+      const totalIncA = (pA.income?.nbiIncludingKgbMonthly && pA.income?.nbiIncludingKgbMonthly > 0) ? pA.income.nbiIncludingKgbMonthly : (nbiA + kgbA);
       const housingA = cd.parents?.[0]?.housingCosts ?? cd.parents?.[0]?.housing?.monthlyCosts ?? 0;
       const careDaysA = pA.careDaysPerWeek ?? cd.parents?.[0]?.careDaysPerWeek ?? 0;
 
       // Parent B extraction
-      const nbiB = pB.nbi ?? cd.parents?.[1]?.nbi ?? pB.income?.nbiMonthly ?? 0;
-      const kgbB = pB.kgb ?? cd.parents?.[1]?.kgb ?? pB.income?.kgbMonthly ?? 0;
-      const totalIncB = (pB.income?.nbiIncludingKgbMonthly) ?? (nbiB + kgbB);
+      const nbiB = (pB.nbi && pB.nbi > 0) ? pB.nbi : (cd.parents?.[1]?.nbi && cd.parents?.[1]?.nbi > 0) ? cd.parents?.[1]?.nbi : (pB.income?.nbiMonthly || cd.parents?.[1]?.income?.netIncomeMonthly || currentCalc?.parentB_NBI || 0);
+      const kgbB = pB.kgb ?? cd.parents?.[1]?.kgb ?? pB.income?.kgbMonthly ?? cd.parents?.[1]?.income?.kgbMonthly ?? currentCalc?.parentB_KGB ?? 0;
+      const totalIncB = (pB.income?.nbiIncludingKgbMonthly && pB.income?.nbiIncludingKgbMonthly > 0) ? pB.income.nbiIncludingKgbMonthly : (nbiB + kgbB);
       const housingB = cd.parents?.[1]?.housingCosts ?? cd.parents?.[1]?.housing?.monthlyCosts ?? 0;
       const careDaysB = pB.careDaysPerWeek ?? cd.parents?.[1]?.careDaysPerWeek ?? 0;
 
@@ -352,13 +360,16 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       curY = drawSectionHeader("5. DRAAGKRACHTVERGELIJKING EN VERDELING", curY);
       curY = drawRow("Totale gezamenlijke draagkracht van beide ouders:", euro(totalCapacity), curY, true);
 
-      const careDiscountPayer = pB.totalCareDiscount ?? pA.totalCareDiscount ?? r.careDiscount?.total ?? 0;
-      const careDiscountPct = (payerName === nameB ? pB.careDiscountPctByChild?.[0] : pA.careDiscountPctByChild?.[0]) ?? 0;
+      const careDiscountPayer = pB.totalCareDiscount ?? pA.totalCareDiscount ?? r.careDiscount?.total ?? (payerName === nameB ? (r.transfers?.[0]?.careDiscount ? r.transfers.reduce((s: number, t: any) => s + (t.payerIndex === 1 ? t.careDiscount : 0), 0) : 0) : 0);
+      const careDiscountPct = (payerName === nameB ? pB.careDiscountPctByChild?.[0] : pA.careDiscountPctByChild?.[0]) ?? (payerName === nameB && careDaysB >= 1 ? (careDaysB >= 3 ? 0.35 : careDaysB >= 2 ? 0.25 : 0.15) : 0);
 
       curY = drawRow(`Draagkracht ${nameA}:`, euro(capA), curY);
       curY = drawRow(`Draagkracht ${nameB}:`, euro(capB), curY);
+      if (stepparentCap > 0) {
+        curY = drawRow("Draagkracht stiefouder (pro-rata):", euro(stepparentCap), curY);
+      }
       if (careDiscountPct > 0 || careDiscountPayer > 0) {
-        curY = drawRow(`Zorgkortingspercentage ${payerName}:`, pct(careDiscountPct), curY);
+        curY = drawRow(`Zorgkortingspercentage ${payerName}:`, pct(careDiscountPct <= 1 ? careDiscountPct * 100 : careDiscountPct), curY);
         curY = drawRow(`Toegepaste zorgkorting:`, `${euro(careDiscountPayer)} per maand`, curY);
       }
       if (!isSufficient) {

@@ -35,6 +35,22 @@ export function buildTremaCaseAudit(
         children: caseInput.children || []
     };
 
+    // Ensure parents inherit calculated income results if parent.nbi is 0/empty
+    if (legacyResult && typeof legacyResult === 'object' && Array.isArray((legacyResult as any).incomeResults) && Array.isArray(inputForAdapter.parents)) {
+      inputForAdapter.parents = inputForAdapter.parents.map((p: any, idx: number) => {
+        const incRes = (legacyResult as any).incomeResults[idx];
+        if (incRes?.nbiMonthly && (!p.nbi || p.nbi === 0)) {
+          return {
+            ...p,
+            nbi: incRes.nbiMonthly,
+            monthlyNbi: incRes.nbiMonthly,
+            kgb: p.kgb || incRes.components?.find((c: any) => c.kind === "income" && c.label === "KGB")?.annual / 12 || 0,
+          };
+        }
+        return p;
+      });
+    }
+
     // We need to fetch totalNeed from legacyResult if available or calculate it
     if (legacyResult && typeof legacyResult === 'object' && 'totalNeed' in legacyResult) {
         if (!inputForAdapter.need) inputForAdapter.need = {};
