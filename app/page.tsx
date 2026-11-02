@@ -3,26 +3,26 @@ import { PRICING } from "@/lib/pricing";
 import { MereloLogo } from "@/components/Brand";
 
 const featureItems = [
-  ["01", "Één rekenkern, geen losse varianten", "Editor, onderbouwing en rapport vertrekken vanuit hetzelfde vastgelegde resultaat."],
-  ["02", "Onderbouwing per stap", "Van netto besteedbaar inkomen tot zorgkorting: invoer, tussenbedragen en herkomst blijven zichtbaar."],
-  ["03", "Ondernemersinkomen", "Werk met ondernemingsgegevens en professionele keuzes zonder een tweede rekenlogica naast de bestaande engine."],
+  ["01", "Één betrouwbare rekenkern", "Berekening, onderbouwing en rapport vertrekken altijd vanuit dezelfde vastgelegde gegevens."],
+  ["02", "Onderbouwing per stap", "Van netto besteedbaar inkomen tot zorgkorting: invoer, tussenbedragen en herkomst blijven helder inzichtelijk."],
+  ["03", "Ondernemersinkomen", "Verwerk ondernemingsgegevens en professionele keuzes overzichtelijk binnen de alimentatieberekening."],
   ["04", "Rapporten om te delen", "Een professioneel rapport met samenvatting, financiële analyse en controleerbare rekenbijlage."],
-  ["05", "Dossiers met klantnummer", "Cliëntgegevens, berekeningen, documenten en historie bij elkaar in één werkplek."],
-  ["06", "Controle en audit", "Versies, wijzigingen, rapportmomenten en beheeracties blijven traceerbaar."],
+  ["05", "Dossiers met overzicht", "Cliëntgegevens, berekeningen, documenten en historie geordend bij elkaar in één rustige werkplek."],
+  ["06", "Controle en audit", "Versies, wijzigingen, rapportmomenten en beslissingen blijven nauwkeurig traceerbaar."],
 ] as const;
 
 const workflowItems = [
-  ["01", "Dossier aanmaken", "Leg de cliënt en de uitgangssituatie vast."],
-  ["02", "Gegevens invoeren", "Inkomen, wonen, kinderen en zorgverdeling worden gestructureerd vastgelegd."],
-  ["03", "Berekenen en controleren", "Bekijk de onderbouwing en leg wijzigingen als nieuwe versie vast."],
-  ["04", "Rapport uitbrengen", "Genereer rapportage vanuit het vastgelegde rekenresultaat."],
+  ["01", "Dossier aanmaken", "Leg de partijen en de uitgangssituatie gestructureerd vast."],
+  ["02", "Gegevens invoeren", "Inkomen, woonlasten, kinderen en zorgverdeling worden overzichtelijk ingevoerd."],
+  ["03", "Berekenen en controleren", "Bekijk de volledige onderbouwing en leg wijzigingen direct als nieuwe versie vast."],
+  ["04", "Rapport uitbrengen", "Genereer een compleet juridisch onderbouwd rapport vanuit het rekenresultaat."],
 ] as const;
 
 const faqItems = [
-  ["Welke berekeningen ondersteunt Merelo?", "Merelo ondersteunt kinder- en partneralimentatie binnen de bestaande rekenkern, inclusief de relevante onderbouwing en professionele rapportage."],
-  ["Kan ik zien waar een bedrag vandaan komt?", "Ja. De publieke productbelofte is juist gericht op herleidbaarheid: invoer, afgeleide bedragen, professionele keuzes en versies worden afzonderlijk zichtbaar gemaakt waar de applicatie dat ondersteunt."],
-  ["Is Merelo juridisch advies?", "Nee. Merelo is rekensoftware. De gebruiker blijft verantwoordelijk voor de juridische beoordeling, gekozen uitgangspunten en toepassing van de uitkomst."],
-  ["Wat gebeurt er met mijn berekening?", "Berekeningen blijven gekoppeld aan de bestaande server-side applicatie, autorisatie, tenant-isolatie en opslag. Deze publieke pagina introduceert daar geen nieuwe datalaag voor."],
+  ["Welke berekeningen ondersteunt Merelo?", "Merelo ondersteunt kinder- en partneralimentatie conform de officiële Tremanormen, inclusief gedetailleerde onderbouwing en professionele rapportage."],
+  ["Kan ik zien waar een bedrag vandaan komt?", "Ja. Elk bedrag is herleidbaar: invoer, afgeleide bedragen, Trema-tabellen, formules en versies worden transparant en stap voor stap getoond."],
+  ["Is Merelo juridisch advies?", "Nee. Merelo is professionele rekensoftware. De professional of gebruiker blijft verantwoordelijk voor de juridische beoordeling, gekozen uitgangspunten en toepassing van de uitkomst."],
+  ["Wat gebeurt er met mijn berekening?", "Berekeningen worden veilig en vertrouwelijk opgeslagen binnen je eigen account en dossier, beschermd volgens strikte privacy- en beveiligingsnormen."],
 ] as const;
 
 export default function Home() {
@@ -42,10 +42,10 @@ export default function Home() {
         <div className="al-container al-hero-grid">
           <div>
             <div className="al-eyebrow">Voor advocaten, mediators en financieel adviseurs</div>
-            <h1>Merelotie berekenen met een <span className="al-gradient">onderbouwing die standhoudt.</span></h1>
+            <h1>Alimentatie berekenen met een <span className="al-gradient">onderbouwing die standhoudt.</span></h1>
             <p className="al-lead">
-              Eén bestaande rekenkern voor kinder- en partneralimentatie. Elke uitkomst is stap voor stap
-              herleidbaar en rapportage blijft gekoppeld aan het vastgelegde resultaat.
+              Professionele rekensoftware voor kinder- en partneralimentatie conform de officiële Tremanormen.
+              Elke uitkomst is stap voor stap herleidbaar en direct bruikbaar voor convenant of rechtbank.
             </p>
             <div className="al-actions">
               <Link href="/register" className="al-btn al-btn-primary">Account aanmaken →</Link>
@@ -55,7 +55,7 @@ export default function Home() {
               <span>Onderbouwing per stap</span>
               <span>Versiehistorie</span>
               <span>Professionele rapportage</span>
-              <span>EU-data</span>
+              <span>Strikte privacy (EU)</span>
             </div>
           </div>
 
@@ -90,10 +90,10 @@ export default function Home() {
 
       <section className="al-trust-strip" aria-label="Belangrijkste eigenschappen">
         <div className="al-container al-trust-grid">
-          <div className="al-trust-item"><strong>Traceerbare parameters</strong><span>Versie en bron blijven aan het rekenmoment gekoppeld.</span></div>
-          <div className="al-trust-item"><strong>Versiehistorie</strong><span>Opslagen en wijzigingen blijven onderdeel van het dossier.</span></div>
-          <div className="al-trust-item"><strong>Rapport = berekening</strong><span>Rapportage volgt het vastgelegde resultaat.</span></div>
-          <div className="al-trust-item"><strong>Zorgvuldig met data</strong><span>De bestaande server-side beveiliging blijft leidend.</span></div>
+          <div className="al-trust-item"><strong>Traceerbare parameters</strong><span>Versie en normbron blijven altijd aan het rekenmoment gekoppeld.</span></div>
+          <div className="al-trust-item"><strong>Volledige historie</strong><span>Elke wijziging en berekening blijft bewaard in het dossier.</span></div>
+          <div className="al-trust-item"><strong>Geverifieerd rapport</strong><span>Rapportage sluit naadloos aan op de gemaakte berekening.</span></div>
+          <div className="al-trust-item"><strong>Veilige dataverwerking</strong><span>Optimale beveiliging en privacy volgens AVG/GDPR richtlijnen.</span></div>
         </div>
       </section>
 
@@ -102,7 +102,7 @@ export default function Home() {
           <div className="al-section-head">
             <div className="al-eyebrow">Functionaliteit</div>
             <h2>Gebouwd rond de vraag: waar komt dit bedrag vandaan?</h2>
-            <p>De UX maakt de weg van invoer naar uitkomst zichtbaar zonder een tweede reken- of datalaag te introduceren.</p>
+            <p>Volledige transparantie in elke fase van de berekening, van bruto inkomen tot netto kind- en partneralimentatie.</p>
           </div>
           <div className="al-grid-3">
             {featureItems.map(([n,title,text]) => (
@@ -121,7 +121,7 @@ export default function Home() {
           <div className="al-section-head">
             <div className="al-eyebrow">Werkwijze</div>
             <h2>Van intake tot rapport in vier stappen.</h2>
-            <p>Een vaste route door het dossier, met de bestaande applicatielogica als bron van waarheid.</p>
+            <p>Een heldere en overzichtelijke route door elk dossier met actuele Tremanormen als uitgangspunt.</p>
           </div>
           <div className="al-workflow">
             {workflowItems.map(([n,title,text]) => (
@@ -141,8 +141,8 @@ export default function Home() {
             <div className="al-eyebrow">Ondernemers</div>
             <h2 style={{fontSize:'clamp(30px,4vw,45px)',lineHeight:1.08,letterSpacing:'-1.5px'}}>Inkomen uit onderneming, expliciet onderbouwd.</h2>
             <p className="al-lead" style={{fontSize:15,marginTop:18}}>
-              De publieke UX laat zien hoe ondernemingsgegevens en professionele keuzes als onderdeel van de
-              onderbouwing kunnen worden gepresenteerd. De bestaande server-side income-engine blijft hiervoor leidend.
+              Verwerk jaarcijfers, dividend en ondernemerswinst op transparante wijze. Inclusief ruimte voor
+              professionele toelichting en fiscale normalisaties.
             </p>
             <ul className="al-list">
               <li>Omzet, bedrijfskosten en afschrijvingen per boekjaar</li>
@@ -167,14 +167,14 @@ export default function Home() {
       <section className="al-section alt">
         <div className="al-container">
           <div className="al-section-head">
-            <div className="al-eyebrow">Vertrouwen</div>
+            <div className="al-eyebrow">Betrouwbaarheid</div>
             <h2>Passend bij een juridische en financiële praktijk.</h2>
-            <p>Geen beloftes over uitkomsten, maar controle over het proces: herleidbaar, herhaalbaar en verantwoord vastgelegd.</p>
+            <p>Geen aannames over uitkomsten, maar controle over het proces: herleidbaar, herhaalbaar en juridisch zuiver vastgelegd.</p>
           </div>
           <div className="al-credibility-grid">
-            <article className="al-feature"><h3>Eigen werkplek</h3><p>Cliënten, berekeningen, documenten en rapportage horen bij dezelfde bestaande applicatie- en autorisatielaag.</p></article>
-            <article className="al-feature"><h3>Verantwoording achteraf</h3><p>Versies, wijzigingen en rapportmomenten kunnen binnen het bestaande audit- en snapshotmodel worden teruggevonden.</p></article>
-            <article className="al-feature"><h3>Server-side beveiliging</h3><p>Deze publieke UI introduceert geen client-side sessie-, tenant-, secret- of rekenlogica.</p></article>
+            <article className="al-feature"><h3>Eigen werkplek</h3><p>Cliënten, berekeningen, documenten en rapportage overzichtelijk in één beveiligde omgeving.</p></article>
+            <article className="al-feature"><h3>Verantwoording & Audit</h3><p>Versies, wijzigingen en rapportmomenten blijven nauwkeurig traceerbaar in de tijdlijn.</p></article>
+            <article className="al-feature"><h3>Beveiliging & Privacy</h3><p>Strikte scheiding van data, end-to-end beveiliging en naleving van alle Europese privacywetgeving.</p></article>
           </div>
         </div>
       </section>

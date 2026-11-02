@@ -5,7 +5,7 @@ import { MereloLogo } from "@/components/Brand";
 const included = [
   {
     title: "Rekenen",
-    items: ["Kinderalimentatie", "Partneralimentatie", "Onderbouwing per stap", "Bestaande rekenkern als bron van waarheid"],
+    items: ["Kinderalimentatie", "Partneralimentatie", "Onderbouwing per stap", "Tremanormen 2026 als rekenbasis"],
   },
   {
     title: "Vastleggen",
@@ -33,11 +33,11 @@ export default function PricingPage() {
         <div className="al-container al-pricing-hero-inner">
           <div className="al-eyebrow">Prijzen</div>
           <h1>Twee duidelijke productvormen.</h1>
-          <p className="al-lead">Kies Particulier voor één persoonlijk dossier of Zakelijk voor een professionele praktijk. De bedragen hieronder worden uit de bestaande productcatalogus gelezen.</p>
+          <p className="al-lead">Kies Particulier voor één persoonlijk dossier of Zakelijk voor een professionele praktijk. De bedragen zijn inclusief continue updates volgens de actuele alimentatienormen.</p>
           <div className="al-proof al-proof-centered">
             <span>Jaarprijzen</span>
             <span>Transparante btw-behandeling</span>
-            <span>Betaling via bestaande flow</span>
+            <span>Direct online activeren</span>
           </div>
         </div>
       </section>

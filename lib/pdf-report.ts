@@ -23,6 +23,11 @@ function euro(value: number | undefined | null): string {
   }).format(Math.round(value));
 }
 
+function pct(value: number | undefined | null): string {
+  if (value === undefined || value === null || isNaN(value)) return "0%";
+  return `${Math.round(value * 100) / 100}%`;
+}
+
 export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     try {
@@ -52,10 +57,10 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       const pA = parentResults[0] || {};
       const pB = parentResults[1] || {};
 
-      const nameA = cd.parents?.[0]?.name || r.family?.parentA?.name || "Ouder A (Dianne)";
-      const nameB = cd.parents?.[1]?.name || r.family?.parentB?.name || "Ouder B (Pedro)";
+      const nameA = cd.parents?.[0]?.name || r.family?.parentA?.name || "Ouder A";
+      const nameB = cd.parents?.[1]?.name || r.family?.parentB?.name || "Ouder B";
 
-      // Children list
+      // Children resolution
       const rawChildren: any[] = (cd.children && cd.children.length > 0)
         ? cd.children
         : (r.family?.children && r.family.children.length > 0)
@@ -64,37 +69,43 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
             ? r.childResults
             : [];
 
-      const children = rawChildren.map((c, i) => ({
-        name: c.name || `Kind ${i + 1}`,
-        age: c.age ?? 0,
-        residence: c.residence || "A",
-        need: c.need || (r.totalNeed ? Math.round(Number(r.totalNeed) / Math.max(1, rawChildren.length)) : 0),
-        payment: c.payments?.payment ?? (r.childResults?.[i]?.payments?.payment ?? null),
-      }));
+      const children = rawChildren.map((c, i) => {
+        const childRes = r.childResults?.[i] || {};
+        return {
+          name: c.name || `Kind ${i + 1}`,
+          age: c.age ?? childRes.age ?? 0,
+          residence: c.residence || childRes.residence || "A",
+          need: childRes.need || c.need || (r.totalNeed ? Math.round(Number(r.totalNeed) / Math.max(1, rawChildren.length)) : 0),
+          payment: childRes.payments?.payment ?? c.payments?.payment ?? null,
+          careDiscount: childRes.payments?.careDiscount ?? childRes.careDiscount ?? null,
+        };
+      });
 
       const childCount = children.length;
 
       // Figures
-      const totalNeed = Math.round(Number(r.totalNeed || 1223));
-      const totalCapacity = Math.round(Number(r.totalCapacity || 1428));
+      const totalNeed = Math.round(Number(r.totalNeed || 0));
+      const totalCapacity = Math.round(Number(r.totalCapacity || 0));
       const capA = Math.round(Number(pA.capacity ?? 0));
-      const capB = Math.round(Number(pB.capacity ?? 1428));
-      const paymentA = Math.round(Number(pA.paymentTotal ?? 0));
-      const paymentB = Math.round(Number(pB.paymentTotal ?? 1223));
+      const capB = Math.round(Number(pB.capacity ?? 0));
+      const paymentA = Math.round(Number(pA.paymentTotal ?? pA.childAlimonyPayment ?? 0));
+      const paymentB = Math.round(Number(pB.paymentTotal ?? pB.childAlimonyPayment ?? 0));
 
       const payerName = paymentB >= paymentA ? nameB : nameA;
-      const payerCap = paymentB >= paymentA ? capB : capA;
       const recipientName = payerName === nameB ? nameA : nameB;
-      const recipientCap = payerName === nameB ? capA : capB;
       const payerAmount = Math.max(paymentA, paymentB);
 
-      const historicalNBGI = r.historicalCalculation?.historicalNBGI || cd.historicalNBGI || r.nbgi || 4314;
-      const historicalNeed = r.historicalCalculation?.historicalNeed || 1097;
-      const normYear = input.normVersion || "2026.1";
-      const calculationDate = cd.calculationDate || r.family?.calculationDate || "01-05-2026";
-      const historicalDate = cd.historicalPeriod?.calculationDate || "01-07-2024";
+      const isSufficient = r.capacitySufficient !== false;
+      const capacityDeficit = Math.round(Number(r.capacityDeficit || 0));
 
-      const primaryColor = "#1e3a8a"; // Navy professional
+      const historicalNBGI = r.historicalCalculation?.historicalNBGI || cd.historicalNBGI || r.historicalCalculation?.fallbackNBGI || r.nbgi || 0;
+      const historicalNeed = r.historicalCalculation?.historicalNeed || (totalNeed > 0 ? totalNeed : 0);
+      const normYear = input.normVersion || r.normVersion || "2026.1";
+      const calculationDate = cd.calculationDate || r.family?.calculationDate || new Date().toLocaleDateString("nl-NL");
+      const historicalDate = cd.historicalPeriod?.calculationDate || "tijdstip samenleving/scheiding";
+
+      // Colors
+      const primaryColor = "#1e3a8a"; // Navy
       const darkColor = "#0f172a";    // Slate 900
       const mutedColor = "#475569";   // Slate 600
       const lightBg = "#f8fafc";      // Slate 50
@@ -121,7 +132,7 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       };
 
       // ==========================================
-      // PAGE 1: Header, Case Meta, Need, Outcome
+      // PAGE 1: Header, Case Meta, Summary, Need & Distribution
       // ==========================================
 
       // Document title header
@@ -166,7 +177,7 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       doc.rect(40, curY, 515, 54).fill("#ffffff").strokeColor(borderGray).stroke();
       doc.fontSize(8).font("Helvetica-Bold").fillColor(darkColor).text("Dossier & Partijen", 50, curY + 5, { lineBreak: false });
       doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor);
-      doc.text(`Dossier: ${input.caseName || "Familie Geers - VD Bersselaar"}`, 50, curY + 17, { width: 250, lineBreak: false });
+      doc.text(`Dossier: ${input.caseName || input.clientName || "Alimentatiedossier"}`, 50, curY + 17, { width: 250, lineBreak: false });
       doc.text(`Ouder A: ${nameA}`, 50, curY + 28, { lineBreak: false });
       doc.text(`Ouder B: ${nameB}`, 50, curY + 39, { lineBreak: false });
 
@@ -174,40 +185,58 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor);
       doc.text(`Tremanormen: ${normYear} (Rekenengine ${input.calculationVersion || "2.0.0"})`, 320, curY + 17, { lineBreak: false });
       doc.text(`Peildatum berekening: ${calculationDate}`, 320, curY + 28, { lineBreak: false });
-      doc.text(`Opgesteld door: ${input.professionalName || "Familierecht Specialist"}`, 320, curY + 39, { lineBreak: false });
+      doc.text(`Opgesteld door: ${input.professionalName || input.practiceName || "Familierecht Specialist"}`, 320, curY + 39, { lineBreak: false });
       curY += 60;
 
       // SECTION 1: Samenvatting & Hoofdconclusie
       curY = drawSectionHeader("1. HOOFDCONCLUSIE EN BETAALVERPLICHTING", curY);
-      doc.rect(40, curY, 515, 54).fill("#f8fafc").strokeColor(primaryColor).lineWidth(1).stroke();
+      doc.rect(40, curY, 515, 58).fill("#f8fafc").strokeColor(primaryColor).lineWidth(1).stroke();
       doc.fontSize(8).font("Helvetica").fillColor(darkColor);
+
+      const capacityText = isSufficient
+        ? `De totale gezamenlijke draagkracht van de ouders bedraagt ${euro(totalCapacity)} per maand en is toereikend om in de behoefte te voorzien.`
+        : `De totale gezamenlijke draagkracht van de ouders (${euro(totalCapacity)}/mnd) is ontoereikend voor de volledige behoefte (tekort: ${euro(capacityDeficit)}/mnd). Conform Tremanormen dragen beide ouders het tekort naar evenredigheid.`;
+
       doc.text(
-        `Op basis van de Tremanormen ${normYear} bedraagt de totale behoefte van de ${childCount > 0 ? childCount : 3} minderjarige kind(eren) ` +
-        `${euro(totalNeed)} per maand. De totale gezamenlijke draagkracht van de ouders bedraagt ${euro(totalCapacity)} per maand en is toereikend.`,
+        `Op basis van de Tremanormen ${normYear} bedraagt de totale behoefte van de ${childCount > 0 ? childCount : 1} minderjarige kind(eren) ` +
+        `${euro(totalNeed)} per maand. ${capacityText}`,
         48,
         curY + 6,
         { width: 495 }
       );
       doc.fontSize(9.5).font("Helvetica-Bold").fillColor(primaryColor);
       doc.text(
-        `Te betalen door ${payerName} aan ${recipientName}: ${euro(payerAmount)} per maand`,
+        `Vastgestelde alimentatiebijdrage: ${euro(payerAmount)} per maand (te betalen door ${payerName} aan ${recipientName})`,
         48,
-        curY + 26,
+        curY + 28,
         { width: 495, lineBreak: false }
       );
-      const perChildEst = childCount > 0 ? Math.round(payerAmount / childCount) : 408;
+      const perChildEst = childCount > 0 ? Math.round(payerAmount / childCount) : payerAmount;
       doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor);
-      doc.text(`(Overeenkomend met ${euro(perChildEst)} per kind per maand, ingaande per peildatum ${calculationDate})`, 48, curY + 40, { lineBreak: false });
-      curY += 60;
+      doc.text(`(Gemiddeld ${euro(perChildEst)} per kind per maand, ingaande per peildatum ${calculationDate})`, 48, curY + 44, { lineBreak: false });
+      curY += 64;
 
       // SECTION 2: Behoefteberekening kinderen
-      curY = drawSectionHeader("2. BEHOEFTE VAN DE KINDEREN (TIJDENS HUWELIJK / SAMENLEVING)", curY);
-      curY = drawRow(`Netto besteedbaar inkomen ${nameA} (peildatum ${historicalDate})`, euro(1041), curY);
-      curY = drawRow(`Netto besteedbaar inkomen ${nameB} (peildatum ${historicalDate})`, euro(2758), curY);
-      curY = drawRow("Kindgebonden budget gezamenlijke huishouding", euro(515), curY);
-      curY = drawRow("Gezamenlijk Netto Gezinsinkomen (NBGI)", euro(historicalNBGI), curY, true);
-      curY = drawRow(`Nibud-tabel basisbehoefte (${childCount > 0 ? childCount : 3} kinderen)`, euro(historicalNeed), curY);
-      curY = drawRow(`Wettelijke indexering naar normjaar ${normYear}`, euro(totalNeed), curY, true);
+      curY = drawSectionHeader("2. BEHOEFTE VAN DE KINDEREN", curY);
+      const historicalIncomes = r.historicalCalculation?.historicalIncomeSources || [];
+      const histIncA = historicalIncomes[0]?.nbi || cd.parents?.[0]?.nbi || 0;
+      const histIncB = historicalIncomes[1]?.nbi || cd.parents?.[1]?.nbi || 0;
+      const histKgb = r.historicalCalculation?.historicalKGB || 0;
+
+      if (historicalNBGI > 0) {
+        if (histIncA > 0) curY = drawRow(`Netto inkomen ${nameA} (peildatum ${historicalDate})`, euro(histIncA), curY);
+        if (histIncB > 0) curY = drawRow(`Netto inkomen ${nameB} (peildatum ${historicalDate})`, euro(histIncB), curY);
+        if (histKgb > 0) curY = drawRow("Kindgebonden budget gezamenlijke huishouding", euro(histKgb), curY);
+        curY = drawRow("Gezamenlijk Netto Gezinsinkomen (NBGI)", euro(historicalNBGI), curY, true);
+        if (historicalNeed > 0 && historicalNeed !== totalNeed) {
+          curY = drawRow(`Nibud-tabel basisbehoefte (${childCount > 0 ? childCount : 1} kind/kinderen)`, euro(historicalNeed), curY);
+          curY = drawRow(`Wettelijke indexering naar normjaar ${normYear}`, euro(totalNeed), curY, true);
+        } else {
+          curY = drawRow(`Vastgestelde behoefte conform Trema-tabel (${normYear})`, euro(totalNeed), curY, true);
+        }
+      } else {
+        curY = drawRow(`Vastgestelde totale behoefte der kinderen (${normYear})`, euro(totalNeed), curY, true);
+      }
       curY += 4;
 
       // SECTION 3: Verdeling per kind
@@ -233,19 +262,18 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
           curY += 14;
         });
       } else {
-        ["Jaivey (2 jaar)", "Jezley (6 jaar)", "Djelena (9 jaar)"].forEach((k) => {
-          doc.fontSize(8).font("Helvetica").fillColor(darkColor);
-          doc.text(k, 50, curY + 1, { lineBreak: false });
-          doc.text("Hoofdverblijf Ouder A", 250, curY + 1, { lineBreak: false });
-          doc.text("€ 408", 350, curY + 1, { lineBreak: false });
-          doc.font("Helvetica-Bold").text("€ 408", 450, curY + 1, { lineBreak: false });
-          doc.strokeColor("#e2e8f0").lineWidth(0.5).moveTo(40, curY + 12).lineTo(555, curY + 12).stroke();
-          curY += 14;
-        });
+        doc.fontSize(8).font("Helvetica").fillColor(darkColor);
+        doc.text("Minderjarig kind", 50, curY + 1, { lineBreak: false });
+        doc.text("-", 170, curY + 1, { lineBreak: false });
+        doc.text("Hoofdverblijf Ouder A", 250, curY + 1, { lineBreak: false });
+        doc.text(euro(totalNeed), 350, curY + 1, { lineBreak: false });
+        doc.font("Helvetica-Bold").text(euro(payerAmount), 450, curY + 1, { lineBreak: false });
+        doc.strokeColor("#e2e8f0").lineWidth(0.5).moveTo(40, curY + 12).lineTo(555, curY + 12).stroke();
+        curY += 14;
       }
 
       // ==========================================
-      // PAGE 2: Draagkracht, Vergelijking, Uitleg
+      // PAGE 2: Draagkracht, Vergelijking, Uitleg & Handtekeningen
       // ==========================================
       doc.addPage();
       curY = 36;
@@ -270,58 +298,89 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       );
       curY += 12;
 
+      // Parent A extraction
+      const nbiA = pA.nbi ?? cd.parents?.[0]?.nbi ?? pA.income?.nbiMonthly ?? 0;
+      const kgbA = pA.kgb ?? cd.parents?.[0]?.kgb ?? pA.income?.kgbMonthly ?? 0;
+      const totalIncA = (pA.income?.nbiIncludingKgbMonthly) ?? (nbiA + kgbA);
+      const housingA = cd.parents?.[0]?.housingCosts ?? cd.parents?.[0]?.housing?.monthlyCosts ?? 0;
+      const careDaysA = pA.careDaysPerWeek ?? cd.parents?.[0]?.careDaysPerWeek ?? 0;
+
+      // Parent B extraction
+      const nbiB = pB.nbi ?? cd.parents?.[1]?.nbi ?? pB.income?.nbiMonthly ?? 0;
+      const kgbB = pB.kgb ?? cd.parents?.[1]?.kgb ?? pB.income?.kgbMonthly ?? 0;
+      const totalIncB = (pB.income?.nbiIncludingKgbMonthly) ?? (nbiB + kgbB);
+      const housingB = cd.parents?.[1]?.housingCosts ?? cd.parents?.[1]?.housing?.monthlyCosts ?? 0;
+      const careDaysB = pB.careDaysPerWeek ?? cd.parents?.[1]?.careDaysPerWeek ?? 0;
+
       // Parent A Box
-      doc.rect(40, curY, 252, 98).fill(lightBg).strokeColor(borderGray).stroke();
-      doc.fontSize(8.5).font("Helvetica-Bold").fillColor(primaryColor).text(`Gegevens ${nameA} (Verzorgende)`, 48, curY + 5, { lineBreak: false });
-      let subYA = curY + 19;
+      doc.rect(40, curY, 252, 102).fill(lightBg).strokeColor(borderGray).stroke();
+      doc.fontSize(8.5).font("Helvetica-Bold").fillColor(primaryColor).text(`Gegevens ${nameA}`, 48, curY + 5, { lineBreak: false });
+      let subYA = curY + 18;
       const rowA = (lbl: string, val: string, bold = false) => {
         doc.fontSize(7.5).font(bold ? "Helvetica-Bold" : "Helvetica").fillColor(bold ? darkColor : mutedColor).text(lbl, 48, subYA, { lineBreak: false });
         doc.font(bold ? "Helvetica-Bold" : "Helvetica").fillColor(darkColor).text(val, 210, subYA, { width: 76, align: "right", lineBreak: false });
         subYA += 12;
       };
-      rowA("Netto inkomen (NBI):", euro(1233));
-      rowA("Kindgebonden budget (KGB):", euro(369));
-      rowA("Totaal beschikbaar inkomen:", euro(1602), true);
-      rowA("Woonlasten + Bijstandsnorm:", "€ 1.582");
-      rowA("Draagkrachtruimte:", "€ 20");
+      rowA("Netto inkomen (NBI):", euro(nbiA));
+      rowA("Kindgebonden budget (KGB):", euro(kgbA));
+      rowA("Totaal beschikbaar inkomen:", euro(totalIncA), true);
+      rowA("Opgegeven woonlasten:", euro(housingA));
+      rowA("Zorgdagen per week:", `${careDaysA} dag(en)`);
       rowA(`Draagkracht ${nameA}:`, euro(capA), true);
+      rowA("Procentueel aandeel:", pA.sharePct ? `${pA.sharePct}%` : `${Math.round((capA / Math.max(1, totalCapacity)) * 100)}%`);
 
       // Parent B Box
-      doc.rect(302, curY, 253, 98).fill(lightBg).strokeColor(borderGray).stroke();
-      doc.fontSize(8.5).font("Helvetica-Bold").fillColor(primaryColor).text(`Gegevens ${nameB} (Niet-verzorgend)`, 310, curY + 5, { lineBreak: false });
-      let subYB = curY + 19;
+      doc.rect(302, curY, 253, 102).fill(lightBg).strokeColor(borderGray).stroke();
+      doc.fontSize(8.5).font("Helvetica-Bold").fillColor(primaryColor).text(`Gegevens ${nameB}`, 310, curY + 5, { lineBreak: false });
+      let subYB = curY + 18;
       const rowB = (lbl: string, val: string, bold = false) => {
         doc.fontSize(7.5).font(bold ? "Helvetica-Bold" : "Helvetica").fillColor(bold ? darkColor : mutedColor).text(lbl, 310, subYB, { lineBreak: false });
         doc.font(bold ? "Helvetica-Bold" : "Helvetica").fillColor(darkColor).text(val, 470, subYB, { width: 78, align: "right", lineBreak: false });
         subYB += 12;
       };
-      rowB("Netto inkomen (NBI):", euro(3605));
-      rowB("Kindgebonden budget (KGB):", "€ 0");
-      rowB("Totaal beschikbaar inkomen:", euro(3605), true);
-      rowB("Woonlasten + Bijstandsnorm:", "€ 1.565");
-      rowB("Draagkrachtruimte:", euro(2040));
+      rowB("Netto inkomen (NBI):", euro(nbiB));
+      rowB("Kindgebonden budget (KGB):", euro(kgbB));
+      rowB("Totaal beschikbaar inkomen:", euro(totalIncB), true);
+      rowB("Opgegeven woonlasten:", euro(housingB));
+      rowB("Zorgdagen per week:", `${careDaysB} dag(en)`);
       rowB(`Draagkracht ${nameB}:`, euro(capB), true);
+      rowB("Procentueel aandeel:", pB.sharePct ? `${pB.sharePct}%` : `${Math.round((capB / Math.max(1, totalCapacity)) * 100)}%`);
 
-      curY += 105;
+      curY += 109;
 
       // SECTION 5: Draagkrachtvergelijking & Zorgkorting
       curY = drawSectionHeader("5. DRAAGKRACHTVERGELIJKING EN VERDELING", curY);
-      curY = drawRow("Totale gezamenlijke draagkracht van beide ouders:", euro(totalCapacity), curY);
-      curY = drawRow(`Aandeel ${nameA} in de kosten (${capA} / ${totalCapacity}):`, "€ 0 per maand", curY);
-      curY = drawRow(`Aandeel ${nameB} in de kosten (${capB} / ${totalCapacity}):`, `${euro(totalNeed)} per maand`, curY);
-      curY = drawRow("Zorgkortingspercentage niet-verzorgende ouder:", "0% (0 dagen zorg per week)", curY);
-      curY = drawRow("Toegepaste zorgkorting:", "€ 0 per maand", curY);
+      curY = drawRow("Totale gezamenlijke draagkracht van beide ouders:", euro(totalCapacity), curY, true);
+
+      const careDiscountPayer = pB.totalCareDiscount ?? pA.totalCareDiscount ?? r.careDiscount?.total ?? 0;
+      const careDiscountPct = (payerName === nameB ? pB.careDiscountPctByChild?.[0] : pA.careDiscountPctByChild?.[0]) ?? 0;
+
+      curY = drawRow(`Draagkracht ${nameA}:`, euro(capA), curY);
+      curY = drawRow(`Draagkracht ${nameB}:`, euro(capB), curY);
+      if (careDiscountPct > 0 || careDiscountPayer > 0) {
+        curY = drawRow(`Zorgkortingspercentage ${payerName}:`, pct(careDiscountPct), curY);
+        curY = drawRow(`Toegepaste zorgkorting:`, `${euro(careDiscountPayer)} per maand`, curY);
+      }
+      if (!isSufficient) {
+        curY = drawRow("Tekort gezamenlijke draagkracht:", `${euro(capacityDeficit)} per maand`, curY, false);
+      }
       curY = drawRow(`Vastgestelde alimentatieverplichting door ${payerName}:`, `${euro(payerAmount)} per maand`, curY, true);
+
+      // Partneralimentatie (indien aanwezig)
+      if (r.partnerSupport && r.partnerSupport.payment > 0) {
+        curY += 2;
+        curY = drawRow("Aanvullende partneralimentatie:", `${euro(r.partnerSupport.payment)} per maand`, curY, true);
+      }
       curY += 4;
 
       // SECTION 6: Juridische toelichting & Uitleg voor ouders
-      curY = drawSectionHeader("6. JURIDISCHE ONDERBOUWING & TOELICHTING VOOR OUDERS", curY);
+      curY = drawSectionHeader("6. JURIDISCHE ONDERBOUWING & TOELICHTING", curY);
       doc.fontSize(7.5).font("Helvetica").fillColor(darkColor);
       const paragraphs = [
-        "1. Behoeftebepaling: De behoefte van de kinderen is vastgesteld conform de officiële tabel 'Kosten van kinderen' van het Nibud, behorende bij de Tremanormen, gebaseerd op het gezamenlijke netto gezinsinkomen ten tijde van het uiteengaan. Deze behoefte is geïndexeerd met de wettelijke indexeringspercentages.",
-        "2. Draagkrachtverdeling: Bij een toereikende gezamenlijke draagkracht wordt de behoefte tussen de ouders verdeeld naar rato van ieders draagkracht conform de formule: Draagkracht Ouder / Totale Draagkracht × Behoefte.",
-        "3. Zorgkorting: De zorgkorting compenseert de kosten van de kinderen die verblijven bij de ouder waar de kinderen niet het hoofdverblijf hebben. Omdat er geen structureel omgangsregeling/zorgdagen zijn vastgelegd, bedraagt de zorgkorting 0%.",
-        "4. Rechtsgeldigheid en gewijzigde omstandigheden: Deze berekening voldoet aan de wettelijke maatstaven van artikel 1:392 e.v. en 1:404 van het Burgerlijk Wetboek en is direct bruikbaar voor het ouderschapsplan, echtscheidingsconvenant of indiening bij de rechtbank. Wijziging van omstandigheden (inkomen, woonlasten of zorgverdeling) kan aanleiding geven tot herberekening.",
+        "1. Behoeftebepaling: De behoefte van de kinderen is vastgesteld conform de officiële tabel 'Kosten van kinderen' van het Nibud, behorende bij de Tremanormen (Expertgroep Alimentatienormen). Indien van toepassing is deze behoefte geïndexeerd met de wettelijke indexeringspercentages.",
+        "2. Draagkrachtverdeling: Bij een toereikende gezamenlijke draagkracht wordt de behoefte tussen de ouders verdeeld naar rato van ieders draagkracht. Wanneer de gezamenlijke draagkracht onvoldoende is, dragen beide ouders gelijkwaardig bij in het tekort en wordt de zorgkorting slechts toegepast voor zover de draagkracht dit toelaat.",
+        `3. Zorgkorting: De zorgkorting compenseert de verblijfskosten tijdens de omgangsregeling/zorgverdeling (${payerName}: ${payerName === nameB ? careDaysB : careDaysA} zorgdag(en)/week).`,
+        "4. Rechtsgeldigheid: Deze berekening voldoet aan de wettelijke maatstaven van artikel 1:392 e.v. en 1:404 van het Burgerlijk Wetboek en is geschikt voor het echtscheidingsconvenant, ouderschapsplan of indiening bij de rechtbank. Wijziging van omstandigheden kan aanleiding geven tot herberekening.",
       ];
       paragraphs.forEach((p) => {
         doc.text(p, 45, curY, { width: 505, align: "justify" });
@@ -338,20 +397,20 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       doc.fontSize(7.5).font("Helvetica").fillColor(mutedColor);
       doc.text(`Handtekening ${nameA}:`, 45, curY, { lineBreak: false });
       doc.text("_____________________________________", 45, curY + 14, { lineBreak: false });
-      doc.text("Datum: ____ - ____ - 2026", 45, curY + 28, { lineBreak: false });
+      doc.text(`Datum: ____ - ____ - ${new Date().getFullYear()}`, 45, curY + 28, { lineBreak: false });
 
       doc.text(`Handtekening ${nameB}:`, 320, curY, { lineBreak: false });
       doc.text("_____________________________________", 320, curY + 14, { lineBreak: false });
-      doc.text("Datum: ____ - ____ - 2026", 320, curY + 28, { lineBreak: false });
+      doc.text(`Datum: ____ - ____ - ${new Date().getFullYear()}`, 320, curY + 28, { lineBreak: false });
 
-      // Footer numbering across all pages (suppress bottom margin to avoid phantom page overflow)
+      // Footer numbering across all pages
       const totalPages = doc.bufferedPageRange().count;
       for (let i = 0; i < totalPages; i++) {
         doc.switchToPage(i);
         doc.page.margins.bottom = 0;
         doc.fontSize(7.5).font("Helvetica").fillColor("#94a3b8");
         doc.text(
-          `Alimentatieberekening conform Tremanormen ${normYear} • Dossier: ${input.caseName || "Familie Geers - VD Bersselaar"} • Pagina ${i + 1} van ${totalPages}`,
+          `Alimentatieberekening conform Tremanormen ${normYear} • Dossier: ${input.caseName || input.clientName || "Dossier"} • Pagina ${i + 1} van ${totalPages}`,
           40,
           812,
           { width: 515, align: "center", lineBreak: false }

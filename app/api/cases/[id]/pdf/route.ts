@@ -61,7 +61,8 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="alimentatieberekening-${record.id}.pdf"`,
+      "Content-Disposition": `inline; filename="alimentatieberekening-${record.id}.pdf"`,
+      "Content-Security-Policy": "default-src 'self'; object-src 'self'",
       "Cache-Control": "private, no-store",
     },
   });
