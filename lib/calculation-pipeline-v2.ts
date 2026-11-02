@@ -130,7 +130,7 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     const totalCap = combinedCap > 0 ? combinedCap : Number(resultWithAudit.totalCapacity || 0);
     resultWithAudit.calculationSteps = [
       { step: 1, title: "Behoefte", value: totalNeed, formula: "2026 behoeftetabel/WSF met indicatief afgeleid NBGI" },
-      { step: 2, title: "Draagkracht", value: totalCap, formula: "2026 gezamenlijke draagkracht inclusief stiefouder" },
+      { step: 2, title: "Draagkracht", value: totalCap, formula: stepparentCap > 0 ? "2026 gezamenlijke draagkracht inclusief wettelijk stiefouderaandeel" : "2026 gezamenlijke draagkracht van ouders" },
       { step: 3, title: "Draagkrachtvergelijking", value: payerCap > 0 ? payerCap : Number(resultWithAudit.parentResults?.[payerIndex]?.capacity || 0), formula: "toegerekend aandeel onderhoudsplichtige" },
       { step: 4, title: "Zorgkorting", value: appliedCareDiscount, formula: "bruto zorgkorting minus helft tekort; bij voldoende draagkracht is de bruto zorgkorting volledig verzilverbaar" },
       { step: 5, title: "Bijdrage", value: payable, formula: "aandeel onderhoudsplichtige minus toepasselijke zorgkorting" }

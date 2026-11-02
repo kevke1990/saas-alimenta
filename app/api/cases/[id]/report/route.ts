@@ -36,10 +36,7 @@ export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
 
     const tremaResult = (calc as any)?.tremaAudit?.result || (r as any)?.tremaAudit?.result;
 
-    const stepparentCap = tremaResult?.stepparentCapacity
-      || r.parentResults?.[0]?.stiefchildMaintenance
-      || r.parentResults?.[1]?.stiefchildMaintenance
-      || 0;
+    const stepparentCap = tremaResult?.stepparentCapacity || 0;
 
     const totalCap = (tremaResult?.totalCapacity && tremaResult.totalCapacity > 0)
       ? tremaResult.totalCapacity
@@ -63,7 +60,7 @@ export async function GET(_req:Request,{params}:{params:Promise<{id:string}>}){
         <td>${money(partnerNbi)}</td>
         <td>—</td>
         <td>${money(stepparentCap)}</td>
-        <td>pro-rata stiefkinderen</td>
+        <td>Wettelijk aandeel art. 1:395 BW</td>
         <td>${pct(sharePct)}</td>
         <td>—</td>
         <td>—</td>

@@ -93,8 +93,8 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
 
       const capA = Math.round(rawCapA > 0 ? rawCapA : (tremaResult?.recipientCapacityMonthly && tremaResult.recipientCapacityMonthly > 0 ? tremaResult.recipientCapacityMonthly : (currentCalc?.parentA_capacity || 0)));
       const capB = Math.round(rawCapB > 0 ? rawCapB : (tremaResult?.payerCapacityMonthly && tremaResult.payerCapacityMonthly > 0 ? tremaResult.payerCapacityMonthly : (currentCalc?.parentB_capacity || 0)));
-      const stepparentCap = Math.round(Number(pA.stiefchildMaintenance || pB.stiefchildMaintenance || tremaResult?.stepparentCapacity || 0));
-      const totalCapacity = Math.round(Number(r.totalCapacity || (capA + capB)));
+      const stepparentCap = Math.round(Number(tremaResult?.stepparentCapacity || 0));
+      const totalCapacity = Math.round(Number(r.totalCapacity || (capA + capB + stepparentCap)));
 
       const paymentA = Math.round(Number(pA.paymentTotal ?? pA.childAlimonyPayment ?? 0));
       const paymentB = Math.round(Number(pB.paymentTotal ?? pB.childAlimonyPayment ?? (currentCalc?.contribution && capB >= capA ? currentCalc.contribution : 0)));
@@ -375,8 +375,11 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       curY = drawRow(`Draagkracht ${nameA}:`, euro(capA), curY);
       curY = drawRow(`Draagkracht ${nameB}:`, euro(capB), curY);
       if (stepparentCap > 0) {
-        const stepParentName = (pB.stiefchildMaintenance && pB.stiefchildMaintenance > 0) ? nameB : nameA;
-        curY = drawRow(`Wettelijke stiefouderbijdrage art. 1:395 BW (${stepParentName}):`, euro(stepparentCap), curY);
+        const partnerParent = (cd.parents || []).find(
+          (p: any) => p.newPartner?.present && (p.newPartner.relationship === 'MARRIED' || p.newPartner.relatievorm === 'MARRIED' || p.newPartner.relationship === 'REGISTERED_PARTNERSHIP')
+        );
+        const partnerName = partnerParent?.newPartner?.name || "Stiefouder";
+        curY = drawRow(`Wettelijke stiefouderbijdrage art. 1:395 BW (${partnerName}):`, euro(stepparentCap), curY);
       }
       if (careDiscountPct > 0 || careDiscountPayer > 0) {
         curY = drawRow(`Zorgkortingspercentage ${payerName}:`, pct(careDiscountPct <= 1 ? careDiscountPct * 100 : careDiscountPct), curY);
