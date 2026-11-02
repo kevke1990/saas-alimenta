@@ -86,6 +86,6 @@ describe("Fictief Gezin - Testcase (3 kinderen, post-scheiding KGB aftrek op beh
     // Aandeel vader: (942 / 1632) * 460 = € 266
     // Na zorgkorting: € 266 - € 69 = € 197 per maand
     const totalPayment = result.transfers.reduce((sum: number, t: any) => sum + t.payment, 0);
-    expect(totalPayment).toBe(458); // Wait, let's verify exact transfers
+    expect(totalPayment).toBe(197);
   });
 });

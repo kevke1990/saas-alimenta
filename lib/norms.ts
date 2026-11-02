@@ -27,7 +27,7 @@ const NEED_TABLE_2026: Record<number, number[]> = { 1:[200,275,350,425,540,610,6
 const NEED_POINTS_2026 = [2000,2500,3000,3500,4000,4500,5000,5500,6000,6500,7000,7500];
 const CARE_DISCOUNT_RULES = [{minDays:0,maxDays:0.99,pct:0.05},{minDays:1,maxDays:1.99,pct:0.15},{minDays:2,maxDays:2.99,pct:0.25},{minDays:3,maxDays:7,pct:0.35}];
 const CAPACITY_2024 = { underAow:{low:[[1815,51],[1865,77],[1915,96],[1965,109],[2015,116],[2065,123]] as [number,number][],minimumNbi:1815,formulaThreshold:2065,necessary:1270,housingPct:0.30}, aow:{low:[[2030,50],[2080,73],[2130,88],[2180,95],[2230,102]] as [number,number][],minimumNbi:2030,formulaThreshold:2230,necessary:1415,housingPct:0.30} };
-const CAPACITY_2025 = { underAow:{low:[[1875,53],[1925,79],[1975,98],[2025,110],[2075,117],[2125,124]] as [number,number][],minimumNbi:1875,formulaThreshold:2125,necessary:1310,housingPct:0.30}, aow:{low:[[2100,50],[2150,50],[2200,72],[2250,88],[2300,102]] as [number,number][],minimumNbi:2100,formulaThreshold:2300,necessary:1465,housingPct:0.30} };
+const CAPACITY_2025 = { underAow:{low:[[1875,53],[1925,79],[1975,98],[2025,110],[2075,117],[2125,124]] as [number,number][],minimumNbi:1875,formulaThreshold:2125,necessary:1310,housingPct:0.30}, aow:{low:[[2100,50],[2150,72],[2200,88],[2250,95],[2300,102]] as [number,number][],minimumNbi:2100,formulaThreshold:2300,necessary:1465,housingPct:0.30} };
 const CAPACITY_2026 = { underAow:{low:[[1950,50],[2000,77],[2050,96],[2100,109],[2150,116]] as [number,number][],minimumNbi:1950,formulaThreshold:2200,necessary:1365,housingPct:0.30}, aow:{low:[[2180,51],[2230,77],[2280,97],[2330,109],[2380,116]] as [number,number][],minimumNbi:2180,formulaThreshold:2430,necessary:1525,housingPct:0.30} };
 
 const WSF_PERIODS_2024: WsfPeriod[] = [
@@ -35,7 +35,7 @@ const WSF_PERIODS_2024: WsfPeriod[] = [
   {from:"2024-08-01",to:"2024-12-31",mbo:{home:513.18,away:765.78,tuition:217.72},hbo:{home:1053.66,away:1053.66,tuition:210.83}},
 ];
 const WSF_PERIODS_2025: WsfPeriod[] = [
-  {from:"2025-01-01",to:"2025-07-31",mbo:{home:636.38,away:898.48,tuition:118.25},hbo:{home:906.11,away:1094.12,tuition:210.83}},
+  {from:"2025-01-01",to:"2025-07-31",mbo:{home:636.18,away:898.48,tuition:118.25},hbo:{home:906.11,away:1094.12,tuition:210.83}},
   {from:"2025-08-01",to:"2025-12-31",mbo:{home:636.18,away:898.48,tuition:121.50},hbo:{home:906.11,away:1094.12,tuition:216.75}},
 ];
 const WSF_PERIODS_2026: WsfPeriod[] = [

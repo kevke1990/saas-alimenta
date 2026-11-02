@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { decryptDocument, safeDocumentName } from "@/lib/document-store";
 import { resolvePortalShare } from "@/lib/client-portal-share";
 
+const SAFE_INLINE_MIMES = new Set(["application/pdf", "image/png", "image/jpeg"]);
+
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string; id: string }> }) {
   try {
     const { token, id } = await params;
@@ -21,13 +23,15 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
       VALUES (${crypto.randomUUID()}, ${share.userId}, ${"PORTAL_DOCUMENT_VIEWED"}, ${JSON.stringify({ shareId: share.shareId, documentId: document.id })}::jsonb, CURRENT_TIMESTAMP)
     `;
 
+    const dispositionType = SAFE_INLINE_MIMES.has(document.mimeType) ? "inline" : "attachment";
     return new Response(body, {
       headers: {
-        "content-type": document.mimeType,
+        "content-type": SAFE_INLINE_MIMES.has(document.mimeType) ? document.mimeType : "application/octet-stream",
         "content-length": String(body.byteLength || document.sizeBytes),
-        "content-disposition": `inline; filename="${safeDocumentName(document.name)}"`,
+        "content-disposition": `${dispositionType}; filename="${safeDocumentName(document.name)}"`,
         "cache-control": "private, no-store",
         "x-content-type-options": "nosniff",
+        "content-security-policy": "sandbox; default-src 'none'",
       },
     });
   } catch {

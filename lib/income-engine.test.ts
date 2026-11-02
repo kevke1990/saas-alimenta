@@ -12,7 +12,8 @@ describe("2026 income engine", () => {
   });
   it("supports the net model without silently adding tax calculations", () => {
     const r = calculateIncome({ mode: "NET", netIncomeMonthly: 2500, kgbMonthly: 300 });
-    expect(r.nbiMonthly).toBe(2800);
+    expect(r.nbiMonthly).toBe(2500);
+    expect(r.nbiIncludingKgbMonthly).toBe(2800);
     expect(r.taxBeforeCredits).toBe(0);
     expect(r.warnings.length).toBeGreaterThan(0);
   });

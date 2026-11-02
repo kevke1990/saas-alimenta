@@ -150,7 +150,7 @@ function calculateCapacity(parent: ParentCalculationInput, warnings: string[], s
 
   const incomeForChildSupport = round(nbi + kgb);
   const norm = calculateCorrectedNorm(c);
-  const isActual = c.housingCostMode === 'ACTUAL' || (c as any).housingType === 'ACTUAL' || (typeof c.actualHousingCost === 'number' && c.actualHousingCost >= 0);
+  const isActual = c.housingCostMode === 'ACTUAL' || (c.housingCostMode !== 'FORFAIT' && ((c as any).housingType === 'ACTUAL' || (typeof c.actualHousingCost === 'number' && c.actualHousingCost >= 0)));
   const housing = isActual ? nonNegative(c.actualHousingCost ?? (c as any).housingCosts ?? 0) : Math.round(nbi * 0.30);
   const other = nonNegative(c.otherNecessaryCostsMonthly ?? 0);
   const priority = nonNegative((c.existingChildSupportMonthly ?? 0) + (c.otherPriorityMaintenanceMonthly ?? 0));
@@ -201,12 +201,14 @@ export function calculateTrema2026(input: Trema2026Input): Trema2026Result {
   let stepparentCapacity = 0;
   let stepchildrenCount = 0;
 
-  // We need to check both payer and recipient for a new partner to be fully robust, but the issue focuses on the recipient's new partner (Kevin, married to recipient B).
-  const partnerToUse = [input.recipient.newPartner, input.payer.newPartner].find(
-    (p) => p && (p.relationship === "MARRIED" || (p as any).relatievorm === "MARRIED" || p.relationship === "REGISTERED_PARTNERSHIP")
-  );
+  // Alleen een gehuwde/geregistreerde nieuwe partner van de verzorgende ouder (recipient, waar de kinderen tot het gezin behoren)
+  // kwalificeert als stiefouder ex art. 1:395 BW voor de kinderen van partijen.
+  const recipientPartner = input.recipient.newPartner;
+  const partnerToUse = recipientPartner && (recipientPartner.relationship === "MARRIED" || (recipientPartner as any).relatievorm === "MARRIED" || recipientPartner.relationship === "REGISTERED_PARTNERSHIP")
+    ? recipientPartner
+    : undefined;
 
-  const partnerId = partnerToUse === input.recipient.newPartner ? input.recipient.id : partnerToUse === input.payer.newPartner ? input.payer.id : null;
+  const partnerId = partnerToUse ? input.recipient.id : null;
 
   const partnerNbiValue = (partnerToUse as any)?.monthlyNbi ?? (partnerToUse as any)?.nbiMonthly ?? (partnerToUse as any)?.nbi;
   if (partnerToUse && partnerNbiValue !== undefined) {

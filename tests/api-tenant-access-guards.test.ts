@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { GET, DELETE } from "../app/api/cases/[id]/route";
 import { GET as PDF_GET } from "../app/api/cases/[id]/pdf/route";
+import { POST as SECURITY_POST } from "../app/api/security/route";
+import { requireSameOrigin } from "../lib/request-security";
+import { caseCreateSchema } from "../lib/case-validation";
+import { CLIENT_LIMITS } from "../lib/entitlements";
 import * as auth from "../lib/auth";
 import { db } from "../lib/db";
 import { NextResponse } from "next/server";
@@ -71,5 +75,66 @@ describe("Tenant Isolation via Route Requests", () => {
     // Need to handle the fact that we mocked db.case.findFirst earlier which affects PDF_GET
     vi.spyOn(db.case, 'findFirst').mockResolvedValue(null as any);
     await expect(PDF_GET(req, { params: Promise.resolve({ id: caseAId }) })).rejects.toThrow();
+  });
+
+  it("blocks forging internal CASE_* or ADMIN_* actions on POST /api/security", async () => {
+    vi.mocked(auth.requireUser).mockResolvedValue({ id: userAId } as any);
+    const req = new Request("http://localhost/api/security", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "CASE_APPROVED", metadata: { caseId: caseAId } }),
+    });
+    const res = await SECURITY_POST(req);
+    expect(res.status).toBe(403);
+  });
+
+  it("throws CROSS_ORIGIN_REQUEST instead of TypeError when Origin header is 'null'", () => {
+    const prev = process.env.APP_URL;
+    process.env.APP_URL = "https://app.example.test";
+    try {
+      const req = new Request("https://app.example.test/api/admin", {
+        headers: { origin: "null" },
+      });
+      expect(() => requireSameOrigin(req)).toThrow("CROSS_ORIGIN_REQUEST");
+    } finally {
+      if (prev === undefined) delete process.env.APP_URL;
+      else process.env.APP_URL = prev;
+    }
+  });
+
+  it("accepts extended wizard fields and empty strings in caseCreateSchema", () => {
+    const parsed = caseCreateSchema.safeParse({
+      name: "Test Dossier 2026",
+      clientId: "",
+      data: {
+        relationship: "MARRIED",
+        normYear: 2026,
+        calculationDate: "2026-03-01",
+        kgbParent: "A",
+        actualKgbReceivingParent: "",
+        parents: [
+          {
+            name: "Ouder A",
+            nbi: 3500,
+            newPartner: {
+              present: true,
+              relationship: "COHABITING",
+              children: [{ age: 8, monthlyAmount: 150, ownIncome: 0 }],
+            },
+          },
+          { name: "Ouder B", nbi: 2200 },
+        ],
+        children: [{ age: 6, residence: "A", careDaysPerWeek: 2 }],
+        partnerSupport: {
+          enabled: true,
+          payerIndex: 0,
+          concreteNeedNet: "",
+        },
+      },
+      meta: { effectiveDate: "", separationDate: "2026-01-15" },
+    });
+    expect(parsed.success).toBe(true);
+    expect(CLIENT_LIMITS.PRACTICE).toBeGreaterThan(5);
+    expect(CLIENT_LIMITS.ENTERPRISE).toBeGreaterThan(50);
   });
 });

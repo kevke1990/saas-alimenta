@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { requireCaseTenantAccess } from "@/lib/tenant-access";
 import { db } from "@/lib/db";
-import { calculate } from "@/lib/calculator";
+import { runCalculationEngineV2 } from "@/lib/calculation-pipeline-v2";
 import { calculatePartnerSupport } from "@/lib/partner-engine";
 import { caseCreateSchema } from "@/lib/case-validation";
 import { persistCaseCalculationV2 } from "@/lib/case-calculation-v2";
 import type { ProvenanceInput } from "@/lib/calculation-provenance";
 import { buildCombinedAudit } from "@/lib/combined-audit";
+import { resolveChildCostShare } from "@/lib/combined-case-support";
 import { calculationLockMessage } from "@/lib/case-lock";
 import { canRestoreCalculation, restoredReviewStatus } from "@/lib/restore-policy";
 
@@ -31,12 +32,26 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     if (!parsed.success) return new NextResponse("De historische invoer is niet meer geldig en kan niet worden hersteld.", { status: 422 });
 
     const body = parsed.data;
-    const calculationInput = { ...body.data, parents: body.data.parents.map((parent) => ({ ...parent, nbi: Number(parent.nbi ?? 0) })) };
-    const childResult: any = calculate(calculationInput);
+    const calculationInput = {
+      ...body.data,
+      parents: body.data.parents.map((parent) => ({
+        ...parent,
+        nbi: Number(parent.nbi ?? 0) > 0 ? Number(parent.nbi) : Number((parent as any).income?.netIncomeMonthly ?? (parent as any).income?.nbiMonthly ?? 0),
+      })),
+    };
+    const pipelineOutput = runCalculationEngineV2(calculationInput);
+    const childResult: any = pipelineOutput.result;
     const childPayments = [0, 0];
     for (const t of childResult.transfers || []) childPayments[t.payerIndex] += Number(t.payment || 0);
+    const childCostShares = [0, 0];
+    for (const parent of childResult.parentResults || []) {
+      const index = Number(parent.parentIndex);
+      if (index === 0 || index === 1) childCostShares[index] = Number(parent.allocatedNeed || 0);
+    }
 
     let partnerSupport: any = null;
+    let partnerChildCostShare = 0;
+    let partnerChildCostShareSource: "CHILD_CALCULATION" | "MANUAL_OVERRIDE" | null = null;
     if (body.data.partnerSupport?.enabled) {
       const ps = body.data.partnerSupport;
       const payerIndex = ps.payerIndex;
@@ -45,8 +60,11 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
       const recipient = body.data.parents[recipientIndex];
       const payerNbi = Number(childResult.incomeResults?.[payerIndex]?.nbiMonthly ?? payer.nbi) || 0;
       const recipientNbi = Number(childResult.incomeResults?.[recipientIndex]?.nbiMonthly ?? recipient.nbi) || 0;
+      const share = resolveChildCostShare(childResult, payerIndex, ps.payerChildSupportShare);
+      partnerChildCostShare = share.childCostShare;
+      partnerChildCostShareSource = share.source;
       partnerSupport = calculatePartnerSupport({
-        historicalNBGI: Number(ps.historicalNBGI || body.data.historicalNBGI || 0), historicalChildCosts: Number(ps.historicalChildCosts || childResult.totalNeed || 0), currentChildSupport: childPayments[payerIndex], currentRecipientNBI: recipientNbi, currentPayerNBI: payerNbi,
+        historicalNBGI: Number(ps.historicalNBGI || body.data.historicalNBGI || 0), historicalChildCosts: Number(ps.historicalChildCosts || childResult.totalNeed || 0), currentChildSupport: partnerChildCostShare, currentRecipientNBI: recipientNbi, currentPayerNBI: payerNbi,
         payerTaxableIncomeAnnual: Number(ps.payerTaxableIncomeAnnual || payerNbi * 12), payerAow: !!payer.aow, payerIsFamily: !!payer.newPartner?.present && !(payer.newPartner.selfSupporting ?? true), payerHousingCosts: Number(payer.housing?.monthlyCosts || payer.housingCosts || 0), payerMortgageInterestTaxBenefitMonthly: Number(ps.payerMortgageInterestTaxBenefitMonthly || payer.housing?.mortgageInterestTaxBenefitMonthly || 0), payerMortgagePrincipalMonthly: Number(payer.housing?.mortgagePrincipalMonthly || 0), payerOtherNecessaryCosts: Number(payer.specialNecessaryCosts || 0), payerOtherMaintenance: Number(payer.otherMaintenance || 0), payerOtherMaintenanceObligations: Number(ps.payerOtherMaintenanceObligations || 0), payerPensionProvisionMonthly: Number(ps.payerPensionProvisionMonthly || 0), payerCapacityAdjustment: Number(payer.capacityAdjustment || 0), recipientVerdiencapaciteit: Number(ps.recipientVerdiencapaciteit || 0), recipientOtherIncomeMonthly: Number(ps.recipientOtherIncomeMonthly || 0), recipientAssetsIncomeMonthly: Number(ps.recipientAssetsIncomeMonthly || 0), payerAssetsIncomeMonthly: 0, payerOwnHome: payer.housing?.type === "OWNED", incomeComparisonEnabled: !!ps.incomeComparisonEnabled, durationException: ps.durationException || "NONE", useHofnorm: ps.useHofnorm !== false, concreteNeedNet: Number(ps.concreteNeedNet || 0), effectiveDate: body.meta?.effectiveDate,
       });
     }
@@ -60,7 +78,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
     const totalMonthlyPayments = combinedPaymentByParent.reduce((a, b) => a + b, 0);
     const primaryPayerIndex = partnerPayer !== null ? partnerPayer : childPayments[0] >= childPayments[1] ? 0 : 1;
     const priorityAudit = buildCombinedAudit({ childSupportByParent: childPayments, partnerPayerIndex: partnerPayer, partnerMonthlyNet: partnerNet, partnerMonthlyGross: partnerGross, partnerCapacityRemainingNet: Number(partnerSupport?.capacity?.remainingNet || 0) });
-    const combined = { childSupportTotal, childSupportByParent: childPayments, partnerSupport: partnerSupport ? { payerIndex: partnerPayer, recipientIndex: partnerPayer === null ? null : partnerPayer === 0 ? 1 : 0, monthlyNet: partnerNet, monthlyGross: partnerGross } : null, combinedPaymentByParent, totalMonthlyPayments, primaryPayerIndex, priorityAudit, explanation: [{ label: "Totale kinderalimentatie", value: childSupportTotal }, { label: "Partneralimentatie netto", value: partnerNet }, { label: "Partneralimentatie bruto / betaling", value: partnerGross }, { label: "Totale maandelijkse betalingen", value: totalMonthlyPayments }] };
+    const combined = { childSupportTotal, childSupportByParent: childPayments, childCostShareByParent: childCostShares, partnerSupport: partnerSupport ? { payerIndex: partnerPayer, recipientIndex: partnerPayer === null ? null : partnerPayer === 0 ? 1 : 0, monthlyNet: partnerNet, monthlyGross: partnerGross, childCostShare: partnerChildCostShare, childCostShareSource: partnerChildCostShareSource } : null, combinedPaymentByParent, totalMonthlyPayments, primaryPayerIndex, priorityAudit, explanation: [{ label: "Totale kinderalimentatie", value: childSupportTotal }, { label: "Eigen aandeel kinderkosten ouder", value: partnerChildCostShare }, { label: "Partneralimentatie netto", value: partnerNet }, { label: "Partneralimentatie bruto / betaling", value: partnerGross }, { label: "Totale maandelijkse betalingen", value: totalMonthlyPayments }] };
     const productionResult = { ...childResult, combined, partnerSupport, family: existing.result && (existing.result as any).family, identity: existing.result && (existing.result as any).identity };
     const reviewStatus = restoredReviewStatus();
     const provenance: ProvenanceInput[] = [

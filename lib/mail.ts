@@ -51,7 +51,7 @@ function getSmtpTransporter() {
     secure,
     auth: user && pass ? { user, pass } : undefined,
     tls: {
-      rejectUnauthorized: process.env.SMTP_IGNORE_TLS !== "true" && process.env.NODE_ENV === "production" ? false : false,
+      rejectUnauthorized: process.env.SMTP_IGNORE_TLS !== "true",
     },
   });
 

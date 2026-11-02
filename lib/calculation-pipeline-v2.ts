@@ -93,11 +93,8 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
 
     let payable = 0;
     if (combinedCap > 0) {
-      if (deficit === 0) {
-        payable = Math.min(payerCap, totalNeed2) - appliedCareDiscount;
-      } else {
-        payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, payerCap - appliedCareDiscount - kgbCorrection);
-      }
+      const payerShare = Math.min(payerCap, (payerCap / combinedCap) * totalNeed2);
+      payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, Math.round(payerShare - appliedCareDiscount - kgbCorrection));
     } else {
       payable = Number(resultWithAudit.currentCalculation?.contribution ?? (resultWithAudit.transfers || []).reduce((s: number, t: any) => s + Number(t.payment || 0), 0));
     }
@@ -139,10 +136,27 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
       { step: 5, title: "Bijdrage", value: payable, formula: "aandeel onderhoudsplichtige minus toepasselijke zorgkorting" }
     ];
 
-    // 5. Werk parentResults en combined bij zodat pagina 1 en Tabel 4 direct het juiste bedrag tonen
+    // 5. Werk parentResults en combined bij zodat pagina 1, Tabel 4 en partneralimentatie direct de juiste bedragen gebruiken
+    const payerAllocatedNeed = combinedCap > 0
+      ? Math.round(tremaAudit?.result?.maximumContributionMonthly ?? Math.min(payerCap, (payerCap / combinedCap) * totalNeed))
+      : Number(resultWithAudit.parentResults?.[payerIndex]?.allocatedNeed ?? 0);
+    const recipientAllocatedNeed = combinedCap > 0
+      ? Math.round(Math.min(recipientCap, (recipientCap / combinedCap) * totalNeed))
+      : Number(resultWithAudit.parentResults?.[recipientIndex]?.allocatedNeed ?? 0);
+
     if (resultWithAudit.parentResults?.[payerIndex]) {
       resultWithAudit.parentResults[payerIndex].paymentTotal = payable;
       resultWithAudit.parentResults[payerIndex].childAlimonyPayment = payable;
+      if (combinedCap > 0) {
+        resultWithAudit.parentResults[payerIndex].allocatedNeed = payerAllocatedNeed;
+        resultWithAudit.parentResults[payerIndex].sharePct = Math.round((payerCap / combinedCap) * 10000) / 100;
+        resultWithAudit.parentResults[payerIndex].totalCareDiscount = appliedCareDiscount;
+      }
+    }
+    if (resultWithAudit.parentResults?.[recipientIndex] && combinedCap > 0) {
+      resultWithAudit.parentResults[recipientIndex].allocatedNeed = recipientAllocatedNeed;
+      resultWithAudit.parentResults[recipientIndex].sharePct = Math.round((recipientCap / combinedCap) * 10000) / 100;
+      resultWithAudit.parentResults[recipientIndex].totalCareDiscount = 0;
     }
 
     if (!resultWithAudit.combined) {
@@ -153,6 +167,10 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
       [recipientIndex]: 0,
       [payerIndex]: payable
     };
+    resultWithAudit.combined.childCostShareByParent = [
+      Number(resultWithAudit.parentResults?.[0]?.allocatedNeed ?? 0),
+      Number(resultWithAudit.parentResults?.[1]?.allocatedNeed ?? 0),
+    ];
     resultWithAudit.combined.totalMonthlyPayments = payable;
     resultWithAudit.combined.combinedPaymentByParent = {
       [recipientIndex]: 0,

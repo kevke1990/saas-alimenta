@@ -120,7 +120,7 @@ export function calculateIncome(profile: IncomeProfile): IncomeResult {
       mode, grossAnnual: 0, pensionAnnual: 0, taxableBox1: 0, box3TaxableIncome: 0,
       taxBeforeCredits: 0, generalTaxCredit: 0, laborTaxCredit: 0, iack: 0, taxCreditTotal: 0,
       netAnnual: eur(annual),
-      nbiMonthly: eur(netMonthly + kgbMonthly),
+      nbiMonthly: eur(netMonthly),
       nbiIncludingKgbMonthly: eur(netMonthly + kgbMonthly),
       components: [{ label: "Netto inkomen volgens specificatie", annual: eur(annual), kind: "income" }], warnings,
     };

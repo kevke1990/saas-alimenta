@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { ensureTenant } from "@/lib/tenant";
+import { requireTenantRole } from "@/lib/tenant";
 import { persistCalculationRecord } from "@/lib/calculation-record";
 import { runCalculationEngineV2 } from "@/lib/calculation-pipeline-v2";
 import { calculatePartnerSupport } from "@/lib/partner-engine";
@@ -15,7 +15,7 @@ import { assertCanCreateCase } from "@/lib/billing";
 export async function POST(req: Request) {
   try {
     const u = await requireUser();
-    const tenant = await ensureTenant(u);
+    const tenant = await requireTenantRole(u, ["OWNER", "ADMIN", "PROFESSIONAL"]);
     const parsed = caseCreateSchema.safeParse(await req.json());
     if (!parsed.success) return new NextResponse("Ongeldige berekeningsinvoer", { status: 422 });
     const body = parsed.data;
@@ -282,6 +282,7 @@ export async function POST(req: Request) {
     });
     return NextResponse.json(persisted.c);
   } catch (e: any) {
-    return new NextResponse(e?.message || "Berekening mislukt", { status: e?.status === 402 ? 402 : 400 });
+    const status = e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 || e?.message === "TENANT_ROLE_FORBIDDEN" ? 403 : e?.status === 402 ? 402 : 400;
+    return new NextResponse(e?.message || "Berekening mislukt", { status });
   }
 }

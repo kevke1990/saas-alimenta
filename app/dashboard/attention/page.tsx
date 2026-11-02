@@ -142,11 +142,13 @@ export default async function AttentionCenter() {
   const clientsById = new Map(taskClients.map((client) => [client.id, client.name]));
   const casesById = new Map(taskCases.map((item) => [item.id, item.name]));
 
+  const taskPriorityLabel = (p: string) => ({ URGENT: "Urgent", HIGH: "Hoog", NORMAL: "Normaal", MEDIUM: "Middel", LOW: "Laag" }[p] || p);
+
   const taskRow = (task: (typeof overdueTasks)[number], overdue = false) => (
     <tr key={task.id}>
       <td><strong>{task.title}</strong>{task.description && <div className="stat-meta">{task.description}</div>}</td>
       <td>{(task.clientId && clientsById.get(task.clientId)) || (task.caseId && casesById.get(task.caseId)) || "—"}</td>
-      <td>{task.priority}</td>
+      <td>{taskPriorityLabel(task.priority)}</td>
       <td>{task.dueAt ? new Intl.DateTimeFormat("nl-NL", { dateStyle: "medium", timeStyle: "short" }).format(task.dueAt) : "—"}</td>
       <td>{overdue ? <span className="status amber">VERLOPEN</span> : <span className="status green">VANDAAG</span>}</td>
     </tr>
@@ -156,7 +158,7 @@ export default async function AttentionCenter() {
     <AppShell>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Fase F · F2 Dossierprioritering</div>
+          <div className="eyebrow">Werkvoorraad · Dossierprioritering</div>
           <h1 className="page-title">Wat vraagt aandacht?</h1>
           <p className="page-subtitle">Eén overzicht van open taken en dossiers, met een uitlegbare prioriteitsscore. De score is een werksignaal en geen juridisch oordeel.</p>
         </div>
@@ -166,14 +168,14 @@ export default async function AttentionCenter() {
         </div>
       </div>
 
-      <div className="dashboard-grid topgap">
+      <div className="dashboard-grid topgap" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         <div className="stat-card"><div className="stat-label">VERLOPEN TAKEN</div><div className="stat-value">{overdueTasks.length}</div><div className="stat-meta">Open taken met een verstreken deadline</div></div>
         <div className="stat-card"><div className="stat-label">VANDAAG</div><div className="stat-value">{todayTasks.length}</div><div className="stat-meta">Open taken voor vandaag</div></div>
         <div className="stat-card"><div className="stat-label">DOSSIER SIGNALEN</div><div className="stat-value">{prioritizedCases.filter((item) => (priorities.get(item.id)?.score || 0) >= 30).length}</div><div className="stat-meta">Dossiers met middelhoge of hoge prioriteit</div></div>
       </div>
 
       <section className="panel topgap">
-        <div className="panel-head"><div><div className="section-kicker">F2 · Uitlegbare score</div><h2 className="panel-title">Dossierprioriteit</h2><div className="panel-sub">De score combineert alleen concrete workflowsignalen: reviewstatus, openstaande goedkeuringen, document-/AI-review, normversie en taken.</div></div></div>
+        <div className="panel-head"><div><div className="section-kicker">Uitlegbare score</div><h2 className="panel-title">Dossierprioriteit</h2><div className="panel-sub">De score combineert alleen concrete workflowsignalen: reviewstatus, openstaande goedkeuringen, document-/AI-review, normversie en taken.</div></div></div>
         {prioritizedCases.length === 0 ? <div className="empty">Geen dossiers die opvolging vragen.</div> : <div className="table-wrap"><table className="table"><thead><tr><th>Dossier</th><th>Cliënt</th><th>Prioriteit</th><th>Signalen</th><th>Bijgewerkt</th><th></th></tr></thead><tbody>{prioritizedCases.map((c) => { const priority = priorities.get(c.id)!; return <tr key={c.id}><td><Link className="table-link" href={`/cases/${c.id}`}>{c.name}</Link></td><td>{c.client?.name || "—"}</td><td><strong>{priority.score}/100</strong><div className="stat-meta">{priorityLabel(priority.level)}</div></td><td>{priority.signals.length === 0 ? "Geen extra signalen" : <>{priority.signals.slice(0, 3).map((signal) => <div key={signal.key} className="stat-meta">+{signal.points} · {signal.label}</div>)}{priority.signals.length > 3 && <div className="stat-meta">+ {priority.signals.length - 3} meer</div>}</>}</td><td>{new Intl.DateTimeFormat("nl-NL", { dateStyle: "medium" }).format(c.updatedAt)}</td><td><Link className="btn ghost" href={`/cases/${c.id}/workflow`}>Open workflow →</Link></td></tr>; })}</tbody></table></div>}
       </section>
 

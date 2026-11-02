@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { encryptSecret } from "@/lib/secrets";
 import { getStripeClient } from "@/lib/stripe";
 import { getSessionContext } from "@/lib/control-mode";
+import { withAuditLogMaintenance } from "@/lib/audit-log-maintenance";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +120,8 @@ export async function POST(req: Request) {
         throw new Error("Annuleer eerst het actieve abonnement voordat je het account verwijdert");
       }
 
-      await withSecurityAudit(admin.id, "ADMIN_USER_DELETED", { targetUserId: target.id, targetEmail: target.email }, async (tx) => {
+      await withAuditLogMaintenance(db, "erasure", async (tx) => {
+        await auditSecurity(admin.id, "ADMIN_USER_DELETED", { targetUserId: target.id, targetEmail: target.email }, { tx });
         await tx.user.delete({ where: { id: target.id } });
       });
       return NextResponse.json({ ok: true });
@@ -179,11 +181,12 @@ export async function POST(req: Request) {
       const model = String(b.model || "").trim();
       const baseUrl = String(b.baseUrl || "").trim();
       const apiKey = String(b.apiKey || "").trim();
+      const apiKeyCipher = apiKey ? encryptSecret(apiKey) : null;
       const systemPrompt = String(b.systemPrompt || "").trim();
       const temperature = Math.max(0, Math.min(2, Number(b.temperature ?? 0.2)));
       const maxTokens = Math.max(256, Math.min(32000, Number(b.maxTokens ?? 4000)));
       await withSecurityAudit(admin.id, "ADMIN_AI_CONFIG_UPDATED", { provider, model, enabled: Boolean(b.enabled) }, (tx) =>
-        tx.$executeRaw`UPDATE "AppConfig" SET "aiEnabled"=${Boolean(b.enabled)}, "aiProvider"=${provider}, "aiModel"=${model || null}, "aiBaseUrl"=${baseUrl || null}, "aiApiKeyCipher"=${apiKey ? encryptSecret(apiKey) : null}, "aiSystemPrompt"=${systemPrompt || null}, "aiTemperature"=${temperature}, "aiMaxTokens"=${maxTokens}, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"='singleton'`,
+        tx.$executeRaw`UPDATE "AppConfig" SET "aiEnabled"=${Boolean(b.enabled)}, "aiProvider"=${provider}, "aiModel"=${model || null}, "aiBaseUrl"=${baseUrl || null}, "aiApiKeyCipher"=CASE WHEN ${Boolean(apiKey)} THEN ${apiKeyCipher} ELSE "aiApiKeyCipher" END, "aiSystemPrompt"=${systemPrompt || null}, "aiTemperature"=${temperature}, "aiMaxTokens"=${maxTokens}, "updatedAt"=CURRENT_TIMESTAMP WHERE "id"='singleton'`,
       );
       return NextResponse.json({ ok: true });
     }

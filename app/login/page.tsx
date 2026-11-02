@@ -14,6 +14,8 @@ function safeNext(value: string | null) {
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [showMfa, setShowMfa] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
@@ -25,9 +27,20 @@ function LoginForm() {
     setError("");
     setBusy(true);
     try {
-      const r = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password }) });
-      if (r.ok) router.push(next as Route);
-      else setError(await r.text());
+      const r = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password, code: code.trim() || undefined }),
+      });
+      if (r.ok) {
+        router.push(next as Route);
+      } else {
+        const msg = await r.text();
+        if (msg.toLowerCase().includes("mfa")) {
+          setShowMfa(true);
+        }
+        setError(msg);
+      }
     } catch {
       setError("Inloggen is tijdelijk niet beschikbaar. Probeer het opnieuw.");
     } finally {
@@ -50,6 +63,29 @@ function LoginForm() {
           </div>
           <input id="password" className="auth-input" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
+        {showMfa ? (
+          <div className="auth-field">
+            <label className="auth-label" htmlFor="mfa-code">6-cijferige MFA-code (authenticator-app)</label>
+            <input
+              id="mfa-code"
+              className="auth-input"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              autoComplete="one-time-code"
+              placeholder="123456"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div>
+            <button type="button" className="auth-text-link" style={{ background: "none", border: 0, padding: 0, cursor: "pointer" }} onClick={() => setShowMfa(true)}>
+              Inloggen met tweestapsverificatie (MFA-code)
+            </button>
+          </div>
+        )}
         <button className="auth-submit" disabled={busy} type="submit">{busy ? "Bezig met inloggen…" : "Inloggen"}<span aria-hidden="true">→</span></button>
       </form>
       <div className="auth-divider"><span>Nieuw bij Merelo?</span></div>

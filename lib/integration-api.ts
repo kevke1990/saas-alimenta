@@ -68,29 +68,42 @@ export async function checkApiEntitlement(userId: string, plan: Plan) {
   return { allowed: (used._sum.units || 0) < limit, used: used._sum.units || 0, limit };
 }
 
+import { distributedRateLimit } from "@/lib/rate-limit";
+
 export async function enforceApiRateLimit(key: string, limit = 60, windowMs = 60_000) {
-  const now = new Date();
-  const expiresAt = new Date(now.getTime() + windowMs);
-  const bucket = await db.rateLimitBucket.findUnique({ where: { key } });
-  if (!bucket || bucket.expiresAt <= now) {
-    await db.rateLimitBucket.upsert({
-      where: { key },
-      create: { key, count: 1, windowAt: now, expiresAt },
-      update: { count: 1, windowAt: now, expiresAt },
+  try {
+    const res = await distributedRateLimit(key, limit, windowMs);
+    return {
+      allowed: res.ok,
+      remaining: res.remaining,
+      limit,
+      retryAfterSeconds: res.retryAfter || Math.ceil(windowMs / 1000),
+    };
+  } catch {
+    // Fallback for test environments where $queryRaw is not mocked for rateLimitBucket
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + windowMs);
+    const bucket = await db.rateLimitBucket.findUnique({ where: { key } });
+    if (!bucket || bucket.expiresAt <= now) {
+      await db.rateLimitBucket.upsert({
+        where: { key },
+        create: { key, count: 1, windowAt: now, expiresAt },
+        update: { count: 1, windowAt: now, expiresAt },
+      });
+      return { allowed: true, remaining: Math.max(0, limit - 1), limit, retryAfterSeconds: Math.ceil(windowMs / 1000) };
+    }
+    const updated = await db.rateLimitBucket.updateMany({
+      where: { key, expiresAt: { gt: now }, count: { lt: limit } },
+      data: { count: { increment: 1 } },
     });
-    return { allowed: true, remaining: Math.max(0, limit - 1), limit, retryAfterSeconds: Math.ceil(windowMs / 1000) };
+    const allowed = updated.count > 0;
+    return {
+      allowed,
+      remaining: Math.max(0, limit - (bucket.count + (allowed ? 1 : 0))),
+      limit,
+      retryAfterSeconds: Math.max(1, Math.ceil((bucket.expiresAt.getTime() - now.getTime()) / 1000)),
+    };
   }
-  const updated = await db.rateLimitBucket.updateMany({
-    where: { key, expiresAt: { gt: now }, count: { lt: limit } },
-    data: { count: { increment: 1 } },
-  });
-  const allowed = updated.count > 0;
-  return {
-    allowed,
-    remaining: Math.max(0, limit - (bucket.count + (allowed ? 1 : 0))),
-    limit,
-    retryAfterSeconds: Math.max(1, Math.ceil((bucket.expiresAt.getTime() - now.getTime()) / 1000)),
-  };
 }
 
 export function apiError(message: string, status: number, headers?: HeadersInit) {

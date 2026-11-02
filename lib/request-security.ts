@@ -23,7 +23,12 @@ export function requireSameOrigin(req: Request) {
   // the browser reaches the same application through another valid host.
   // Still require the browser Origin to match either the configured origin or
   // the origin of the actual HTTP request; arbitrary cross-origin writes remain blocked.
-  const actual = new URL(origin).origin;
+  let actual: string;
+  try {
+    actual = new URL(origin).origin;
+  } catch {
+    throw new Error("CROSS_ORIGIN_REQUEST");
+  }
   if (actual !== expected && actual !== requestOrigin) {
     throw new Error("CROSS_ORIGIN_REQUEST");
   }

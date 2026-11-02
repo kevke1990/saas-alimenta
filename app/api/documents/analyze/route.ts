@@ -1,20 +1,32 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { requireCaseTenantAccess } from "@/lib/tenant-access";
+import { requireCaseTenantAccess, requireClientTenantAccess } from "@/lib/tenant-access";
 import { decryptDocument } from "@/lib/document-store";
 import { analyzeDocumentBytes } from "@/lib/document-ai";
 import { buildAiFactProposals, proposalConflicts } from "@/lib/ai-fact-proposals";
+import { distributedRateLimit } from "@/lib/rate-limit";
+import { AI_INCOME_LIMIT, AI_INCOME_WINDOW_MS } from "@/lib/ai-guardrails";
 
 export async function POST(req: Request) {
   try {
     const u = await requireUser();
+    const rate = await distributedRateLimit(`ai:doc:${u.id}`, AI_INCOME_LIMIT, AI_INCOME_WINDOW_MS);
+    if (!rate.ok) {
+      return new NextResponse("AI-gebruikslimiet bereikt. Probeer het later opnieuw.", {
+        status: 429,
+        headers: { "Retry-After": String(rate.retryAfter) },
+      });
+    }
+
     const { documentId } = await req.json();
     const d = await db.document.findFirst({ where: { id: String(documentId || "") } });
     if (!d) return new NextResponse("Document niet gevonden", { status: 404 });
 
     if (d.caseId) {
       await requireCaseTenantAccess(u.id, d.caseId, "PROFESSIONAL");
+    } else if (d.clientId) {
+      await requireClientTenantAccess(u.id, d.clientId, "PROFESSIONAL");
     } else if (d.userId !== u.id) {
       return new NextResponse("Geen toegang tot document", { status: 403 });
     }
@@ -28,6 +40,7 @@ export async function POST(req: Request) {
 
       await db.$transaction(async (tx) => {
         await tx.document.update({ where: { id: d.id }, data: { aiStatus: "COMPLETED", aiResult, analysisVersion: analysis.analysisVersion, aiModel: analysis.model } });
+        await tx.incomeFact.deleteMany({ where: { documentId: d.id, status: "PROPOSED" } });
         if (proposals.length) {
           await tx.incomeFact.createMany({
             data: proposals.map((p) => ({
@@ -55,6 +68,8 @@ export async function POST(req: Request) {
       throw e;
     }
   } catch (e: any) {
-    return new NextResponse(e?.message || "AI-analyse mislukt", { status: 400 });
+    return new NextResponse(e?.message || "AI-analyse mislukt", {
+      status: e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 ? 403 : 400,
+    });
   }
 }

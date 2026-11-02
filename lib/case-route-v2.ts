@@ -23,7 +23,10 @@ export async function getCase(request: Request, params: Promise<{ id: string }>,
   const u = context?.user ?? (await requireUser());
   const { id } = await params;
   const access = context?.access ?? (await requireCaseTenantAccess(u.id, id, "READ_ONLY"));
-  const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, include: { client: true, calculations: true } });
+  const c = await db.case.findFirst({
+    where: { id, organizationId: access.organizationId },
+    include: { client: true, calculations: { orderBy: { createdAt: "desc" }, take: 50 } },
+  });
   if (!c) return new NextResponse("Not found", { status: 404 });
   return NextResponse.json(c);
 }
@@ -62,8 +65,16 @@ export async function patchCase(req: Request, params: Promise<{ id: string }>, c
     };
     let factProvenance: any = null;
 
+    if (body.clientId) {
+      const client = await db.client.findFirst({
+        where: { id: body.clientId, organizationId: access.organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!client) return new NextResponse("Cliënt niet gevonden.", { status: 404 });
+    }
+
     if (requestedFactIds.length) {
-      const approvedFacts = await db.incomeFact.findMany({ where: { id: { in: requestedFactIds }, userId: u.id, caseId: id, status: "APPROVED" }, select: { id: true, parentIndex: true, key: true, label: true, valueNumber: true, valueText: true, unit: true, confidence: true, documentId: true, page: true } });
+      const approvedFacts = await db.incomeFact.findMany({ where: { id: { in: requestedFactIds }, caseId: id, status: "APPROVED" }, select: { id: true, parentIndex: true, key: true, label: true, valueNumber: true, valueText: true, unit: true, confidence: true, documentId: true, page: true } });
       if (approvedFacts.length !== requestedFactIds.length) return new NextResponse("Een of meer geselecteerde inkomensfeiten zijn niet meer goedgekeurd of horen niet bij dit dossier.", { status: 422 });
       const mappings = mapApprovedIncomeFacts(approvedFacts);
       calculationInput = applyIncomeFactMappings(calculationInput, mappings);

@@ -12,9 +12,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const user = await requireUser();
     const { id } = await params;
     const access = await requireCaseTenantAccess(user.id, id, "PROFESSIONAL");
-    const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: 'desc' } } } });
+    const c = await db.case.findFirst({ where: { id, organizationId: access.organizationId }, include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: 'desc' }, take: 20 } } });
     if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
-    const body = req.headers.get('content-type')?.includes('application/json') ? await req.json() : Object.fromEntries((await req.formData()).entries());
+    const contentType = req.headers.get('content-type') || '';
+    const isJson = contentType.includes('application/json');
+    const body = isJson ? await req.json() : Object.fromEntries((await req.formData()).entries());
     const status = String(body.status || '');
     const comment = typeof body.comment === 'string' ? body.comment.trim() : '';
     if (!isReviewStatus(status)) return new NextResponse('Ongeldige reviewstatus.', { status: 422 });
@@ -59,6 +61,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (comment) await tx.auditLog.create({ data: { userId: user.id, organizationId: access.organizationId, entityType: 'CASE', entityId: id, actorRole: access.role, action: 'CASE_REVIEW_COMMENTED', metadata: { caseId: id, calculationId: currentCalculation?.id || null, comment } } });
       return next;
     });
+    if (!isJson) {
+      return NextResponse.redirect(new URL(`/cases/${id}/review`, req.url), 303);
+    }
     return NextResponse.json(updated);
   } catch (e: any) {
     return new NextResponse(e?.message || 'Reviewactie mislukt.', { status: e?.message === 'UNAUTHORIZED' ? 401 : e?.status === 403 ? 403 : 400 });

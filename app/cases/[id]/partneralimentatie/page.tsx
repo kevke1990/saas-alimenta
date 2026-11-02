@@ -10,6 +10,7 @@ type Form = Record<string, any>;
 type CareObligation = { id: string; description: string; monthlyAmount: string; included: boolean };
 
 const initial: Form = {
+  payerIndex: 0,
   historicalNBGI: '', historicalChildCosts: '', currentChildSupport: '0', currentRecipientNBI: '', currentPayerNBI: '',
   payerTaxableIncomeAnnual: '', recipientVerdiencapaciteit: '0', recipientOtherIncomeMonthly: '0', recipientAssetsIncomeMonthly: '0',
   payerAssetsIncomeMonthly: '0', payerHousingCosts: '0', payerMortgageInterestTaxBenefitMonthly: '0', payerOtherNecessaryCosts: '0',
@@ -21,6 +22,26 @@ const initial: Form = {
   partnerCapacityMode: 'CALCULATE', partnerNetMonthlyIncome: '', partnerBasicNeedMonthly: '', partnerOtherObligationsMonthly: '',
   partnerAllocationPercentage: '100',
 };
+
+const limitReasonLabel = (v: string) => ({
+  NEED: 'Behoefte',
+  CAPACITY: 'Draagkracht',
+  INCOME_COMPARISON: 'Inkomensvergelijking',
+  NONE: 'Geen begrenzing',
+}[v] || v || '—');
+
+const incomeAnalysisLabel = (key: string) => ({
+  payerAdjustedMonthly: 'Gecorrigeerd inkomen betaler p/m',
+  recipientAdjustedMonthly: 'Gecorrigeerd inkomen ontvanger p/m',
+  payerBusinessAverageMonthly: 'Gemiddelde ondernemingswinst betaler p/m',
+  recipientBusinessAverageMonthly: 'Gemiddelde ondernemingswinst ontvanger p/m',
+  payerVariableAverageMonthly: 'Gemiddeld variabel inkomen betaler p/m',
+  payerDividendMonthly: 'Dividendinkomen betaler p/m',
+  recipientDividendMonthly: 'Dividendinkomen ontvanger p/m',
+  payerBox3Monthly: 'Box 3-inkomen betaler p/m',
+  recipientBox3Monthly: 'Box 3-inkomen ontvanger p/m',
+  resolvedChildCostShareMonthly: 'Toegerekend aandeel kinderkosten p/m',
+}[key] || key);
 
 function anonymize(value: unknown, key = ''): unknown {
   if (value === null || value === undefined || typeof value === 'number' || typeof value === 'boolean') return value;
@@ -41,7 +62,56 @@ export default function PartnerPage({ params }: { params: Promise<{ id: string }
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { params.then((p) => { setId(p.id); }); }, [params]);
+  const [parentNames, setParentNames] = useState<[string, string]>(['Ouder A', 'Ouder B']);
+
+  useEffect(() => {
+    params.then(async (p) => {
+      setId(p.id);
+      try {
+        const [caseRes, palRes] = await Promise.all([
+          fetch(`/api/cases/${p.id}`).then((r) => (r.ok ? r.json() : null)),
+          fetch(`/api/cases/${p.id}/partneralimentatie`).then((r) => (r.ok ? r.json() : null)),
+        ]);
+        const d = caseRes?.data || {};
+        const ps = d.partnerSupport || {};
+        const parents = Array.isArray(d.parents) ? d.parents : [];
+        if (parents.length >= 2) {
+          setParentNames([parents[0]?.name || 'Ouder A', parents[1]?.name || 'Ouder B']);
+        }
+        const payerIdx = ps.payerIndex === 1 ? 1 : 0;
+        const recIdx = payerIdx === 0 ? 1 : 0;
+        const payerP = parents[payerIdx] || {};
+        const recP = parents[recIdx] || {};
+        const suggestedCS = palRes?.suggestedChildSupport ?? caseRes?.result?.combined?.childSupportTotal ?? 0;
+        setForm((curr) => ({
+          ...curr,
+          payerIndex: payerIdx,
+          historicalNBGI: String(ps.historicalNBGI ?? d.historicalNBGI ?? curr.historicalNBGI),
+          historicalChildCosts: String(ps.historicalChildCosts ?? d.historicalChildCosts ?? curr.historicalChildCosts),
+          currentChildSupport: String(suggestedCS || curr.currentChildSupport),
+          currentPayerNBI: String(payerP.nbi ?? payerP.income?.netIncomeMonthly ?? curr.currentPayerNBI),
+          currentRecipientNBI: String(recP.nbi ?? recP.income?.netIncomeMonthly ?? curr.currentRecipientNBI),
+          payerTaxableIncomeAnnual: String(ps.payerTaxableIncomeAnnual ?? curr.payerTaxableIncomeAnnual),
+          recipientVerdiencapaciteit: String(ps.recipientVerdiencapaciteit ?? curr.recipientVerdiencapaciteit),
+          recipientOtherIncomeMonthly: String(ps.recipientOtherIncomeMonthly ?? curr.recipientOtherIncomeMonthly),
+          recipientAssetsIncomeMonthly: String(ps.recipientAssetsIncomeMonthly ?? curr.recipientAssetsIncomeMonthly),
+          payerAssetsIncomeMonthly: String(ps.payerAssetsIncomeMonthly ?? curr.payerAssetsIncomeMonthly),
+          payerHousingCosts: String(payerP.housing?.monthlyCosts ?? payerP.housingCosts ?? curr.payerHousingCosts),
+          payerMortgageInterestTaxBenefitMonthly: String(ps.payerMortgageInterestTaxBenefitMonthly ?? payerP.housing?.mortgageInterestTaxBenefitMonthly ?? curr.payerMortgageInterestTaxBenefitMonthly),
+          payerOtherNecessaryCosts: String(payerP.specialNecessaryCosts ?? curr.payerOtherNecessaryCosts),
+          payerOtherMaintenanceObligations: String(ps.payerOtherMaintenanceObligations ?? payerP.otherMaintenance ?? curr.payerOtherMaintenanceObligations),
+          payerPensionProvisionMonthly: String(ps.payerPensionProvisionMonthly ?? curr.payerPensionProvisionMonthly),
+          useHofnorm: ps.useHofnorm !== undefined ? Boolean(ps.useHofnorm) : curr.useHofnorm,
+          concreteNeedNet: String(ps.concreteNeedNet ?? curr.concreteNeedNet),
+          incomeComparisonEnabled: Boolean(ps.incomeComparisonEnabled ?? curr.incomeComparisonEnabled),
+          durationException: ps.durationException || curr.durationException,
+          effectiveDate: caseRes?.metadata?.effectiveDate || d.calculationDate || curr.effectiveDate,
+        }));
+      } catch {
+        // fallback to default initial state
+      }
+    });
+  }, [params]);
   const set = (key: string, value: any) => setForm((current) => ({ ...current, [key]: value }));
   const years = (value: string) => value.split(/[,;\s]+/).filter(Boolean).map(Number).filter(Number.isFinite);
   const partnerObligationPayload = useMemo(() => obligations.map((item) => ({ id: item.id, description: item.description, monthlyAmount: numberValue(item.monthlyAmount), included: item.included })), [obligations]);
@@ -51,6 +121,7 @@ export default function PartnerPage({ params }: { params: Promise<{ id: string }
     try {
       const body = {
         ...form,
+        payerIndex: Number(form.payerIndex ?? 0),
         historicalNBGI: numberValue(form.historicalNBGI), historicalChildCosts: numberValue(form.historicalChildCosts), currentChildSupport: numberValue(form.currentChildSupport),
         currentRecipientNBI: numberValue(form.currentRecipientNBI), currentPayerNBI: numberValue(form.currentPayerNBI), payerTaxableIncomeAnnual: numberValue(form.payerTaxableIncomeAnnual),
         recipientVerdiencapaciteit: numberValue(form.recipientVerdiencapaciteit), recipientOtherIncomeMonthly: numberValue(form.recipientOtherIncomeMonthly), recipientAssetsIncomeMonthly: numberValue(form.recipientAssetsIncomeMonthly),
@@ -75,10 +146,10 @@ export default function PartnerPage({ params }: { params: Promise<{ id: string }
 
   const Field = ({ label, name, help }: { label: string; name: string; help?: string }) => <div><label className="label" htmlFor={name}>{label}</label><input id={name} className="input" value={form[name] ?? ''} onChange={(event) => set(name, event.target.value)} />{help && <div className="panel-sub">{help}</div>}</div>;
 
-  return <main className="content" style={{ maxWidth: 1220 }}>
+  return <div style={{ maxWidth: 1220 }}>
     <div className="page-head"><div><div className="eyebrow">Partneralimentatie · professionele analyse</div><h1 className="page-title">Complexe partneralimentatie</h1><p className="page-subtitle">Een transparante berekening met afzonderlijke draagkracht, verplichtingen, uitleg en controleerbare uitgangspunten.</p></div><div className="actions"><Link className="btn secondary" href={`/cases/${id}`}>← Dossier</Link></div></div>
 
-    <section className="panel"><div className="panel-head"><div><h2 className="panel-title">1. Historische behoefte</h2><div className="panel-sub">De historische behoefte vormt het uitgangspunt. Gebruik de hofnorm alleen wanneer die passend en onderbouwd is.</div></div></div><div className="form-grid topgap"><Field label="Historisch NBGI per maand" name="historicalNBGI"/><Field label="Kosten kinderen per maand" name="historicalChildCosts"/><Field label="Datum historisch NBGI" name="historicalDate"/><Field label="Ingangsdatum" name="effectiveDate"/><div className="full"><label className="label"><input type="checkbox" checked={form.useHofnorm} onChange={(e) => set('useHofnorm', e.target.checked)} /> Hofnorm gebruiken (60%)</label></div>{!form.useHofnorm && <Field label="Concrete netto behoefte per maand" name="concreteNeedNet"/>}</div></section>
+    <section className="panel"><div className="panel-head"><div><h2 className="panel-title">1. Historische behoefte & betaler</h2><div className="panel-sub">De historische behoefte vormt het uitgangspunt. Gebruik de hofnorm alleen wanneer die passend en onderbouwd is.</div></div></div><div className="form-grid topgap"><div><label className="label" htmlFor="payerIndex">Onderhoudsplichtige (betaler)</label><select id="payerIndex" className="input" value={form.payerIndex ?? 0} onChange={(e) => set('payerIndex', Number(e.target.value))}><option value={0}>{parentNames[0]}</option><option value={1}>{parentNames[1]}</option></select></div><Field label="Historisch NBGI per maand" name="historicalNBGI"/><Field label="Kosten kinderen per maand" name="historicalChildCosts"/><Field label="Datum historisch NBGI" name="historicalDate"/><Field label="Ingangsdatum" name="effectiveDate"/><div className="full"><label className="label"><input type="checkbox" checked={form.useHofnorm} onChange={(e) => set('useHofnorm', e.target.checked)} /> Hofnorm gebruiken (60%)</label></div>{!form.useHofnorm && <Field label="Concrete netto behoefte per maand" name="concreteNeedNet"/>}</div></section>
 
     <div className="two-col topgap"><section className="panel"><h2 className="panel-title">2. Ontvanger</h2><div className="panel-sub">Vul de actuele inkomsten en verdiencapaciteit afzonderlijk in.</div><div className="form-grid topgap"><Field label="Huidig NBI per maand" name="currentRecipientNBI"/><Field label="Verdiencapaciteit per maand" name="recipientVerdiencapaciteit"/><Field label="Overig inkomen per maand" name="recipientOtherIncomeMonthly"/><Field label="Inkomen uit vermogen per maand" name="recipientAssetsIncomeMonthly"/><Field label="Winst onderneming per jaar" name="recipientBusinessProfitAnnual"/><Field label="Winst eerdere jaren" name="recipientBusinessProfitYears" help="Bedragen gescheiden door spaties of komma's."/><Field label="Dividend per jaar" name="recipientDividendAnnual"/><Field label="Box 3-inkomen per jaar" name="recipientBox3IncomeAnnual"/></div></section><section className="panel"><h2 className="panel-title">3. Betaler & draagkracht</h2><div className="panel-sub">Kinderalimentatie en noodzakelijke lasten worden vóór partneralimentatie meegenomen.</div><div className="form-grid topgap"><Field label="Huidig NBI per maand" name="currentPayerNBI"/><Field label="Belastbaar inkomen per jaar" name="payerTaxableIncomeAnnual"/><Field label="Woonlast per maand" name="payerHousingCosts"/><Field label="Fiscaal hypotheekvoordeel per maand" name="payerMortgageInterestTaxBenefitMonthly"/><Field label="Noodzakelijke lasten per maand" name="payerOtherNecessaryCosts"/><Field label="Pensioen/lijfrente per maand" name="payerPensionProvisionMonthly"/><Field label="Andere onderhoudsverplichtingen per maand" name="payerOtherMaintenanceObligations"/><Field label="Correctie draagkracht per maand" name="payerCapacityAdjustment"/></div></section></div>
 
@@ -86,6 +157,6 @@ export default function PartnerPage({ params }: { params: Promise<{ id: string }
 
     <section className="panel topgap"><h2 className="panel-title">5. Overige uitgangspunten</h2><div className="form-grid topgap"><Field label="Kinderalimentatie per maand" name="currentChildSupport"/><Field label="Overig vermogen betaler per maand" name="payerAssetsIncomeMonthly"/><Field label="Ondernemingswinst betaler per jaar" name="payerBusinessProfitAnnual"/><Field label="Dividend betaler per jaar" name="payerDividendAnnual"/><Field label="Box 3-inkomen betaler per jaar" name="payerBox3IncomeAnnual"/><Field label="Variabel inkomen eerdere jaren" name="payerVariableIncomeYears"/><div><label className="label">Duurregel</label><select className="input" value={form.durationException} onChange={(e) => set('durationException', e.target.value)}><option value="NONE">Hoofdregel</option><option value="CHILD_YOUNGER_THAN_12">Jongste kind jonger dan 12</option><option value="LONG_MARRIAGE_PRE_1970">Overgangsregel lang huwelijk</option><option value="RECEIVER_BORN_1970_OR_EARLIER">Overgangsregel geboortejaar</option><option value="AGREEMENT_OR_COURT">Afspraak of rechter bepaalt duur</option></select></div></div><button className="btn topgap" disabled={busy} onClick={calculate}>{busy ? 'Berekenen…' : 'Bereken partneralimentatie'}</button>{error && <div className="notice error topgap">{error}</div>}</section>
 
-    {result && <section className="panel topgap"><div className="result-hero"><div className="stat-card result-main"><div className="stat-label">BRUTO PARTNERALIMENTATIE</div><div className="stat-value">{money(result.result?.monthlyGross)}</div><div className="stat-meta">Netto: {money(result.result?.monthlyNet)} per maand · begrenzing: {result.result?.limitedBy || '—'}</div></div><div className="stat-card"><div className="stat-label">AANVULLENDE BEHOEFTE</div><div className="stat-value">{money(result.need?.additionalNeedNet)}</div></div><div className="stat-card"><div className="stat-label">RESTERENDE DRAAGKRACHT</div><div className="stat-value">{money(result.capacity?.remainingNet)}</div></div></div>{result.partnerCapacity && <div className="partner-result topgap"><h2 className="panel-title">Nieuwe-partneranalyse</h2><div className="summary-line"><span>Beschikbare draagkracht nieuwe partner</span><b>{money(result.partnerCapacity.availableCapacityMonthly)}</b></div><div className="summary-line"><span>Toegerekende draagkracht nieuwe partner</span><b>{money(result.partnerCapacity.allocatedCapacityMonthly)}</b></div><div className="summary-line"><span>Niet-opgevangen zorgverplichtingen voor kinderen van de nieuwe partner</span><b>{money(result.partnerCapacity.uncoveredCareObligationsAllocatedToOtherPerson)}</b></div><div className="explanation-list">{result.partnerCapacity.explanation?.map((line: string, index: number) => <p key={index}>{line}</p>)}</div></div>}<div className="two-col topgap"><div><h2 className="panel-title">Volledige rekenroute</h2>{result.steps?.map((step: any) => <div className="summary-line" key={step.step}><span>{step.step}. {step.title}<small>{step.formula}</small></span><b>{money(step.value)}</b></div>)}</div><div><h2 className="panel-title">Inkomensanalyse</h2>{Object.entries(result.incomeAnalysis || {}).map(([key, value]: any) => <div className="summary-line" key={key}><span>{key}</span><b>{money(value)}</b></div>)}{result.warnings?.map((warning: string, index: number) => <div className="notice topgap" key={index}>• {warning}</div>)}</div></div><div className="notice topgap">{result.disclaimer}</div><div className="actions topgap"><button className="btn secondary" type="button" onClick={downloadAnonymized}>Download geanonimiseerde berekening</button><span className="panel-sub">De normale berekening blijft volledig herkenbaar. Alleen deze download wordt geanonimiseerd.</span></div></section>}
-  </main>;
+    {result && <section className="panel topgap"><div className="result-hero"><div className="stat-card result-main"><div className="stat-label">BRUTO PARTNERALIMENTATIE</div><div className="stat-value">{money(result.result?.monthlyGross)}</div><div className="stat-meta">Netto: {money(result.result?.monthlyNet)} per maand · begrenzing: {limitReasonLabel(result.result?.limitedBy)}</div></div><div className="stat-card"><div className="stat-label">AANVULLENDE BEHOEFTE</div><div className="stat-value">{money(result.need?.additionalNeedNet)}</div></div><div className="stat-card"><div className="stat-label">RESTERENDE DRAAGKRACHT</div><div className="stat-value">{money(result.capacity?.remainingNet)}</div></div></div>{result.partnerCapacity && <div className="partner-result topgap"><h2 className="panel-title">Nieuwe-partneranalyse</h2><div className="summary-line"><span>Beschikbare draagkracht nieuwe partner</span><b>{money(result.partnerCapacity.availableCapacityMonthly)}</b></div><div className="summary-line"><span>Toegerekende draagkracht nieuwe partner</span><b>{money(result.partnerCapacity.allocatedCapacityMonthly)}</b></div><div className="summary-line"><span>Niet-opgevangen zorgverplichtingen voor kinderen van de nieuwe partner</span><b>{money(result.partnerCapacity.uncoveredCareObligationsAllocatedToOtherPerson)}</b></div><div className="explanation-list">{result.partnerCapacity.explanation?.map((line: string, index: number) => <p key={index}>{line}</p>)}</div></div>}<div className="two-col topgap"><div><h2 className="panel-title">Volledige rekenroute</h2>{result.steps?.map((step: any) => <div className="summary-line" key={step.step}><span>{step.step}. {step.title}<small>{step.formula}</small></span><b>{money(step.value)}</b></div>)}</div><div><h2 className="panel-title">Inkomensanalyse</h2>{Object.entries(result.incomeAnalysis || {}).map(([key, value]: any) => <div className="summary-line" key={key}><span>{incomeAnalysisLabel(key)}</span><b>{money(value)}</b></div>)}{result.warnings?.map((warning: string, index: number) => <div className="notice topgap" key={index}>• {warning}</div>)}</div></div><div className="notice topgap">{result.disclaimer}</div><div className="actions topgap"><button className="btn secondary" type="button" onClick={downloadAnonymized}>Download geanonimiseerde berekening</button><span className="panel-sub">De normale berekening blijft volledig herkenbaar. Alleen deze download wordt geanonimiseerd.</span></div></section>}
+  </div>;
 }

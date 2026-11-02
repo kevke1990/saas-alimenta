@@ -1,4 +1,4 @@
-import { NORM_SETS, getNormSet, getNormYearForDate, getWsfPeriod, NORM_VERSION } from "./norms";
+import { NORM_SETS, getNormSet, getNormYearForDate, getWsfPeriod, NORM_VERSION, ALIMENTATION_INDEXATION } from "./norms";
 import type { NormYear, NormSet } from "./norms";
 import { calculateIncome, type IncomeProfile, type IncomeResult } from "./income-engine";
 import { calculateChildSupportCapacity } from "./support-engine";
@@ -53,11 +53,10 @@ export function calculate(input: CaseInput) {
   let indexedNeedString = "";
   if (minorCount > 0 && historicalNeed === undefined && historicalYear < normYear) {
     const originalNeed = minorTableTotal;
-    // Wettelijke indexering: 2024->2025 = 6.2%, 2025->2026 = 4.9%
-    const indexRates: Record<number, number> = { 2024: 0.062, 2025: 0.049 };
+    // Wettelijke indexering per 1 januari van elk opvolgend jaar: 2024 = 6,2%, 2025 = 6,5%, 2026 = 4,6%
     let indexedNeed = originalNeed;
-    for (let year = historicalYear; year < normYear; year++) {
-      const rate = indexRates[year] || 0;
+    for (let year = historicalYear + 1; year <= normYear; year++) {
+      const rate = ALIMENTATION_INDEXATION[year] || 0;
       indexedNeed = Math.round(indexedNeed * (1 + rate));
     }
     // Split-Online afrondingscorrectie bij samengestelde indexatie van 1097 -> 1223

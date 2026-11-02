@@ -11,7 +11,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const access = await requireCaseTenantAccess(u.id, id, "READ_ONLY");
     const c = await db.case.findFirst({
       where: { id, organizationId: access.organizationId },
-      include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: "desc" } } },
+      include: { documents: { select: { aiStatus: true, approvedAt: true } }, calculations: { orderBy: { createdAt: "desc" }, take: 20 } },
     });
     if (!c) return new NextResponse("Dossier niet gevonden", { status: 404 });
     return NextResponse.json(reviewCase({ data: c.data, documents: c.documents, calculations: c.calculations, result: c.result }));

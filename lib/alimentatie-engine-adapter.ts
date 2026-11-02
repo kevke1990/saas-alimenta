@@ -57,14 +57,15 @@ function parent(id: "A" | "B", raw: RawParent | undefined): ParentCalculationInp
       ? nestedKgb
       : (rawKgb ?? nestedKgb ?? 0);
   const kgb = money(resolvedKgb, `ouder ${id}: KGB`, 0);
+  const aowEligible = raw.aowEligible === true || raw.aow === true;
   const capacity: CapacityInput = {
     income: { monthlyNbi: income, monthlyKgb: kgb, kgbVerified: raw.kgbVerified !== false, referenceYear: 2026 },
     household: raw.household === "pension" ? "pension" : raw.household === "married" ? "married" : "single",
-    aowEligible: raw.aowEligible === true || raw.aow === true,
+    aowEligible,
     officialCapacityMonthly: raw.officialCapacityMonthly === undefined ? undefined : money(raw.officialCapacityMonthly as NumericLike, `ouder ${id}: officiële draagkracht`),
     capacityMethod: raw.capacityMethod === "official-table" ? "official-table" : "published-formula",
-    correctedAssistanceNormMonthly: raw.correctedAssistanceNormMonthly === undefined ? 1365 : money(raw.correctedAssistanceNormMonthly as NumericLike, `ouder ${id}: gecorrigeerde bijstandsnorm`),
-    housingCostMode: raw.housingCostMode === "ACTUAL" || ((raw.actualHousingCost !== undefined && Number(raw.actualHousingCost) >= 0) || (raw.housingCosts !== undefined && Number(raw.housingCosts) > 0) || ((raw.housing && typeof raw.housing === "object" && (raw.housing as any).monthlyCosts !== undefined && Number((raw.housing as any).monthlyCosts) > 0))) ? "ACTUAL" : "FORFAIT",
+    correctedAssistanceNormMonthly: raw.correctedAssistanceNormMonthly === undefined ? (aowEligible ? 1525 : 1365) : money(raw.correctedAssistanceNormMonthly as NumericLike, `ouder ${id}: gecorrigeerde bijstandsnorm`),
+    housingCostMode: raw.housingCostMode === "FORFAIT" ? "FORFAIT" : (raw.housingCostMode === "ACTUAL" || raw.useActualHousingCosts === true || (raw.housing && typeof raw.housing === "object" && (raw.housing as any).useActualCosts === true) || ((raw.actualHousingCost !== undefined && Number(raw.actualHousingCost) >= 0) || (raw.housingCosts !== undefined && Number(raw.housingCosts) > 0) || ((raw.housing && typeof raw.housing === "object" && (raw.housing as any).monthlyCosts !== undefined && Number((raw.housing as any).monthlyCosts) > 0))) ? "ACTUAL" : "FORFAIT"),
     actualHousingCost: (firstValue(raw, ["actualHousingCost", "housingCosts"]) ?? (raw.housing && typeof raw.housing === "object" ? (raw.housing as any).monthlyCosts : undefined)) === undefined ? undefined : money((firstValue(raw, ["actualHousingCost", "housingCosts"]) ?? (raw.housing && typeof raw.housing === "object" ? (raw.housing as any).monthlyCosts : undefined)) as NumericLike, `ouder ${id}: werkelijke woonlast`),
     housingBudgetMonthly: raw.housingBudgetMonthly === undefined ? undefined : money(raw.housingBudgetMonthly as NumericLike, `ouder ${id}: woonbudget`),
     otherNecessaryCostsMonthly: money(raw.otherNecessaryCostsMonthly as NumericLike, `ouder ${id}: noodzakelijke lasten`, 0),
@@ -111,7 +112,12 @@ export function adaptAlimentaForm(payload: AlimentaFormPayload): Trema2026Input 
   const p1 = resolveParent(payload, 1);
   const resA = (payload.children || []).filter((c: any) => c.residence === 'A' || c.residence === 'Ouder A').length;
   const resB = (payload.children || []).filter((c: any) => c.residence === 'B' || c.residence === 'Ouder B').length;
-  const isParent0Payer = resB > resA || (resB === 0 && resA === 0);
+  const has5050 = (payload.children || []).some((c: any) => c.residence === '50-50');
+  const p0ExplicitPayer = p0?.role === 'payer' || p0?.role === 'MAINTENANCE_DEBTOR' || p0?.isRecipient === false;
+  const p1ExplicitPayer = p1?.role === 'payer' || p1?.role === 'MAINTENANCE_DEBTOR' || p1?.isRecipient === false;
+  const p0Nbi = Number(firstValue(p0 ?? {}, ['monthlyNbi', 'nbi']) ?? firstValue((p0?.income ?? {}) as RawParent, ['netIncomeMonthly', 'monthlyNbi']) ?? 0);
+  const p1Nbi = Number(firstValue(p1 ?? {}, ['monthlyNbi', 'nbi']) ?? firstValue((p1?.income ?? {}) as RawParent, ['netIncomeMonthly', 'monthlyNbi']) ?? 0);
+  const isParent0Payer = p0ExplicitPayer ? true : p1ExplicitPayer ? false : resB > resA ? true : resA > resB ? false : has5050 ? p0Nbi >= p1Nbi : true;
 
   const payerRaw = isParent0Payer ? p0 : p1;
   const recipientRaw = isParent0Payer ? p1 : p0;
@@ -129,9 +135,14 @@ export function adaptAlimentaForm(payload: AlimentaFormPayload): Trema2026Input 
     carePercentage = days >= 3 ? 35 : days >= 2 ? 25 : days >= 1 ? 15 : days > 0 ? 5 : 0;
   }
 
-  const baseNeedTotal = (payload.children || []).reduce((sum: number, c: any) => sum + Number(c.baseNeed || c.need || 380), 0);
-  const care = carePercentage !== undefined ? {
-    carePercentage: Number(carePercentage),
+  const hasExplicitChildBaseNeed = (payload.children || []).some((c: any) => c.baseNeed !== undefined || c.need !== undefined);
+  const baseNeedTotal = hasExplicitChildBaseNeed
+    ? (payload.children || []).reduce((sum: number, c: any) => sum + Number(c.baseNeed ?? c.need ?? 0), 0)
+    : ownShareMonthly;
+  const rawCarePct = carePercentage !== undefined ? Number(carePercentage) : undefined;
+  const normalizedCarePct = rawCarePct !== undefined ? (rawCarePct > 0 && rawCarePct <= 1 ? rawCarePct * 100 : rawCarePct) : undefined;
+  const care = normalizedCarePct !== undefined ? {
+    carePercentage: normalizedCarePct,
     careDiscountBaseMonthly: payload.care?.careDiscountBaseMonthly !== undefined ? Number(payload.care.careDiscountBaseMonthly) : baseNeedTotal,
     careDiscountOverrideMonthly: payload.care?.careDiscountOverrideMonthly !== undefined ? Number(payload.care.careDiscountOverrideMonthly) : undefined,
   } : undefined;

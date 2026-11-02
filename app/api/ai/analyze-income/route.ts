@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     const config = await import("@/lib/ai-config").then((m) => m.getAiConfig());
-    const model = config.enabled && config.provider === "GOOGLE_GEMINI" && config.model
+    const model = config.enabled && (config.provider === "GOOGLE_GEMINI" || config.provider === "GEMINI") && config.model
       ? config.model
       : process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash";
     const inputHash = hashAiInput(text);

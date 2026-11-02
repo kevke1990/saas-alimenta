@@ -40,7 +40,7 @@ export default function CaseActions({ caseId, locked }: { caseId: string; locked
   return (
     <div className="actions" style={{ position: 'relative' }}>
       <details ref={detailsRef} className="dropdown-menu" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-        <summary className="btn ghost" style={{ listStyle: 'none', cursor: 'pointer', padding: '6px 10px' }}>
+        <summary className="btn ghost" aria-label="Meer dossieracties" style={{ listStyle: 'none', cursor: 'pointer', minWidth: '40px', minHeight: '40px', padding: '8px 12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
           •••
         </summary>
         <div style={{ position: 'absolute', right: 0, top: '100%', zIndex: 10, background: '#fff', border: '1px solid var(--line)', borderRadius: '8px', boxShadow: 'var(--shadow)', padding: '4px', display: 'flex', flexDirection: 'column', minWidth: '140px', marginTop: '4px' }}>

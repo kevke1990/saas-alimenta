@@ -1,18 +1,28 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { AuthShell, AuthStatus } from "@/components/auth/AuthShell";
 
 const initialForm = { accountType:"BUSINESS", name:"", companyName:"", email:"", password:"", phone:"", addressLine1:"", postalCode:"", city:"", country:"Nederland", kvkNumber:"", vatNumber:"", website:"", practiceType:"" };
 
-export default function Register() {
-  const [form, setForm] = useState(initialForm);
+function RegisterForm() {
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get("type")?.toLowerCase();
+  const [form, setForm] = useState(() => ({
+    ...initialForm,
+    accountType: typeParam === "private" ? "PRIVATE" : "BUSINESS",
+  }));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
   const set = (key:string,value:string) => setForm((current) => ({ ...current, [key]: value }));
+
+  useEffect(() => {
+    if (typeParam === "private") set("accountType", "PRIVATE");
+    else if (typeParam === "business") set("accountType", "BUSINESS");
+  }, [typeParam]);
 
   async function submit(e:React.FormEvent) {
     e.preventDefault(); setError(""); setBusy(true);
@@ -77,5 +87,13 @@ export default function Register() {
       </form>
       <p className="auth-footer-link">Heb je al een account? <Link href="/login" className="auth-text-link">Inloggen</Link></p>
     </AuthShell>
+  );
+}
+
+export default function Register() {
+  return (
+    <Suspense fallback={<AuthShell eyebrow="Nieuw account" title="Account aanmaken" description="Kies je accounttype en vul de gegevens in." wide><div aria-hidden="true" /></AuthShell>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

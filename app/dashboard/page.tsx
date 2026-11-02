@@ -79,7 +79,12 @@ export default async function Dashboard() {
   const workQueue = reviewQueue;
   const attentionCount = readyCount + reviewedCount + incompleteCount;
   const firstName = user.name?.split(" ")[0] || "welkom";
-  const dateLabel = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long" }).format(new Date());
+  const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Goedemorgen" : hour < 18 ? "Goedemiddag" : "Goedenavond";
+  const dateLabel = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long" }).format(now);
+  const planLabel = ({ FREE: "Gratis", PRIVATE: "Particulier", PRO: "Zakelijk Pro", ENTERPRISE: "Kantoor" } as Record<string, string>)[user.plan] || user.plan;
+  const subStatusLabel = ({ ACTIVE: "Actief", INACTIVE: "Niet actief", PAST_DUE: "Betaling achterstallig", CANCELED: "Opgezegd", TRIALING: "Proefperiode" } as Record<string, string>)[user.subscriptionStatus || ""] || user.subscriptionStatus || "Geen actief abonnement";
 
   return (
     <AppShell>
@@ -87,7 +92,7 @@ export default async function Dashboard() {
         <header className="dashboard-welcome">
           <div>
             <div className="eyebrow">{dateLabel}</div>
-            <h1 className="page-title">Goedemorgen, {firstName}.</h1>
+            <h1 className="page-title">{greeting}, {firstName}.</h1>
             <p className="page-subtitle">Je actuele cliënten, dossiers en professionele werkvoorraad in één overzicht.</p>
           </div>
           <div className="actions dashboard-actions" aria-label="Snel toevoegen">
@@ -123,14 +128,14 @@ export default async function Dashboard() {
           <div><span className="dashboard-meta-icon" aria-hidden><DashboardIcon name="cases" /></span><strong>{cases.length}</strong><span>recente dossiers</span></div>
           <div><span className="dashboard-meta-icon" aria-hidden><DashboardIcon name="documents" /></span><strong>{documentCount}</strong><span>documenten</span></div>
           <div><span className="dashboard-meta-icon" aria-hidden><DashboardIcon name="sparkles" /></span><strong>{proposedFactCount}</strong><span>AI-voorstellen te beoordelen</span></div>
-          <div className="dashboard-plan"><span>Abonnement</span><strong>{user.plan}</strong><small>{user.subscriptionStatus || "Geen actief abonnement"}</small></div>
+          <div className="dashboard-plan"><span>Abonnement</span><strong>{planLabel}</strong><small>{subStatusLabel}</small></div>
         </div>
 
         <div className="dashboard-primary-grid">
           <section className="panel dashboard-work-panel">
             <div className="panel-head">
               <div><div className="section-kicker">Werkvoorraad</div><h2 className="panel-title">Wat vraagt vandaag aandacht?</h2><div className="panel-sub">Dossiers die nog professionele beoordeling of goedkeuring vragen.</div></div>
-              <Link className="btn ghost" href="/cases">Alle dossiers <span aria-hidden>→</span></Link>
+              <div className="actions"><Link className="btn ghost" href="/dashboard/attention">Prioriteitenoverzicht</Link><Link className="btn ghost" href="/cases">Alle dossiers <span aria-hidden>→</span></Link></div>
             </div>
 
             <div className="dashboard-review-grid">

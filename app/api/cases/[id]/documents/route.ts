@@ -49,7 +49,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const rate = await distributedRateLimit(`ai:income:${user.id}`,AI_INCOME_LIMIT,AI_INCOME_WINDOW_MS);
   if (!rate.ok) { await db.document.update({where:{id:document.id},data:{aiStatus:"RATE_LIMITED"}}); return new NextResponse("AI-limiet bereikt. Het document is veilig opgeslagen.",{status:429,headers:{"Retry-After":String(rate.retryAfter)}}); }
   const cfg = await import("@/lib/ai-config").then(m=>m.getAiConfig());
-  const model = cfg.enabled && cfg.provider === "GOOGLE_GEMINI" && cfg.model ? cfg.model : process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash";
+  const model = cfg.enabled && (cfg.provider === "GOOGLE_GEMINI" || cfg.provider === "GEMINI") && cfg.model ? cfg.model : process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash";
   const run = await db.aiRun.create({data:{userId:user.id,caseId:id,documentId:document.id,operation:"ANALYZE_INCOME_DOCUMENT",model,status:"RUNNING",inputHash:hashAiInput(text)}});
   try {
     const result = await analyzeIncomeDocument(text);

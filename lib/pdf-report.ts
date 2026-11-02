@@ -203,7 +203,7 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
 
       const capacityText = isSufficient
         ? `De totale gezamenlijke draagkracht van de ouders bedraagt ${euro(totalCapacity)} per maand en is toereikend om in de behoefte te voorzien.`
-        : `De totale gezamenlijke draagkracht van de ouders (${euro(totalCapacity)}/mnd) is ontoereikend voor de volledige behoefte (tekort: ${euro(capacityDeficit)}/mnd). Conform Tremanormen dragen beide ouders het tekort naar evenredigheid.`;
+        : `De totale gezamenlijke draagkracht van de ouders (${euro(totalCapacity)}/mnd) is ontoereikend voor de volledige behoefte (tekort: ${euro(capacityDeficit)}/mnd). Conform Tremanormen dragen beide ouders ieder de helft van het tekort.`;
 
       doc.text(
         `Op basis van de Tremanormen ${normYear} bedraagt de totale behoefte van de ${childCount > 0 ? childCount : 1} minderjarige kind(eren) ` +
@@ -360,8 +360,17 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       curY = drawSectionHeader("5. DRAAGKRACHTVERGELIJKING EN VERDELING", curY);
       curY = drawRow("Totale gezamenlijke draagkracht van beide ouders:", euro(totalCapacity), curY, true);
 
-      const careDiscountPayer = pB.totalCareDiscount ?? pA.totalCareDiscount ?? r.careDiscount?.total ?? (payerName === nameB ? (r.transfers?.[0]?.careDiscount ? r.transfers.reduce((s: number, t: any) => s + (t.payerIndex === 1 ? t.careDiscount : 0), 0) : 0) : 0);
-      const careDiscountPct = (payerName === nameB ? pB.careDiscountPctByChild?.[0] : pA.careDiscountPctByChild?.[0]) ?? (payerName === nameB && careDaysB >= 1 ? (careDaysB >= 3 ? 0.35 : careDaysB >= 2 ? 0.25 : 0.15) : 0);
+      const payerParent = payerName === nameB ? pB : pA;
+      const payerIdx = payerName === nameB ? 1 : 0;
+      const payerCareDays = payerName === nameB ? careDaysB : careDaysA;
+      const transferCareDiscount = Array.isArray(r.transfers)
+        ? r.transfers.reduce((s: number, t: any) => s + ((t.payerIndex ?? (t.direction === "B->A" ? 1 : 0)) === payerIdx ? Number(t.careDiscount ?? t.appliedCareDiscount ?? 0) : 0), 0)
+        : 0;
+      const careDiscountPayer = Number(payerParent.totalCareDiscount || transferCareDiscount || r.careDiscount?.appliedCareDiscount || r.careDiscount?.total || 0);
+      const rawCarePct = payerParent.careDiscountPctByChild?.[0];
+      const careDiscountPct = (typeof rawCarePct === "number" && rawCarePct > 0)
+        ? rawCarePct
+        : (payerCareDays >= 3 ? 0.35 : payerCareDays >= 2 ? 0.25 : payerCareDays >= 1 ? 0.15 : 0);
 
       curY = drawRow(`Draagkracht ${nameA}:`, euro(capA), curY);
       curY = drawRow(`Draagkracht ${nameB}:`, euro(capB), curY);
@@ -379,9 +388,25 @@ export function createCalculationPdf(input: CalculationPdfInput): Promise<Buffer
       curY = drawRow(`Vastgestelde alimentatieverplichting door ${payerName}:`, `${euro(payerAmount)} per maand`, curY, true);
 
       // Partneralimentatie (indien aanwezig)
-      if (r.partnerSupport && r.partnerSupport.payment > 0) {
+      const partnerSupportGross = Number(
+        r.combined?.partnerSupport?.monthlyGross ??
+        r.partnerSupport?.result?.monthlyGross ??
+        r.partnerSupport?.monthlyGross ??
+        r.partnerSupport?.payment ??
+        0
+      );
+      const partnerSupportNet = Number(
+        r.combined?.partnerSupport?.monthlyNet ??
+        r.partnerSupport?.result?.monthlyNet ??
+        r.partnerSupport?.monthlyNet ??
+        0
+      );
+      if (partnerSupportGross > 0) {
         curY += 2;
-        curY = drawRow("Aanvullende partneralimentatie:", `${euro(r.partnerSupport.payment)} per maand`, curY, true);
+        const palDisplay = partnerSupportNet > 0
+          ? `${euro(partnerSupportGross)} bruto/mnd (${euro(partnerSupportNet)} netto)`
+          : `${euro(partnerSupportGross)} per maand`;
+        curY = drawRow("Aanvullende partneralimentatie:", palDisplay, curY, true);
       }
       curY += 4;
 

@@ -318,6 +318,11 @@
   background: color-mix(in oklab, var(--al-ds-warning) 12%, transparent);
 }
 
+.content-premium .status.red {
+  color: var(--al-ds-destructive, #a51d2d);
+  background: color-mix(in oklab, var(--al-ds-destructive, #a51d2d) 12%, transparent);
+}
+
 .content-premium .status.gray {
   color: var(--al-ds-muted-foreground);
   background: var(--al-ds-muted);

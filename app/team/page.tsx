@@ -1,11 +1,19 @@
 import { requireUser } from "@/lib/auth";
 import { getTeam } from "@/lib/team-security";
 
+const roleLabel = (role: string) => ({
+  OWNER: "Kantoorhouder / Eigenaar",
+  ADMIN: "Beheerder",
+  PROFESSIONAL: "Jurist / Mediator",
+  ASSISTANT: "Praktijkondersteuner",
+  READ_ONLY: "Alleen-lezen",
+}[role] || role);
+
 export default async function TeamPage() {
   const user = await requireUser();
   const { tenant, members } = await getTeam(user);
   return (
-    <div className="content" style={{ maxWidth: 1180, margin: "0 auto" }}>
+    <div style={{ maxWidth: 1180, margin: "0 auto" }}>
       <div className="page-head">
         <div>
           <div className="eyebrow">Organisatie · team</div>
@@ -34,7 +42,7 @@ export default async function TeamPage() {
                 <tr key={m.userId}>
                   <td><b>{m.name || "—"}</b></td>
                   <td>{m.email}</td>
-                  <td><span className="status green">{m.role}</span></td>
+                  <td><span className="status green">{roleLabel(m.role)}</span></td>
                 </tr>
               ))}
             </tbody>

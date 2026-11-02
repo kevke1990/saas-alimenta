@@ -1,13 +1,26 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { sendTransactionalEmail } from "@/lib/mail";
+import { requireSameOrigin } from "@/lib/request-security";
+import { distributedRateLimit, requestKey } from "@/lib/rate-limit";
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 export async function POST(req: Request) {
   try {
-    const user = await requireUser();
-    if (user.role !== "ADMIN") {
-      return new NextResponse("Toegang geweigerd: beheerder vereist", { status: 403 });
+    requireSameOrigin(req);
+    const user = await requireAdmin();
+    const rl = await distributedRateLimit(requestKey(req, "admin-broadcast"), 5, 15 * 60 * 1000);
+    if (!rl.ok) {
+      return new NextResponse("Te veel broadcast-verzoeken. Probeer later opnieuw.", { status: 429 });
     }
 
     const body = await req.json();
@@ -23,6 +36,7 @@ export async function POST(req: Request) {
     const users = await db.user.findMany({
       select: { id: true, email: true, name: true },
       where: { role: { not: "ANONYMOUS" as any } },
+      take: 1000,
     });
 
     if (users.length === 0) {
@@ -36,13 +50,14 @@ export async function POST(req: Request) {
     // Verzend naar gebruikers
     for (const recipient of users) {
       try {
+        const safeName = escapeHtml(recipient.name || "gebruiker");
         await sendTransactionalEmail({
           from: fromEmail,
           to: [recipient.email],
           subject,
           textBody: `Beste ${recipient.name || "gebruiker"},\n\n${message}\n\n---\nJe ontvangt dit bericht als geregistreerde gebruiker.`,
           htmlBody: html
-            ? `<p>Beste ${recipient.name || "gebruiker"},</p>${html}<hr><small>Je ontvangt dit bericht als geregistreerde gebruiker.</small>`
+            ? `<p>Beste ${safeName},</p>${html}<hr><small>Je ontvangt dit bericht als geregistreerde gebruiker.</small>`
             : undefined,
           userId: user.id,
           eventType: "ADMIN_BROADCAST",
@@ -61,6 +76,8 @@ export async function POST(req: Request) {
       failures: failures.length > 0 ? failures : undefined,
     });
   } catch (e: any) {
+    if (e?.message === "CROSS_ORIGIN_REQUEST") return new NextResponse("Ongeldige herkomst van verzoek", { status: 403 });
+    if (e?.message === "FORBIDDEN" || e?.message === "UNAUTHORIZED") return new NextResponse("Toegang geweigerd: beheerder vereist", { status: 403 });
     return new NextResponse(e?.message || "Broadcast mislukt", { status: 500 });
   }
 }

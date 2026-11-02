@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getMailIdentity, sendTransactionalEmail } from "@/lib/mail";
+import { distributedRateLimit } from "@/lib/rate-limit";
 
 function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map(String).map(v => v.trim()).filter(Boolean) : [];
@@ -10,6 +11,13 @@ function stringArray(value: unknown): string[] {
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireUser();
+    const rate = await distributedRateLimit(`mail:send:${user.id}`, 30, 15 * 60 * 1000);
+    if (!rate.ok) {
+      return new NextResponse("Te veel e-mails verzonden. Probeer het later opnieuw.", {
+        status: 429,
+        headers: { "Retry-After": String(rate.retryAfter) },
+      });
+    }
     const { id } = await params;
     const draft = await db.mailMessage.findFirst({
       where: { id, userId: user.id, direction: "OUTBOUND", status: "DRAFT" },

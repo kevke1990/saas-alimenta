@@ -8,6 +8,7 @@ import { calculatePartnerCapacity } from '@/lib/partner-capacity';
 import { persistCaseCalculationV2 } from '@/lib/case-calculation-v2';
 import type { ProvenanceInput } from '@/lib/calculation-provenance';
 import { resolveChildCostShareFromCaseResult } from '@/lib/combined-case-support';
+import { calculationLockMessage, isCaseLockedForCalculation } from '@/lib/case-lock';
 
 function partnerAnalysis(body: Record<string, any>) {
   const hasPartnerInput = body.partnerCapacityMode || body.partnerNetMonthlyIncome !== undefined || Array.isArray(body.partnerCareObligations);
@@ -73,6 +74,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     include: { calculations: { orderBy: { createdAt: 'desc' }, take: 10 } },
   });
   if (!c) return new NextResponse('Dossier niet gevonden.', { status: 404 });
+  if (isCaseLockedForCalculation(c.reviewStatus)) {
+    return new NextResponse(calculationLockMessage(c.reviewStatus), { status: 409 });
+  }
 
   try {
     const body = await req.json();
@@ -100,9 +104,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     };
 
     const result = calculatePartnerSupport(calculationInput);
-    const persistedResult = {
+    const partnerSupportPayload = {
       type: 'PARTNER_SUPPORT',
-            ...result,
+      ...result,
       ...(resolvedChildCostShare ? {
         childCostShare: resolvedChildCostShare.childCostShare,
         childCostShareSource: resolvedChildCostShare.source,
@@ -120,6 +124,42 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         },
       } : {}),
     };
+    const baseChildCalculation = c.calculations.find(x => {
+      const r = x.result as any;
+      return r && typeof r === 'object' && r.type !== 'PARTNER_SUPPORT';
+    });
+    const baseCaseResult = (typeof c.result === 'object' && c.result ? c.result : baseChildCalculation?.result || {}) as Record<string, any>;
+    const existingCombined = (baseCaseResult.combined && typeof baseCaseResult.combined === 'object' ? baseCaseResult.combined : {}) as Record<string, any>;
+    const partnerGross = Number(result?.result?.monthlyGross || 0);
+    const partnerNet = Number(result?.result?.monthlyNet || 0);
+    const childPayments: [number, number] = Array.isArray(existingCombined.childSupportByParent)
+      ? [Number(existingCombined.childSupportByParent[0] || 0), Number(existingCombined.childSupportByParent[1] || 0)]
+      : [0, 0];
+    const combinedPaymentByParent: [number, number] = [childPayments[0], childPayments[1]];
+    if (payerIndex !== null) combinedPaymentByParent[payerIndex] += partnerGross;
+    const totalMonthlyPayments = combinedPaymentByParent[0] + combinedPaymentByParent[1];
+
+    const mergedProductionResult = {
+      ...baseCaseResult,
+      partnerSupport: partnerSupportPayload,
+      combined: {
+        ...existingCombined,
+        partnerSupport: {
+          payerIndex,
+          recipientIndex: payerIndex === null ? null : payerIndex === 0 ? 1 : 0,
+          monthlyNet: partnerNet,
+          monthlyGross: partnerGross,
+          childCostShare: resolvedChildCostShare?.childCostShare ?? 0,
+          childCostShareSource: resolvedChildCostShare?.source ?? null,
+        },
+        combinedPaymentByParent,
+        totalMonthlyPayments,
+      },
+    };
+    const mergedCalculationInput = {
+      ...(typeof c.data === 'object' && c.data ? c.data as object : {}),
+      partnerInput: calculationInput,
+    };
     const provenance: ProvenanceInput[] = [
       { sourceType: 'CASE', sourceId: id, label: c.name },
     ];
@@ -129,8 +169,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         caseId: id,
         organizationId: tenant.id,
         userId: user.id,
-        calculationInput,
-        productionResult: persistedResult,
+        calculationInput: mergedCalculationInput,
+        productionResult: mergedProductionResult,
         normVersion: result.normVersion,
         provenance,
       });
@@ -139,14 +179,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         where: { id },
         data: {
           calculationVersion: result.engineVersion,
+          reviewStatus: 'INCOMPLETE',
+          reviewedAt: null,
+          approvedAt: null,
+          approvedByUserId: null,
           metadata: {
             ...(typeof c.metadata === 'object' && c.metadata ? c.metadata as object : {}),
             partnerInput: calculationInput,
           },
-          result: {
-            ...(typeof c.result === 'object' && c.result ? c.result as object : {}),
-            partnerSupport: persistedResult,
-          },
+          result: mergedProductionResult,
         },
       });
       return snapshot;
@@ -159,7 +200,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         childCostShare: resolvedChildCostShare.childCostShare,
         childCostShareSource: resolvedChildCostShare.source,
       } : {}),
-      ...(partnerCapacity ? { partnerCapacity: persistedResult.partnerCapacity } : {}),
+      ...(partnerCapacity ? { partnerCapacity: partnerSupportPayload.partnerCapacity } : {}),
       fingerprint,
     });
   } catch (e: any) {

@@ -19,8 +19,8 @@ export type GeminiAnalysis = {
 
 export async function analyzeIncomeDocument(text: string): Promise<GeminiAnalysis> {
   const cfg = await getAiConfig();
-  const configuredGemini = cfg.enabled && cfg.provider === "GOOGLE_GEMINI";
-  const key = configuredGemini && cfg.apiKey ? cfg.apiKey : process.env.GOOGLE_AI_API_KEY;
+  const configuredGemini = cfg.enabled && (cfg.provider === "GOOGLE_GEMINI" || cfg.provider === "GEMINI");
+  const key = configuredGemini && cfg.apiKey ? cfg.apiKey : process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
   if (!key) throw new Error("Google AI API key ontbreekt");
 
   // Configured settings are preferred; environment settings remain a safe fallback.

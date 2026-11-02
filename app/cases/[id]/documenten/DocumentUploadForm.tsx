@@ -1,7 +1,7 @@
 "use client";
 import {FormEvent,useState} from "react";
 
-const categories=["IDENTITE","INKOMEN","ONDERNEMING","WONEN","KINDEREN","ZORGREGELING","JURIDISCH","BEREKENINGEN","FACTUREN","OVERIG"];
+const categories=["IDENTITEIT","INKOMEN","ONDERNEMING","WONEN","KINDEREN","ZORGREGELING","JURIDISCH","BEREKENINGEN","FACTUREN","OVERIG"];
 export default function DocumentUploadForm({caseId,clientId}:{caseId:string;clientId?:string|null}){
  const[busy,setBusy]=useState(false);const[message,setMessage]=useState("");
  async function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();setBusy(true);setMessage("");try{const form=new FormData(event.currentTarget);const upload=await fetch("/api/documents/upload",{method:"POST",body:form});if(!upload.ok)throw new Error(await upload.text());const document=await upload.json();const analysis=await fetch(`/api/documents/analyze`,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({documentId:document.id})});if(!analysis.ok)setMessage(`Document opgeslagen. AI-analyse is nog niet uitgevoerd: ${await analysis.text()}`);else setMessage("Document opgeslagen en AI-analyse uitgevoerd. Controleer de voorgestelde feiten.");event.currentTarget.reset();window.setTimeout(()=>window.location.reload(),700);}catch(error:any){setMessage(error?.message||"Upload mislukt.");}finally{setBusy(false);}}

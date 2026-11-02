@@ -28,9 +28,10 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const take = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 25)));
+  const tenant = await import("@/lib/tenant").then(({ ensureTenant }) => ensureTenant(auth.user));
   const cases = await import("@/lib/db").then(({ db }) =>
     db.case.findMany({
-      where: { userId: auth.user.id },
+      where: { organizationId: tenant.id, deletedAt: null },
       orderBy: { updatedAt: "desc" },
       take: take + 1,
       select: {

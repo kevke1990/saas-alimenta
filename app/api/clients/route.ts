@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { clientSchema } from "@/lib/validation";
 import { getClientEntitlement } from "@/lib/entitlements";
-import { ensureTenant } from "@/lib/tenant";
+import { ensureTenant, requireTenantRole } from "@/lib/tenant";
 import { generateClientNumber } from "@/lib/client-number";
 
 export async function GET() {
@@ -13,6 +13,7 @@ export async function GET() {
     return NextResponse.json(await db.client.findMany({
       where: { organizationId: tenant.id, deletedAt: null },
       orderBy: { createdAt: "desc" },
+      take: 250,
     }));
   } catch (e: any) {
     return new NextResponse(e?.message === "UNAUTHORIZED" ? "Unauthorized" : e?.message || "Fout", { status: e?.message === "UNAUTHORIZED" ? 401 : 400 });
@@ -22,8 +23,8 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const u = await requireUser();
-    const tenant = await ensureTenant(u);
-    const entitlement = await getClientEntitlement(u.id, u.plan);
+    const tenant = await requireTenantRole(u, ["OWNER", "ADMIN", "PROFESSIONAL"]);
+    const entitlement = await getClientEntitlement(u.id, u.plan, tenant.id);
     if (!entitlement.allowed) return NextResponse.json({ error: "Dossierlimiet van je abonnement bereikt.", used: entitlement.used, limit: entitlement.limit, upgrade: "/billing" }, { status: 402 });
     const data = clientSchema.parse(await req.json());
     const reference = await generateClientNumber(tenant.id);
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
     await db.auditLog.create({ data: { userId: u.id, organizationId: tenant.id, actorRole: tenant.role, action: "CLIENT_CREATED", metadata: { clientId: c.id, customerNumber: reference, plan: u.plan } } });
     return NextResponse.json(c);
   } catch (e: any) {
-    return new NextResponse(e?.message || "Fout", { status: 400 });
+    const status = e?.message === "UNAUTHORIZED" ? 401 : e?.status === 403 || e?.message === "TENANT_ROLE_FORBIDDEN" ? 403 : 400;
+    return new NextResponse(e?.message || "Fout", { status });
   }
 }

@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { getAiConfig } from "@/lib/ai-config";
 
 export const AI_ANALYSIS_VERSION = "2.0";
 
@@ -22,15 +23,33 @@ const schema = {
 export function analysisHash(data: Buffer) { return crypto.createHash("sha256").update(data).digest("hex"); }
 
 export async function analyzeDocumentBytes(input:{data:Buffer;mimeType:string;name:string}) {
-  const key=process.env.GOOGLE_AI_API_KEY;
-  if(!key) throw new Error("GOOGLE_AI_API_KEY ontbreekt");
   if(process.env.AI_PROCESSING_DISABLED==="true") throw new Error("AI-documentanalyse is uitgeschakeld");
-  const model=process.env.GOOGLE_AI_MODEL||"gemini-3.8-flash";
-  const prompt=`Je bent Merelo Document Intelligence. Extraheer uitsluitend aantoonbare gegevens uit dit document. Verzin niets. Dit is géén juridisch, fiscaal of alimentatieadvies. Gebruik null als een waarde niet betrouwbaar kan worden vastgesteld. Geef per geldbedrag de frequentie aan via unit (MONTHLY, ANNUAL, PERCENT, EUR, TEXT). Geef bij PDF zoveel mogelijk de pagina en een korte bronverwijzing. Herken salaris, vakantiegeld, IKB/PKB, 13e maand, bonus, overwerk, belaste vergoedingen, uitkeringen, pensioenpremie, andere premies, netto loon en relevante fiscale gegevens. Signaleer afwijkende of tegenstrijdige waarden. De professional moet alle voorstellen controleren.`;
-  const body={model,input:[{type:"document",data:input.data.toString("base64"),mime_type:input.mimeType},{type:"text",text:prompt}],response_format:{type:"text",mime_type:"application/json",schema},store:false};
-  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/interactions`,{method:"POST",headers:{"content-type":"application/json","x-goog-api-key":key},body:JSON.stringify(body)});
+  const cfg = await getAiConfig().catch(() => null);
+  const configuredGemini = cfg && cfg.enabled && (cfg.provider === "GOOGLE_GEMINI" || cfg.provider === "GEMINI");
+  const key = (configuredGemini && cfg.apiKey) ? cfg.apiKey : (process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY);
+  if(!key) throw new Error("GOOGLE_AI_API_KEY ontbreekt");
+  const model = (configuredGemini && cfg.model) ? cfg.model : (process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash");
+  const prompt=`Je bent Merelo Document Intelligence. Extraheer uitsluitend aantoonbare gegevens uit dit document. Verzin niets. Dit is géén juridisch, fiscaal of alimentatieadvies. Gebruik null als een waarde niet betrouwbaar kan worden vastgesteld. Geef per geldbedrag de frequentie aan via unit (MONTHLY, ANNUAL, PERCENT, EUR, TEXT). Geef bij PDF zoveel mogelijk de pagina en een korte bronverwijzing. Herken salaris, vakantiegeld, IKB/PKB, 13e maand, bonus, overwerk, belaste vergoedingen, uitkeringen, pensioenpremie, andere premies, netto loon en relevante fiscale gegevens. Signaleer afwijkende of tegenstrijdige waarden. De professional moet alle voorstellen controleren. Geef een JSON-object terug volgens dit schema: ${JSON.stringify(schema)}`;
+  const body = {
+    contents: [
+      {
+        parts: [
+          { inlineData: { mimeType: input.mimeType, data: input.data.toString("base64") } },
+          { text: prompt },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: configuredGemini ? cfg.temperature : 0,
+      responseMimeType: "application/json",
+    },
+  };
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`,
+    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+  );
   if(!r.ok) { const t=await r.text(); throw new Error(`Gemini documentanalyse fout (${r.status}): ${t.slice(0,300)}`); }
   const j:any=await r.json();
-  const text=j?.outputs?.map((o:any)=>o?.text||"").join("")||j?.output_text||"{}";
+  const text=j?.candidates?.[0]?.content?.parts?.map((p:any)=>p?.text||"").join("")||j?.outputs?.map((o:any)=>o?.text||"").join("")||j?.output_text||"{}";
   return {result:JSON.parse(text),model,analysisVersion:AI_ANALYSIS_VERSION};
 }

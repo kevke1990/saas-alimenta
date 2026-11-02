@@ -13,7 +13,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const entitlement = await checkApiEntitlement(auth.user.id, auth.user.plan);
   if (!entitlement.allowed) return apiError("Maandelijkse API-limiet bereikt.", 429);
   const { id } = await params;
-  const item = await db.case.findFirst({ where: { id, userId: auth.user.id }, include: { client: true, calculations: { orderBy: { createdAt: "desc" }, take: 1 }, incomeFacts: { orderBy: { createdAt: "desc" } }, tasks: { orderBy: { createdAt: "desc" } } } });
+  const tenant = await import("@/lib/tenant").then(({ ensureTenant }) => ensureTenant(auth.user));
+  const item = await db.case.findFirst({
+    where: { id, organizationId: tenant.id, deletedAt: null },
+    include: { client: true, calculations: { orderBy: { createdAt: "desc" }, take: 1 }, incomeFacts: { orderBy: { createdAt: "desc" } }, tasks: { orderBy: { createdAt: "desc" } } },
+  });
   if (!item) return apiError("Dossier niet gevonden.", 404);
   await recordApiRequest(auth.user.id, { endpoint: "/api/v1/cases/[id]", method: "GET", caseId: id });
   return NextResponse.json({ data: item, apiVersion: "v1" }, { headers: { "x-ratelimit-remaining": String(rate.remaining) } });
