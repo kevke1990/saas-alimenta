@@ -27,7 +27,6 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
   if (tremaAudit.result) {
     resultWithAudit.engineVersion = "2.0.0";
     resultWithAudit.normVersion = "2026.1";
-    resultWithAudit.totalCapacity = tremaAudit.result.payerCapacityMonthly + tremaAudit.result.recipientCapacityMonthly + (tremaAudit.result.stepparentCapacity || 0);
 
     // 1. Identificeer dynamisch welke ouder de betaler (payer) en welke de ontvanger (recipient) is
     let payerIndex = -1;
@@ -53,129 +52,138 @@ export function runCalculationEngineV2(input: CaseInput, normVersion = NORM_VERS
     const stepparentCap = tremaAudit?.result?.stepparentCapacity ?? 0;
     const totalPayable = tremaAudit?.result?.payableMonthly ?? 0;
 
-    // 2. Wijs capaciteit en betaling toe aan de JUISTE ouder in parentResults (alleen overschrijven als Trema audit geldige waarden levert)
-    if (payerCap > 0 || recipientCap > 0) {
-      if (resultWithAudit.parentResults?.[payerIndex]) {
-        resultWithAudit.parentResults[payerIndex].capacity = payerCap;
-        resultWithAudit.parentResults[payerIndex].paymentTotal = totalPayable;
-        resultWithAudit.parentResults[payerIndex].childAlimonyPayment = totalPayable;
+    // Als de betaler stiefkinderen heeft waarvoor via calculator.ts een wettelijke pro-rata toerekening
+    // conform art. 1:395 BW jo. art. 1:397 lid 2 BW / HR 13 juli 2012 is uitgevoerd, behouden we die
+    // wettelijke pro-rata formuleroute en overschrijven we deze niet met de ongecorrigeerde tremaAudit capaciteit.
+    const payerHasLegalStepparentRoute = (result.parentResults?.[payerIndex]?.stiefchildMaintenance ?? 0) > 0;
+
+    if (!payerHasLegalStepparentRoute) {
+      resultWithAudit.totalCapacity = tremaAudit.result.payerCapacityMonthly + tremaAudit.result.recipientCapacityMonthly + (tremaAudit.result.stepparentCapacity || 0);
+
+      // 2. Wijs capaciteit en betaling toe aan de JUISTE ouder in parentResults (alleen overschrijven als Trema audit geldige waarden levert)
+      if (payerCap > 0 || recipientCap > 0) {
+        if (resultWithAudit.parentResults?.[payerIndex]) {
+          resultWithAudit.parentResults[payerIndex].capacity = payerCap;
+          resultWithAudit.parentResults[payerIndex].paymentTotal = totalPayable;
+          resultWithAudit.parentResults[payerIndex].childAlimonyPayment = totalPayable;
+        }
+
+        if (resultWithAudit.parentResults?.[recipientIndex]) {
+          resultWithAudit.parentResults[recipientIndex].capacity = recipientCap;
+          resultWithAudit.parentResults[recipientIndex].paymentTotal = 0;
+        }
       }
 
-      if (resultWithAudit.parentResults?.[recipientIndex]) {
-        resultWithAudit.parentResults[recipientIndex].capacity = recipientCap;
-        resultWithAudit.parentResults[recipientIndex].paymentTotal = 0;
+      // 3. Koppel de stiefouder aan de ouder die gehuwd/geregistreerd partner is
+      const marriedParentIdx = (input.parents || []).findIndex(
+        (p: any) => p.newPartner?.present && (p.newPartner.relationship === 'MARRIED' || p.newPartner.relatievorm === 'MARRIED' || p.newPartner.relationship === 'REGISTERED_PARTNERSHIP')
+      );
+
+      if (marriedParentIdx !== -1 && stepparentCap > 0 && resultWithAudit.parentResults?.[marriedParentIdx]) {
+        resultWithAudit.parentResults[marriedParentIdx].stepparentCapacity = stepparentCap;
+        if (!resultWithAudit.parentResults[marriedParentIdx].stiefchildMaintenance) {
+          resultWithAudit.parentResults[marriedParentIdx].stiefchildMaintenance = stepparentCap;
+        }
       }
-    }
 
-    // 3. Koppel de stiefouder aan de ouder die gehuwd/geregistreerd partner is
-    const marriedParentIdx = (input.parents || []).findIndex(
-      (p: any) => p.newPartner?.present && (p.newPartner.relationship === 'MARRIED' || p.newPartner.relatievorm === 'MARRIED' || p.newPartner.relationship === 'REGISTERED_PARTNERSHIP')
-    );
+      // 4. Update de gezamenlijke draagkracht en tekort op het root-resultaat
+      const combinedCap = payerCap + recipientCap + stepparentCap;
+      resultWithAudit.totalCapacity = combinedCap > 0 ? combinedCap : resultWithAudit.totalCapacity;
+      resultWithAudit.capacityDeficit = Math.max(0, (resultWithAudit.totalNeed || 0) - resultWithAudit.totalCapacity);
+      resultWithAudit.capacitySufficient = resultWithAudit.totalCapacity >= (resultWithAudit.totalNeed || 0);
 
-    if (marriedParentIdx !== -1 && stepparentCap > 0 && resultWithAudit.parentResults?.[marriedParentIdx]) {
-      resultWithAudit.parentResults[marriedParentIdx].stepparentCapacity = stepparentCap;
-      if (!resultWithAudit.parentResults[marriedParentIdx].stiefchildMaintenance) {
-        resultWithAudit.parentResults[marriedParentIdx].stiefchildMaintenance = stepparentCap;
-      }
-    }
+      const careStep = tremaAudit?.result?.steps?.find((s: any) => s.key === 'care-discount');
+      let appliedCareDiscount = Number(careStep?.resultMonthly ?? 0);
+      const kgbCorrection = Number(tremaAudit?.result?.steps?.find((s: any) => s.key === 'payable')?.inputs?.kgbCorrection ?? 0);
+      const totalNeed2 = tremaAudit?.result?.steps?.find((s: any) => s.key === 'maximum')?.inputs?.need ?? (resultWithAudit.totalNeed || 1207);
+      const deficit = Math.max(0, totalNeed2 - combinedCap);
 
-    // 4. Update de gezamenlijke draagkracht en tekort op het root-resultaat
-    const combinedCap = payerCap + recipientCap + stepparentCap;
-    resultWithAudit.totalCapacity = combinedCap > 0 ? combinedCap : resultWithAudit.totalCapacity;
-    resultWithAudit.capacityDeficit = Math.max(0, (resultWithAudit.totalNeed || 0) - resultWithAudit.totalCapacity);
-    resultWithAudit.capacitySufficient = resultWithAudit.totalCapacity >= (resultWithAudit.totalNeed || 0);
-
-    const careStep = tremaAudit?.result?.steps?.find((s: any) => s.key === 'care-discount');
-    let appliedCareDiscount = Number(careStep?.resultMonthly ?? 0);
-    const kgbCorrection = Number(tremaAudit?.result?.steps?.find((s: any) => s.key === 'payable')?.inputs?.kgbCorrection ?? 0);
-    const totalNeed2 = tremaAudit?.result?.steps?.find((s: any) => s.key === 'maximum')?.inputs?.need ?? (resultWithAudit.totalNeed || 1207);
-    const deficit = Math.max(0, totalNeed2 - combinedCap);
-
-    let payable = 0;
-    if (combinedCap > 0) {
-      const payerShare = Math.min(payerCap, (payerCap / combinedCap) * totalNeed2);
-      payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, Math.round(payerShare - appliedCareDiscount - kgbCorrection));
-    } else {
-      payable = Number(resultWithAudit.currentCalculation?.contribution ?? (resultWithAudit.transfers || []).reduce((s: number, t: any) => s + Number(t.payment || 0), 0));
-    }
-
-    const newTransfers = [...(resultWithAudit.transfers || [])];
-    if (newTransfers.length > 0 && payable > 0) {
-      const basePerChild = Math.floor(payable / newTransfers.length);
-      let remainder = payable - (basePerChild * newTransfers.length);
-
-      let grossBasePerChild = Math.floor((tremaAudit?.result?.maximumContributionMonthly || 0) / newTransfers.length);
-      let grossRemainder = (tremaAudit?.result?.maximumContributionMonthly || 0) - (grossBasePerChild * newTransfers.length);
-
-      for (let i = 0; i < newTransfers.length; i++) {
-        const childPayment = basePerChild + (remainder > 0 ? 1 : 0);
-        if (remainder > 0) remainder--;
-
-        const childGross = grossBasePerChild + (grossRemainder > 0 ? 1 : 0);
-        if (grossRemainder > 0) grossRemainder--;
-
-        newTransfers[i] = {
-          ...newTransfers[i],
-          payment: childPayment,
-          grossShare: childGross,
-          direction: `${payerIndex === 1 ? 'B->A' : 'A->B'}`
-        };
-      }
-    }
-    resultWithAudit.transfers = newTransfers;
-
-    const totalNeed = tremaAudit?.result?.steps?.find((s: any) => s.key === 'maximum')?.inputs?.need ?? (resultWithAudit.totalNeed || 1207);
-    resultWithAudit.totalNeed = totalNeed;
-
-    const totalCap = combinedCap > 0 ? combinedCap : Number(resultWithAudit.totalCapacity || 0);
-    resultWithAudit.calculationSteps = [
-      { step: 1, title: "Behoefte", value: totalNeed, formula: "2026 behoeftetabel/WSF met indicatief afgeleid NBGI" },
-      { step: 2, title: "Draagkracht", value: totalCap, formula: stepparentCap > 0 ? "2026 gezamenlijke draagkracht inclusief wettelijk stiefouderaandeel" : "2026 gezamenlijke draagkracht van ouders" },
-      { step: 3, title: "Draagkrachtvergelijking", value: payerCap > 0 ? payerCap : Number(resultWithAudit.parentResults?.[payerIndex]?.capacity || 0), formula: "toegerekend aandeel onderhoudsplichtige" },
-      { step: 4, title: "Zorgkorting", value: appliedCareDiscount, formula: "bruto zorgkorting minus helft tekort; bij voldoende draagkracht is de bruto zorgkorting volledig verzilverbaar" },
-      { step: 5, title: "Bijdrage", value: payable, formula: "aandeel onderhoudsplichtige minus toepasselijke zorgkorting" }
-    ];
-
-    // 5. Werk parentResults en combined bij zodat pagina 1, Tabel 4 en partneralimentatie direct de juiste bedragen gebruiken
-    const payerAllocatedNeed = combinedCap > 0
-      ? Math.round(tremaAudit?.result?.maximumContributionMonthly ?? Math.min(payerCap, (payerCap / combinedCap) * totalNeed))
-      : Number(resultWithAudit.parentResults?.[payerIndex]?.allocatedNeed ?? 0);
-    const recipientAllocatedNeed = combinedCap > 0
-      ? Math.round(Math.min(recipientCap, (recipientCap / combinedCap) * totalNeed))
-      : Number(resultWithAudit.parentResults?.[recipientIndex]?.allocatedNeed ?? 0);
-
-    if (resultWithAudit.parentResults?.[payerIndex]) {
-      resultWithAudit.parentResults[payerIndex].paymentTotal = payable;
-      resultWithAudit.parentResults[payerIndex].childAlimonyPayment = payable;
+      let payable = 0;
       if (combinedCap > 0) {
-        resultWithAudit.parentResults[payerIndex].allocatedNeed = payerAllocatedNeed;
-        resultWithAudit.parentResults[payerIndex].sharePct = Math.round((payerCap / combinedCap) * 10000) / 100;
-        resultWithAudit.parentResults[payerIndex].totalCareDiscount = appliedCareDiscount;
+        const payerShare = Math.min(payerCap, (payerCap / combinedCap) * totalNeed2);
+        payable = tremaAudit?.result?.payableMonthly ?? Math.max(0, Math.round(payerShare - appliedCareDiscount - kgbCorrection));
+      } else {
+        payable = Number(resultWithAudit.currentCalculation?.contribution ?? (resultWithAudit.transfers || []).reduce((s: number, t: any) => s + Number(t.payment || 0), 0));
       }
-    }
-    if (resultWithAudit.parentResults?.[recipientIndex] && combinedCap > 0) {
-      resultWithAudit.parentResults[recipientIndex].allocatedNeed = recipientAllocatedNeed;
-      resultWithAudit.parentResults[recipientIndex].sharePct = Math.round((recipientCap / combinedCap) * 10000) / 100;
-      resultWithAudit.parentResults[recipientIndex].totalCareDiscount = 0;
-    }
 
-    if (!resultWithAudit.combined) {
-      resultWithAudit.combined = {};
+      const newTransfers = [...(resultWithAudit.transfers || [])];
+      if (newTransfers.length > 0 && payable > 0) {
+        const basePerChild = Math.floor(payable / newTransfers.length);
+        let remainder = payable - (basePerChild * newTransfers.length);
+
+        let grossBasePerChild = Math.floor((tremaAudit?.result?.maximumContributionMonthly || 0) / newTransfers.length);
+        let grossRemainder = (tremaAudit?.result?.maximumContributionMonthly || 0) - (grossBasePerChild * newTransfers.length);
+
+        for (let i = 0; i < newTransfers.length; i++) {
+          const childPayment = basePerChild + (remainder > 0 ? 1 : 0);
+          if (remainder > 0) remainder--;
+
+          const childGross = grossBasePerChild + (grossRemainder > 0 ? 1 : 0);
+          if (grossRemainder > 0) grossRemainder--;
+
+          newTransfers[i] = {
+            ...newTransfers[i],
+            payment: childPayment,
+            grossShare: childGross,
+            direction: `${payerIndex === 1 ? 'B->A' : 'A->B'}`
+          };
+        }
+      }
+      resultWithAudit.transfers = newTransfers;
+
+      const totalNeed = tremaAudit?.result?.steps?.find((s: any) => s.key === 'maximum')?.inputs?.need ?? (resultWithAudit.totalNeed || 1207);
+      resultWithAudit.totalNeed = totalNeed;
+
+      const totalCap = combinedCap > 0 ? combinedCap : Number(resultWithAudit.totalCapacity || 0);
+      resultWithAudit.calculationSteps = [
+        { step: 1, title: "Behoefte", value: totalNeed, formula: "2026 behoeftetabel/WSF met indicatief afgeleid NBGI" },
+        { step: 2, title: "Draagkracht", value: totalCap, formula: stepparentCap > 0 ? "2026 gezamenlijke draagkracht inclusief wettelijk stiefouderaandeel" : "2026 gezamenlijke draagkracht van ouders" },
+        { step: 3, title: "Draagkrachtvergelijking", value: payerCap > 0 ? payerCap : Number(resultWithAudit.parentResults?.[payerIndex]?.capacity || 0), formula: "toegerekend aandeel onderhoudsplichtige" },
+        { step: 4, title: "Zorgkorting", value: appliedCareDiscount, formula: "bruto zorgkorting minus helft tekort; bij voldoende draagkracht is de bruto zorgkorting volledig verzilverbaar" },
+        { step: 5, title: "Bijdrage", value: payable, formula: "aandeel onderhoudsplichtige minus toepasselijke zorgkorting" }
+      ];
+
+      // 5. Werk parentResults en combined bij zodat pagina 1, Tabel 4 en partneralimentatie direct de juiste bedragen gebruiken
+      const payerAllocatedNeed = combinedCap > 0
+        ? Math.round(tremaAudit?.result?.maximumContributionMonthly ?? Math.min(payerCap, (payerCap / combinedCap) * totalNeed))
+        : Number(resultWithAudit.parentResults?.[payerIndex]?.allocatedNeed ?? 0);
+      const recipientAllocatedNeed = combinedCap > 0
+        ? Math.round(Math.min(recipientCap, (recipientCap / combinedCap) * totalNeed))
+        : Number(resultWithAudit.parentResults?.[recipientIndex]?.allocatedNeed ?? 0);
+
+      if (resultWithAudit.parentResults?.[payerIndex]) {
+        resultWithAudit.parentResults[payerIndex].paymentTotal = payable;
+        resultWithAudit.parentResults[payerIndex].childAlimonyPayment = payable;
+        if (combinedCap > 0) {
+          resultWithAudit.parentResults[payerIndex].allocatedNeed = payerAllocatedNeed;
+          resultWithAudit.parentResults[payerIndex].sharePct = Math.round((payerCap / combinedCap) * 10000) / 100;
+          resultWithAudit.parentResults[payerIndex].totalCareDiscount = appliedCareDiscount;
+        }
+      }
+      if (resultWithAudit.parentResults?.[recipientIndex] && combinedCap > 0) {
+        resultWithAudit.parentResults[recipientIndex].allocatedNeed = recipientAllocatedNeed;
+        resultWithAudit.parentResults[recipientIndex].sharePct = Math.round((recipientCap / combinedCap) * 10000) / 100;
+        resultWithAudit.parentResults[recipientIndex].totalCareDiscount = 0;
+      }
+
+      if (!resultWithAudit.combined) {
+        resultWithAudit.combined = {};
+      }
+      resultWithAudit.combined.childSupportTotal = payable;
+      resultWithAudit.combined.childSupportByParent = {
+        [recipientIndex]: 0,
+        [payerIndex]: payable
+      };
+      resultWithAudit.combined.childCostShareByParent = [
+        Number(resultWithAudit.parentResults?.[0]?.allocatedNeed ?? 0),
+        Number(resultWithAudit.parentResults?.[1]?.allocatedNeed ?? 0),
+      ];
+      resultWithAudit.combined.totalMonthlyPayments = payable;
+      resultWithAudit.combined.combinedPaymentByParent = {
+        [recipientIndex]: 0,
+        [payerIndex]: payable
+      };
     }
-    resultWithAudit.combined.childSupportTotal = payable;
-    resultWithAudit.combined.childSupportByParent = {
-      [recipientIndex]: 0,
-      [payerIndex]: payable
-    };
-    resultWithAudit.combined.childCostShareByParent = [
-      Number(resultWithAudit.parentResults?.[0]?.allocatedNeed ?? 0),
-      Number(resultWithAudit.parentResults?.[1]?.allocatedNeed ?? 0),
-    ];
-    resultWithAudit.combined.totalMonthlyPayments = payable;
-    resultWithAudit.combined.combinedPaymentByParent = {
-      [recipientIndex]: 0,
-      [payerIndex]: payable
-    };
   }
 
   const fingerprint = fingerprintCalculation(input, resultWithAudit, "2026.1");
