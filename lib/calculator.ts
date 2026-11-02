@@ -178,9 +178,10 @@ export function calculate(input: CaseInput) {
     const qualifyingStepChildren = formalRelationship
       ? (partner.children ?? []).filter(c => c.active !== false && c.age !== undefined && c.age !== null && String(c.age).trim() !== "" && n(c.age) < 21 && c.livesAtHome !== false)
       : [];
-    if (formalRelationship && qualifyingStepChildren.length && partner.monthlyNbi === undefined) reasons.push("PARTNER_NBI_ONTBREEKT");
-    if (formalRelationship && qualifyingStepChildren.some(c => n(c.monthlyAmount) <= 0)) reasons.push("STIEFKIND_BIJDRAGE_ONTBREEKT");
-    if (formalRelationship && qualifyingStepChildren.length && parent.newPartner?.maintenanceObligation !== true) reasons.push("WETTELIJKE_STIEFOUDER_ONDERHOUDSPLICHT_NIET_GEREGISTREERD");
+    const partnerNbiVal = partner.monthlyNbi ?? (partner as any).nbiMonthly ?? (partner as any).nbi;
+    if (formalRelationship && qualifyingStepChildren.length && (partnerNbiVal === undefined || isNaN(Number(partnerNbiVal)))) reasons.push("PARTNER_NBI_ONTBREEKT");
+    if (formalRelationship && qualifyingStepChildren.some(c => n((c as any).monthlyAmount ?? (c as any).amount) <= 0)) reasons.push("STIEFKIND_BIJDRAGE_ONTBREEKT");
+    if (formalRelationship && qualifyingStepChildren.length && parent.newPartner?.maintenanceObligation !== true && (parent.newPartner as any)?.wettelijkeOnderhoudsplicht !== true) reasons.push("WETTELIJKE_STIEFOUDER_ONDERHOUDSPLICHT_NIET_GEREGISTREERD");
     if (partner.includedInCalculation === true && partner.maintenanceObligation === undefined) reasons.push("ONDERHOUDSVERPLICHTING_ONDUIDELIJK");
     if (partner.children?.length && partner.includedInCalculation === true && partner.maintenanceObligation !== true) reasons.push("STIEFKINDEREN_MAAR_GEEN_VASTGESTELDE_ONDERHOUDSVERPLICHTING");
     return {
