@@ -135,3 +135,248 @@ select:focus-visible, button:focus-visible, a:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* 
+ * Pixel-to-Payload: Legibility, Symmetry & Calm Professional Theme Upgrades
+ * Enforces minimum readable font sizes, balanced tabular data, and serene whitespace.
+ */
+
+/* 1. Global Font Size Floor: Prevent micro unreadable text (WCAG AA) */
+.al-card-kicker,
+.al-origin-title,
+.al-card-note,
+.cases-summary-label,
+.settings-section-kicker,
+.billing-annual,
+.workspace-copy small,
+.user-chip small,
+.stat-meta,
+.help-card span,
+.subtle,
+.table-note,
+.brand-lockup span {
+  font-size: 11.5px !important;
+  line-height: 1.5 !important;
+}
+
+.al-tag,
+.al-pill,
+.status,
+.status-pill,
+.badge,
+.clients-mobile-status,
+.billing-badge {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px !important;
+  padding: 4px 10px !important;
+}
+
+.eyebrow,
+.section-kicker {
+  font-size: 11px !important;
+  letter-spacing: 1.2px !important;
+  font-weight: 700 !important;
+}
+
+.stat-label {
+  font-size: 11.5px !important;
+  letter-spacing: 0.6px !important;
+  font-weight: 600 !important;
+}
+
+.billing-features li {
+  font-size: 12.5px !important;
+  line-height: 1.6 !important;
+}
+
+/* 2. Symmetrical Card Heights, Tables & Tabular Numerals */
+.table td,
+.table th,
+.al-row strong,
+.result-amount,
+.metric-value,
+.stat-value,
+.summary-line b {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.table th {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--bg);
+  padding: 12px 14px !important;
+}
+
+.table td {
+  padding: 14px 14px !important;
+  font-size: 13px !important;
+  vertical-align: middle;
+}
+
+.dashboard-grid .stat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 130px;
+}
+
+.stat-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-icon {
+  width: 36px !important;
+  height: 36px !important;
+  display: grid !important;
+  place-items: center !important;
+  flex: 0 0 36px !important;
+  border-radius: 10px !important;
+}
+
+/* 3. Calm & Balanced Layout Containers */
+.main-area .content {
+  max-width: 1280px !important;
+  margin: 0 auto !important;
+  padding: 32px 32px 48px !important;
+}
+
+.case-detail-page,
+.two-col,
+.billing-bottom {
+  gap: 20px !important;
+}
+
+.panel {
+  border-radius: 12px !important;
+  border: 1px solid rgba(22, 60, 58, 0.12) !important;
+  background: #ffffff !important;
+  box-shadow: 0 4px 20px rgba(22, 60, 58, 0.04) !important;
+}
+
+.panel-title {
+  color: #163c3a !important;
+  font-weight: 700 !important;
+}
+
+.panel-sub {
+  color: #60716f !important;
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+}
+
+/* Smooth input focus states */
+.input:focus,
+select.input:focus,
+textarea.input:focus {
+  border-color: #2f8f82 !important;
+  box-shadow: 0 0 0 3px rgba(47, 143, 130, 0.15) !important;
+  outline: none !important;
+}
+
+/* 4. Wizard Stepper & Calm Interactive Elements */
+.wizard-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid rgba(22, 60, 58, 0.12);
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-bottom: 24px;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.wizard-step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #60716f;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.wizard-step-item:hover {
+  background: #f4f7f5;
+  color: #163c3a;
+}
+
+.wizard-step-item.active {
+  background: #e8f3f1;
+  color: #163c3a;
+  border-color: rgba(99, 198, 178, 0.4);
+}
+
+.wizard-step-badge {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(22, 60, 58, 0.08);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.wizard-step-item.active .wizard-step-badge {
+  background: #163c3a;
+  color: #ffffff;
+}
+
+/* 5. In-Page Calm Modal / Confirmation Dialog */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 60, 58, 0.4);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-dialog {
+  background: #ffffff;
+  border: 1px solid rgba(22, 60, 58, 0.15);
+  border-radius: 14px;
+  padding: 26px 28px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 16px 40px rgba(22, 60, 58, 0.16);
+}
+
+.modal-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #163c3a;
+}
+
+.modal-body {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #60716f;
+  margin-bottom: 22px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+
